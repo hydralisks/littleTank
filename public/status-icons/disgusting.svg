@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="disgusting">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="hsl(73 90% 20%)"/>
+      <stop offset="1" stop-color="hsl(109 95% 26%)"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+  <path fill="hsl(87 84% 52%)" stroke="rgba(8, 12, 24, 0.92)" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" d="M10 23c7-10 37-10 44 0-1 18-11 30-22 34-11-4-21-16-22-34Z"/>
+  <path fill="none" stroke="hsl(54 100% 67%)" stroke-width="4" stroke-linecap="round" d="M17 27c5 4 7 4 12 0m6 0c5 4 7 4 12 0"/>
+  <path fill="none" stroke="rgba(8, 12, 24, 0.9)" stroke-width="4" stroke-linecap="round" d="M20 45c5 4 19 4 24 0"/>
+  <path fill="none" stroke="hsl(330 88% 62%)" stroke-width="3" stroke-linecap="round" d="M30 39c2 0 4-2 6-2"/>
+</svg>

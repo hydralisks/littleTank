@@ -1,0 +1,901 @@
+import type { CSSProperties } from 'react'
+import { useState } from 'react'
+import { getStageBuildRuleId } from '../game/data/encounterTemplates'
+import {
+  ACTIVE_SKILL_POINT_COST,
+  SKILL_HOTKEYS,
+  canUseSkillInRule,
+  canUseTalentInRule,
+  getActivePointCost,
+  getActiveSkillCatalog,
+  getActiveSkillDefinition,
+  getBuildRuleDefinition,
+  getNextPassiveTalentIdsForToggle,
+  getPassivePointCost,
+  getPassiveTalentCatalog,
+  getPassiveTalentDefinition,
+  getTotalBuildPoints,
+  isHotkeyEnabledForRule,
+  normalizePersistedBuildForRule,
+} from '../game/data/playerBuildCatalog'
+import type {
+  PassiveTalentId,
+  PersistedBuildState,
+  SkillHotkey,
+  SkillId,
+  SkillLoadout,
+} from '../game/encounter/encounterTypes'
+import {
+  getStageAreaById,
+  getPassiveTalentUnlockTierForStage,
+  getStageById,
+  getUnlockedActiveSkillIdsForStage,
+  stageAreaOrder,
+  stageOrder,
+  type StageAreaId,
+  type StageId,
+  type StageLegendEntry,
+  type StageSectionEntry,
+} from '../game/data/stageTemplates'
+import { buildMonsterCodexEntries } from '../game/data/monsterCodex'
+import { getStageNodeLayout } from './stageSelectMapLayout'
+import {
+  buildStageSelectBuildRuleModal,
+  buildStageSelectConflictModal,
+  shouldShowBuildConflictButton,
+} from './stageSelectViewModel'
+import { resolveIconAssetUrl } from './statusIconResolver'
+import { MonsterCodexPanel } from './MonsterCodexPanel'
+import { PassiveTalentPanel } from './PassiveTalentPanel'
+import { SkillConfigPanel } from './SkillConfigPanel'
+import { TutorialOverlay } from './TutorialOverlay'
+import { getMonsterCodexTutorialScript, getStageSelectTutorialScript } from './tutorialGuide'
+
+interface StageSelectScreenProps {
+  defaultSelectedStageId: StageId
+  highestClearedStageIndex: number
+  maxUnlockedStageIndex: number
+  partyStageId: StageId
+  persistedBuild: PersistedBuildState
+  seenEnemyDefinitionIds?: readonly string[]
+  monsterCodexTutorialSeen?: boolean
+  stageSelectTutorialSeenStageIds?: readonly StageId[]
+  tutorialReplayVersion?: number
+  onStartStage: (stageId: StageId) => void
+  onResetTutorials?: () => void
+  onMonsterCodexTutorialComplete?: () => void
+  onStageSelectTutorialComplete?: (stageId: StageId) => void
+  onBuildChange?: (build: PersistedBuildState, stageId: StageId) => void
+}
+
+const AREA_CAPTIONS: Record<StageAreaId, { x: string; y: string }> = {
+  harbor: { x: '12%', y: '24%' },
+  midland: { x: '48%', y: '16%' },
+  highland: { x: '79%', y: '12%' },
+}
+
+const DEFAULT_AREA_CAPTION_IDS = Object.keys(AREA_CAPTIONS) as StageAreaId[]
+
+type StageInfoModal = 'none' | 'rule' | 'conflict' | 'legend' | 'build'
+
+interface StageInfoRow {
+  id: string
+  iconId?: string
+  title: string
+  description: string
+  meta: string
+}
+
+function createStageSectionRows(meta: string, entries: StageSectionEntry[]): StageInfoRow[] {
+  return entries.map((entry) => ({
+    id: `${meta}-${entry.id}`,
+    iconId: entry.iconId,
+    title: entry.title,
+    description: entry.description,
+    meta,
+  }))
+}
+
+function createStageLegendRows(entries: StageLegendEntry[]): StageInfoRow[] {
+  return entries.map((entry) => ({
+    id: `legend-${entry.id}`,
+    iconId: entry.iconId,
+    title: entry.label,
+    description: entry.description,
+    meta: [entry.source, entry.target].filter(Boolean).join(' / '),
+  }))
+}
+
+function StageInfoIcon({ iconId, title }: { iconId?: string; title: string }) {
+  const iconUrl = iconId ? resolveIconAssetUrl(iconId, 'status') : null
+  const fallbackText = title.trim().slice(0, 1) || '?'
+
+  return (
+    <span className="stage-brief__row-icon" data-icon-id={iconId ?? ''} aria-hidden="true">
+      {iconUrl ? <img src={iconUrl} alt="" /> : <span>{fallbackText}</span>}
+    </span>
+  )
+}
+
+function canAssignSkillToHotkey(
+  buildRuleId: string,
+  loadout: SkillLoadout,
+  hotkey: SkillHotkey,
+  skillId: SkillId,
+  remainingBuildPoints: number,
+  unlockedActiveSkillIds: readonly SkillId[],
+) {
+  if (!isHotkeyEnabledForRule(buildRuleId, hotkey) || !canUseSkillInRule(buildRuleId, skillId, unlockedActiveSkillIds)) {
+    return false
+  }
+
+  const assignedHotkey = SKILL_HOTKEYS.find((entry) => loadout[entry] === skillId)
+  const targetSkillId = loadout[hotkey]
+
+  if (assignedHotkey === hotkey) {
+    return true
+  }
+
+  if (assignedHotkey || targetSkillId) {
+    return true
+  }
+
+  return remainingBuildPoints >= ACTIVE_SKILL_POINT_COST
+}
+
+function assignSkillToHotkey(loadout: SkillLoadout, hotkey: SkillHotkey, skillId: SkillId) {
+  const nextLoadout: SkillLoadout = { ...loadout }
+  const assignedHotkey = SKILL_HOTKEYS.find((entry) => loadout[entry] === skillId)
+  const currentSkill = loadout[hotkey]
+
+  if (assignedHotkey && assignedHotkey !== hotkey) {
+    nextLoadout[assignedHotkey] = currentSkill
+  }
+
+  nextLoadout[hotkey] = skillId
+  return nextLoadout
+}
+
+function canTogglePassiveTalent(
+  buildRuleId: string,
+  passiveTalentId: PassiveTalentId,
+  selectedPassiveTalentIds: PassiveTalentId[],
+  activePoints: number,
+) {
+  const nextPassiveTalentIds = getNextPassiveTalentIdsForToggle(passiveTalentId, selectedPassiveTalentIds)
+
+  const nextTotalPoints = getTotalBuildPoints(buildRuleId, nextPassiveTalentIds)
+  const nextPassivePoints = getPassivePointCost(nextPassiveTalentIds)
+  return nextTotalPoints - activePoints - nextPassivePoints >= 0
+}
+
+function getStageAreaCaption(areaId: StageAreaId) {
+  const explicitCaption = AREA_CAPTIONS[areaId]
+  if (explicitCaption) {
+    return explicitCaption
+  }
+
+  const areaIndex = stageAreaOrder.indexOf(areaId)
+  const fallbackAreaId = DEFAULT_AREA_CAPTION_IDS[Math.max(0, areaIndex) % DEFAULT_AREA_CAPTION_IDS.length] ?? DEFAULT_AREA_CAPTION_IDS[0]
+  return AREA_CAPTIONS[fallbackAreaId]
+}
+
+const ROUTE_SEGMENTS = [
+  'M 10 78 C 12 74, 13 71, 16 68',
+  'M 16 68 C 19 68, 21 70, 24 73',
+  'M 24 73 C 28 69, 29 64, 30 60',
+  'M 30 60 C 28 56, 26 52, 24 49',
+  'M 24 49 C 28 47, 32 46, 36 45',
+  'M 36 45 C 39 47, 42 51, 44 55',
+  'M 44 55 C 47 59, 49 62, 52 63',
+  'M 52 63 C 55 61, 57 58, 60 55',
+  'M 60 55 C 57 50, 54 46, 52 41',
+  'M 52 41 C 56 39, 60 37, 64 36',
+  'M 64 36 C 68 38, 70 41, 72 46',
+  'M 72 46 C 74 42, 75 37, 76 32',
+  'M 76 32 C 79 28, 81 25, 84 24',
+  'M 84 24 C 88 26, 90 29, 91 33',
+  'M 91 33 C 88 37, 86 41, 84 46',
+  'M 84 46 C 88 49, 90 52, 92 56',
+  'M 92 56 C 90 61, 88 64, 86 67',
+] as const
+
+const ENTER_ACTION_ARROW_START = { x: 50, y: 91.6 } as const
+
+function parseMapPercent(value: string) {
+  const parsed = Number.parseFloat(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+export function StageSelectScreen({
+  defaultSelectedStageId,
+  highestClearedStageIndex,
+  maxUnlockedStageIndex,
+  partyStageId,
+  persistedBuild,
+  seenEnemyDefinitionIds = [],
+  monsterCodexTutorialSeen = true,
+  stageSelectTutorialSeenStageIds = [],
+  tutorialReplayVersion = 0,
+  onStartStage,
+  onResetTutorials,
+  onMonsterCodexTutorialComplete,
+  onStageSelectTutorialComplete,
+  onBuildChange,
+}: StageSelectScreenProps) {
+  const [selectedStageId, setSelectedStageId] = useState<StageId>(defaultSelectedStageId)
+  const [buildInfoModal, setBuildInfoModal] = useState<StageInfoModal>('none')
+  const [openBuildPanel, setOpenBuildPanel] = useState<'skills' | 'passives' | null>(null)
+  const [isMonsterCodexOpen, setIsMonsterCodexOpen] = useState(false)
+  const [selectedConfigHotkey, setSelectedConfigHotkey] = useState<SkillHotkey | null>('1')
+  const selectedStage = getStageById(selectedStageId)
+  const tutorialScript = getStageSelectTutorialScript(selectedStage) ?? []
+  const shouldShowSelectedStageTutorial = tutorialScript.length > 0 && !stageSelectTutorialSeenStageIds.includes(selectedStageId)
+  const [tutorialState, setTutorialState] = useState(() => ({
+    stageId: defaultSelectedStageId,
+    replayVersion: tutorialReplayVersion,
+    stepIndex: shouldShowSelectedStageTutorial || (highestClearedStageIndex >= 1 && !monsterCodexTutorialSeen) ? 0 : -1,
+  }))
+  const selectedBuildRuleId = getStageBuildRuleId(selectedStage)
+  const selectedBuildRule = getBuildRuleDefinition(selectedBuildRuleId)
+  const unlockedActiveSkillIds = getUnlockedActiveSkillIdsForStage(selectedStage)
+  const buildPreview = normalizePersistedBuildForRule(
+    persistedBuild,
+    selectedBuildRuleId,
+    getPassiveTalentUnlockTierForStage(selectedStage),
+    unlockedActiveSkillIds,
+  )
+  const selectedStageIndex = stageOrder.indexOf(selectedStageId)
+  const isMonsterCodexUnlocked = highestClearedStageIndex >= 1
+  const monsterCodexTutorialScript = isMonsterCodexUnlocked && !monsterCodexTutorialSeen
+    ? getMonsterCodexTutorialScript()
+    : []
+  const activeTutorialScript = shouldShowSelectedStageTutorial ? tutorialScript : monsterCodexTutorialScript
+  const selectedArea = getStageAreaById(selectedStage.areaId)
+  const partyStage = getStageById(partyStageId)
+  const stageAffixRows = createStageSectionRows('词缀', selectedStage.affixes)
+  const stageRuleRows = createStageSectionRows('规则', selectedStage.rules)
+  const stageLegendRows = createStageLegendRows(selectedStage.legend)
+  const stageBriefRows = [...stageAffixRows, ...stageRuleRows]
+  const activePreviewSkills = Object.values(buildPreview.build.loadout)
+    .filter((skillId): skillId is string => Boolean(skillId))
+    .map((skillId) => getActiveSkillDefinition(skillId)?.shortName ?? skillId)
+  const passivePreviewTalents = buildPreview.build.passiveTalentIds.map(
+    (talentId) => getPassiveTalentDefinition(talentId)?.name ?? talentId,
+  )
+  const skillLoadout = buildPreview.build.loadout
+  const selectedPassiveTalentIds = buildPreview.build.passiveTalentIds
+  const activeSkills = getActiveSkillCatalog()
+    .filter((skill) => canUseSkillInRule(selectedBuildRuleId, skill.id, unlockedActiveSkillIds))
+    .sort((left, right) => (left.uiOrder ?? 999) - (right.uiOrder ?? 999) || left.id.localeCompare(right.id))
+  const unlockedPassiveTalentTier = getPassiveTalentUnlockTierForStage(selectedStage)
+  const passiveTalents = getPassiveTalentCatalog().filter((talent) =>
+    canUseTalentInRule(selectedBuildRuleId, talent.id, unlockedPassiveTalentTier)
+  )
+  const activePoints = getActivePointCost(skillLoadout)
+  const passivePoints = getPassivePointCost(selectedPassiveTalentIds)
+  const totalBuildPoints = getTotalBuildPoints(selectedBuildRuleId, selectedPassiveTalentIds)
+  const remainingBuildPoints = totalBuildPoints - activePoints - passivePoints
+  const buildWarningMessages = buildPreview.warnings.map((warning) => warning.message)
+  const hasBuildConflict = shouldShowBuildConflictButton(buildWarningMessages)
+  const buildRuleModal = selectedBuildRule
+    ? buildStageSelectBuildRuleModal({
+        ruleName: selectedBuildRule.ruleName,
+        description: selectedBuildRule.description,
+        totalBuildPoints: selectedBuildRule.totalBuildPoints,
+        maxActiveSlots: selectedBuildRule.maxActiveSlots,
+        enabledHotkeys: selectedBuildRule.enabledHotkeys,
+      })
+    : null
+  const buildConflictModal = buildStageSelectConflictModal(buildWarningMessages)
+  const normalizedTutorialStepIndex =
+    tutorialState.stageId === selectedStageId && tutorialState.replayVersion === tutorialReplayVersion
+      ? tutorialState.stepIndex
+      : activeTutorialScript.length > 0 ? 0 : -1
+  const tutorialStep =
+    normalizedTutorialStepIndex >= 0 && normalizedTutorialStepIndex < activeTutorialScript.length
+      ? activeTutorialScript[normalizedTutorialStepIndex]
+      : null
+  const tutorialRequestedBuildModal =
+    tutorialStep?.target === '[data-tutorial-id="stage-skill-config-button"]' ||
+    tutorialStep?.target === '[data-tutorial-id="stage-passive-config-button"]'
+  const effectiveBuildInfoModal = tutorialRequestedBuildModal ? 'build' : buildInfoModal
+  const effectiveOpenBuildPanel = tutorialStep?.openPanel ?? openBuildPanel
+  const activeBuildModal = effectiveBuildInfoModal === 'rule' ? buildRuleModal : effectiveBuildInfoModal === 'conflict' ? buildConflictModal : null
+  const isLegendModalOpen = effectiveBuildInfoModal === 'legend'
+  const isBuildMenuOpen = effectiveBuildInfoModal === 'build'
+  const selectedNodeLayout = getStageNodeLayout(selectedStage)
+  const selectedArrowTarget = {
+    x: parseMapPercent(selectedNodeLayout.x),
+    y: parseMapPercent(selectedNodeLayout.y),
+  }
+  const selectedStagePointerStyle = {
+    '--arrow-from-x': `${ENTER_ACTION_ARROW_START.x}%`,
+    '--arrow-from-y': `${ENTER_ACTION_ARROW_START.y}%`,
+    '--arrow-to-x': selectedNodeLayout.x,
+    '--arrow-to-y': selectedNodeLayout.y,
+    '--selected-accent': selectedArea.accent,
+  } as CSSProperties
+  const partyMarkerStyle = {
+    '--party-x': getStageNodeLayout(partyStage).x,
+    '--party-y': getStageNodeLayout(partyStage).y,
+    '--party-accent': getStageAreaById(partyStage.areaId).accent,
+  } as CSSProperties
+  const monsterCodexEntries = buildMonsterCodexEntries(seenEnemyDefinitionIds)
+
+  function commitBuild(nextLoadout: SkillLoadout, nextPassiveTalentIds: PassiveTalentId[]) {
+    onBuildChange?.({ loadout: nextLoadout, passiveTalentIds: nextPassiveTalentIds }, selectedStageId)
+  }
+
+  function advanceTutorial() {
+    const next = normalizedTutorialStepIndex + 1
+    const hasNextStep = next < activeTutorialScript.length
+    if (!hasNextStep) {
+      if (shouldShowSelectedStageTutorial) {
+        onStageSelectTutorialComplete?.(selectedStageId)
+      } else {
+        onMonsterCodexTutorialComplete?.()
+      }
+    }
+    setTutorialState({
+      stageId: selectedStageId,
+      replayVersion: tutorialReplayVersion,
+      stepIndex: hasNextStep ? next : -1,
+    })
+  }
+
+  function skipTutorial() {
+    if (shouldShowSelectedStageTutorial) {
+      onStageSelectTutorialComplete?.(selectedStageId)
+    } else {
+      onMonsterCodexTutorialComplete?.()
+    }
+    setTutorialState({
+      stageId: selectedStageId,
+      replayVersion: tutorialReplayVersion,
+      stepIndex: -1,
+    })
+  }
+
+  function closeBuildPanel() {
+    if (tutorialStep?.openPanel) {
+      skipTutorial()
+    }
+    setOpenBuildPanel(null)
+  }
+
+  function handleAssignSkill(skillId: SkillId) {
+    if (!selectedConfigHotkey) {
+      return
+    }
+
+    if (
+      !canAssignSkillToHotkey(
+        selectedBuildRuleId,
+        skillLoadout,
+        selectedConfigHotkey,
+        skillId,
+        remainingBuildPoints,
+        unlockedActiveSkillIds,
+      )
+    ) {
+      return
+    }
+
+    commitBuild(assignSkillToHotkey(skillLoadout, selectedConfigHotkey, skillId), selectedPassiveTalentIds)
+  }
+
+  function handleClearHotkey(hotkey: SkillHotkey) {
+    commitBuild(
+      {
+        ...skillLoadout,
+        [hotkey]: null,
+      },
+      selectedPassiveTalentIds,
+    )
+  }
+
+  function handleTogglePassive(talentId: PassiveTalentId) {
+    if (!canUseTalentInRule(selectedBuildRuleId, talentId, unlockedPassiveTalentTier)) {
+      return
+    }
+    if (!canTogglePassiveTalent(selectedBuildRuleId, talentId, selectedPassiveTalentIds, activePoints)) {
+      return
+    }
+
+    const nextPassiveTalentIds = getNextPassiveTalentIdsForToggle(talentId, selectedPassiveTalentIds)
+
+    commitBuild(skillLoadout, nextPassiveTalentIds)
+  }
+
+  return (
+    <main className="encounter-shell">
+      <div className="encounter-stage stage-select">
+        <section className="stage-select__hero">
+          {isMonsterCodexUnlocked ? (
+            <button
+              type="button"
+              className="stage-select__codex-button"
+              data-tutorial-id="monster-codex-button"
+              onClick={() => setIsMonsterCodexOpen(true)}
+            >
+              怪物图鉴
+            </button>
+          ) : null}
+          <p className="eyebrow">Little Tank 原型</p>
+          <h1>战场地图</h1>
+          {onResetTutorials ? (
+            <button type="button" className="stage-select__reset-tutorial" onClick={onResetTutorials}>
+              重置教程
+            </button>
+          ) : null}
+          <p className="stage-select__intro">
+            现在地图被拆成三个真实连接的区域，每个区域各自有六关。队伍旗标会停在当前推进位置，你可以回头复盘已通关节点，也可以直接从推荐推进点继续�?          </p>
+        </section>
+
+        <section className="stage-select__layout">
+          <div className="stage-map" aria-label="关卡地图">
+            <div className="stage-map__terrain stage-map__terrain--sea" />
+            <div className="stage-map__terrain stage-map__terrain--harbor-main" />
+            <div className="stage-map__terrain stage-map__terrain--harbor-ridge" />
+            <div className="stage-map__terrain stage-map__terrain--midland-main" />
+            <div className="stage-map__terrain stage-map__terrain--midland-ridge" />
+            <div className="stage-map__terrain stage-map__terrain--highland-main" />
+            <div className="stage-map__terrain stage-map__terrain--highland-ridge" />
+            <div className="stage-map__terrain stage-map__terrain--bridge-west" />
+            <div className="stage-map__terrain stage-map__terrain--bridge-east" />
+            <div className="stage-map__terrain stage-map__terrain--mist" />
+
+            <svg className="stage-map__route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              {ROUTE_SEGMENTS.map((segment, index) => (
+                <g key={segment}>
+                  <path d={segment} className="stage-map__route-shadow" />
+                  <path
+                    d={segment}
+                    className={[
+                      'stage-map__route-line',
+                      index <= highestClearedStageIndex ? 'is-cleared' : index <= maxUnlockedStageIndex ? 'is-open' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  />
+                </g>
+              ))}
+            </svg>
+
+            {stageAreaOrder.map((areaId) => {
+              const area = getStageAreaById(areaId)
+              const caption = getStageAreaCaption(areaId)
+              return (
+                <div
+                  key={areaId}
+                  className="stage-map__caption"
+                  style={{ left: caption.x, top: caption.y, '--caption-accent': area.accent } as CSSProperties}
+                >
+                  <strong>{area.title}</strong>
+                  <span>{area.mapLabel}</span>
+                </div>
+              )
+            })}
+
+            <div className="stage-party-marker" style={partyMarkerStyle}>
+              <span className="stage-party-marker__flag">队伍</span>
+              <span className="stage-party-marker__pole" />
+            </div>
+
+            <svg
+              className="stage-map__selected-arrow"
+              style={selectedStagePointerStyle}
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <defs>
+                <marker
+                  id="stage-selected-arrow-head"
+                  markerWidth="8"
+                  markerHeight="8"
+                  refX="7"
+                  refY="4"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <path className="stage-map__selected-arrow-head" d="M 0 0 L 8 4 L 0 8 Z" />
+                </marker>
+              </defs>
+              <line
+                className="stage-map__selected-arrow-glow"
+                x1={ENTER_ACTION_ARROW_START.x}
+                y1={ENTER_ACTION_ARROW_START.y}
+                x2={selectedArrowTarget.x}
+                y2={selectedArrowTarget.y}
+              />
+              <line
+                className="stage-map__selected-arrow-line"
+                x1={ENTER_ACTION_ARROW_START.x}
+                y1={ENTER_ACTION_ARROW_START.y}
+                x2={selectedArrowTarget.x}
+                y2={selectedArrowTarget.y}
+                markerEnd="url(#stage-selected-arrow-head)"
+              />
+            </svg>
+
+            {stageOrder.map((stageId, index) => {
+              const stage = getStageById(stageId)
+              const layout = getStageNodeLayout(stage)
+              const area = getStageAreaById(stage.areaId)
+              const isSelected = stageId === selectedStageId
+              const isCompleted = index <= highestClearedStageIndex
+              const isUnlocked = index <= maxUnlockedStageIndex
+              const isRecommended = stageId === partyStageId && !isCompleted
+              const style = {
+                '--node-x': layout.x,
+                '--node-y': layout.y,
+                '--node-accent': area.accent,
+              } as CSSProperties
+
+              return (
+                <button
+                  key={stageId}
+                  type="button"
+                  className={[
+                    'stage-node',
+                    isSelected ? 'is-selected' : '',
+                    isCompleted ? 'is-completed' : '',
+                    isUnlocked ? 'is-unlocked' : 'is-locked',
+                    isRecommended ? 'is-recommended' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  style={style}
+                  disabled={!isUnlocked}
+                  onClick={() => {
+                    setSelectedStageId(stageId)
+                    const nextStage = getStageById(stageId)
+                    const nextScript = getStageSelectTutorialScript(nextStage) ?? []
+                    const shouldShowTutorial = nextScript.length > 0 && !stageSelectTutorialSeenStageIds.includes(stageId)
+                    setTutorialState({
+                      stageId,
+                      replayVersion: tutorialReplayVersion,
+                      stepIndex: shouldShowTutorial ? 0 : -1,
+                    })
+                    setBuildInfoModal('none')
+                    setOpenBuildPanel(null)
+                  }}
+                >
+                  <span className="stage-node__halo" />
+                  <span className="stage-node__core">{isCompleted ? '\u2713' : stage.stageNumber}</span>
+                  <span className="stage-node__label">
+                    <strong>
+                      {area.shortTitle}-{stage.stageNumber}
+                    </strong>
+                    <span>{isCompleted ? '已通关' : isUnlocked ? stage.title : '尚未解锁'}</span>
+                  </span>
+                </button>
+              )
+            })}
+
+            <button
+              type="button"
+              className="stage-map__enter-action"
+              disabled={selectedStageIndex > maxUnlockedStageIndex}
+              onClick={() => onStartStage(selectedStageId)}
+            >
+              {selectedStageIndex > maxUnlockedStageIndex ? '\u5c1a\u672a\u89e3\u9501' : '\u8fdb\u5165\u8fd9\u4e00\u5173'}
+            </button>
+          </div>
+
+          <aside className="panel stage-brief">
+            <div className="stage-brief__header">
+              <span className="stage-brief__index">
+                {selectedArea.shortTitle} {selectedStage.stageNumber} / 6
+              </span>
+              <span
+                className={[
+                  'stage-brief__region',
+                  selectedStageIndex <= highestClearedStageIndex
+                    ? 'is-completed'
+                    : selectedStageIndex <= maxUnlockedStageIndex
+                      ? 'is-unlocked'
+                      : 'is-locked',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {selectedStageIndex <= highestClearedStageIndex
+                  ? '已通关'
+                  : selectedStageIndex <= maxUnlockedStageIndex
+                    ? selectedArea.title
+                    : '尚未解锁'}
+              </span>
+            </div>
+            <h2>{selectedStage.title}</h2>
+            <p className="stage-brief__subtitle stage-brief__subtitle--clamp">{selectedStage.subtitle}</p>
+            <p className="stage-brief__area-summary stage-brief__area-summary--clamp">{selectedArea.description}</p>
+
+            <div className="stage-brief__info-list">
+              {stageBriefRows.map((entry) => (
+                <div key={entry.id} className="stage-brief__info-row">
+                  <StageInfoIcon iconId={entry.iconId} title={entry.title} />
+                  <span className="stage-brief__row-copy">
+                    <strong>{entry.title}</strong>
+                    <span>{entry.description}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="stage-brief__legend-button"
+              onClick={() => setBuildInfoModal('legend')}
+            >
+              <span className="stage-brief__detail-icon stage-brief__detail-icon--rule">{'\u56fe'}</span>
+              <span className="stage-brief__detail-copy">
+                <strong>{'\u672c\u5173\u56fe\u4f8b'}</strong>
+                <span>{'\u67e5\u770b\u8bcd\u7f00\u3001\u89c4\u5219\u4e0e\u72b6\u6001\u8bf4\u660e'}</span>
+              </span>
+            </button>
+            {selectedBuildRule ? (
+              <button
+                type="button"
+                className="stage-brief__legend-button stage-brief__build-menu-button"
+                data-tutorial-id="stage-build-menu"
+                onClick={() => setBuildInfoModal('build')}
+              >
+                <span className="stage-brief__detail-icon stage-brief__detail-icon--rule">{'\u6784'}</span>
+                <span className="stage-brief__detail-copy">
+                  <strong>{'\u672c\u5173\u6784\u7b51'}</strong>
+                  <span>
+                    {hasBuildConflict
+                      ? `${buildWarningMessages.length} \u9879\u9700\u8981\u8c03\u6574`
+                      : '\u67e5\u770b\u5f53\u524d\u6280\u80fd\u3001\u5929\u8d4b\u4e0e\u89c4\u5219'}
+                  </span>
+                </span>
+              </button>
+            ) : null}
+
+            {activeBuildModal ? (
+              <div className="stage-brief__modal-backdrop" role="presentation" onClick={() => setBuildInfoModal('none')}>
+                <section
+                  className="stage-brief__modal"
+                  role="dialog"
+                  aria-modal="false"
+                  aria-label={activeBuildModal.title}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="stage-brief__modal-header">
+                    <h3>{activeBuildModal.title}</h3>
+                    <button
+                      type="button"
+                      className="stage-brief__modal-close"
+                      aria-label="关闭构筑详情"
+                  onClick={() => setBuildInfoModal('none')}
+                    >
+                      X
+                    </button>
+                  </div>
+
+                  <div className="stage-brief__modal-body">
+                    {'sections' in activeBuildModal ? (
+                      <div className="stage-brief__modal-sections">
+                        {activeBuildModal.sections.map((section) => (
+                          <div key={section.label} className="stage-brief__modal-row">
+                            <span>{section.label}</span>
+                            <strong>{section.value}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="stage-brief__modal-list">
+                        {activeBuildModal.items.map((item, index) => (
+                          <p key={`${index}-${item}`} className="stage-brief__modal-warning">
+                            {item}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </div>
+            ) : null}
+
+            {isBuildMenuOpen ? (
+              <div className="stage-brief__modal-backdrop" role="presentation" onClick={() => setBuildInfoModal('none')}>
+                <section
+                  className="stage-brief__modal stage-brief__modal--build"
+                  role="dialog"
+                  aria-modal="false"
+                  aria-label="本关构筑"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="stage-brief__modal-header">
+                    <h3>{'\u672c\u5173\u6784\u7b51'}</h3>
+                    <button
+                      type="button"
+                      className="stage-brief__modal-close"
+                      aria-label="关闭本关构筑"
+                      onClick={() => setBuildInfoModal('none')}
+                    >
+                      X
+                    </button>
+                  </div>
+
+                  <div className="stage-brief__modal-body">
+                    <div className="stage-brief__build-menu">
+                      <span className="stage-brief__kicker">{'\u5f53\u524d\u6784\u7b51'}</span>
+                      <div className="stage-brief__focus-list">
+                        {activePreviewSkills.map((entry) => (
+                          <span key={`skill-${entry}`} className="stage-brief__focus">
+                            {entry}
+                          </span>
+                        ))}
+                        {passivePreviewTalents.map((entry) => (
+                          <span key={`talent-${entry}`} className="stage-brief__focus">
+                            {entry}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="stage-brief__build-actions">
+                        <button
+                          type="button"
+                          className="stage-brief__detail-button stage-brief__skill-config-button"
+                          data-tutorial-id="stage-skill-config-button"
+                          onClick={() => {
+          setBuildInfoModal('none')
+          setOpenBuildPanel('skills')
+                          }}
+                        >
+                          <span className="stage-brief__detail-icon stage-brief__detail-icon--rule">{'\u6280'}</span>
+                          <span className="stage-brief__detail-copy">
+                            <strong>{'\u6280\u80fd\u914d\u7f6e'}</strong>
+                            <span>{'\u8c03\u6574\u8fdb\u5165\u672c\u5173\u524d\u7684\u4e3b\u52a8\u6280\u80fd'}</span>
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          className="stage-brief__detail-button stage-brief__passive-config-button"
+                          data-tutorial-id="stage-passive-config-button"
+                          onClick={() => {
+                            setBuildInfoModal('none')
+                            setOpenBuildPanel('passives')
+                          }}
+                        >
+                          <span className="stage-brief__detail-icon stage-brief__detail-icon--rule">{'\u5929'}</span>
+                          <span className="stage-brief__detail-copy">
+                            <strong>{'\u88ab\u52a8\u5929\u8d4b'}</strong>
+                            <span>{'\u8c03\u6574\u8fdb\u5165\u672c\u5173\u524d\u7684\u88ab\u52a8\u6784\u7b51'}</span>
+                          </span>
+                        </button>
+                      </div>
+                      <div className="stage-brief__build-actions">
+                        <button
+                          type="button"
+                          className="stage-brief__detail-button"
+                          onClick={() => setBuildInfoModal('rule')}
+                        >
+                          <span className="stage-brief__detail-icon stage-brief__detail-icon--rule">{'\u6784'}</span>
+                          <span className="stage-brief__detail-copy">
+                            <strong>{'\u6784\u7b51\u89c4\u5219'}</strong>
+                            <span>{'\u67e5\u770b\u672c\u5173\u6784\u7b51\u9650\u5236\u4e0e\u5f00\u653e\u5185\u5bb9'}</span>
+                          </span>
+                        </button>
+
+                        {hasBuildConflict ? (
+                          <button
+                            type="button"
+                            className="stage-brief__detail-button is-warning"
+                            onClick={() => setBuildInfoModal('conflict')}
+                          >
+                            <span className="stage-brief__detail-icon stage-brief__detail-icon--warning">!</span>
+                            <span className="stage-brief__detail-copy">
+                              <strong>{'\u5f53\u524d\u6784\u7b51\u51b2\u7a81'}</strong>
+                              <span>{buildWarningMessages.length} {'\u9879\u9700\u8981\u8c03\u6574'}</span>
+                            </span>
+                          </button>
+                        ) : (
+                          <p className="stage-brief__build-hint">{'\u5f53\u524d\u6784\u7b51\u53ef\u76f4\u63a5\u8fdb\u5165\u672c\u5173\u3002'}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            ) : null}
+
+            {isLegendModalOpen ? (
+              <div className="stage-brief__modal-backdrop" role="presentation" onClick={() => setBuildInfoModal('none')}>
+                <section
+                  className="stage-brief__modal stage-brief__modal--legend"
+                  role="dialog"
+                  aria-modal="false"
+                  aria-label="本关图例"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="stage-brief__modal-header">
+                    <h3>{'\u672c\u5173\u56fe\u4f8b'}</h3>
+                    <button
+                      type="button"
+                      className="stage-brief__modal-close"
+                      aria-label="关闭图例"
+                      onClick={() => setBuildInfoModal('none')}
+                    >
+                      X
+                    </button>
+                  </div>
+
+                  <div className="stage-brief__modal-body">
+                    <div className="stage-brief__legend-list">
+                      {stageLegendRows.map((entry) => (
+                        <div key={entry.id} className="stage-brief__legend-row">
+                          <StageInfoIcon iconId={entry.iconId} title={entry.title} />
+                          <span className="stage-brief__row-copy">
+                            <strong>{entry.title}</strong>
+                            {entry.meta ? <em>{entry.meta}</em> : null}
+                            <span>{entry.description}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              </div>
+            ) : null}
+          </aside>
+        </section>
+      </div>
+
+      <SkillConfigPanel
+        isOpen={effectiveOpenBuildPanel === 'skills'}
+        loadout={skillLoadout}
+        selectedHotkey={selectedConfigHotkey}
+        buildRule={selectedBuildRule}
+        activeSkills={activeSkills}
+        totalPoints={totalBuildPoints}
+        activePoints={activePoints}
+        passivePoints={passivePoints}
+        remainingPoints={remainingBuildPoints}
+        onClose={closeBuildPanel}
+        onSelectHotkey={setSelectedConfigHotkey}
+        onAssignSkill={handleAssignSkill}
+        onClearHotkey={handleClearHotkey}
+        canAssignToSelectedHotkey={(skillId) =>
+          selectedConfigHotkey
+            ? canAssignSkillToHotkey(
+                selectedBuildRuleId,
+                skillLoadout,
+                selectedConfigHotkey,
+                skillId,
+                remainingBuildPoints,
+                unlockedActiveSkillIds,
+              )
+            : false
+        }
+      />
+
+      <PassiveTalentPanel
+        isOpen={effectiveOpenBuildPanel === 'passives'}
+        buildRule={selectedBuildRule}
+        talents={passiveTalents}
+        selectedPassiveTalentIds={selectedPassiveTalentIds}
+        totalPoints={totalBuildPoints}
+        activePoints={activePoints}
+        passivePoints={passivePoints}
+        remainingPoints={remainingBuildPoints}
+        onClose={closeBuildPanel}
+        onToggleTalent={handleTogglePassive}
+        canToggleTalent={(talentId) =>
+          canUseTalentInRule(selectedBuildRuleId, talentId, unlockedPassiveTalentTier) &&
+          canTogglePassiveTalent(selectedBuildRuleId, talentId, selectedPassiveTalentIds, activePoints)
+        }
+      />
+
+      <TutorialOverlay step={tutorialStep} onNext={advanceTutorial} onSkip={skipTutorial} />
+      <MonsterCodexPanel
+        isOpen={isMonsterCodexOpen}
+        entries={monsterCodexEntries}
+        onClose={() => setIsMonsterCodexOpen(false)}
+      />
+    </main>
+  )
+}

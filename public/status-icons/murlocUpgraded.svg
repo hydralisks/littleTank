@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="murloc upgraded">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="hsl(156 82% 19%)"/>
+      <stop offset="1" stop-color="hsl(92 78% 27%)"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+  <path fill="hsl(88 84% 58%)" stroke="rgba(8,12,24,.9)" stroke-width="4" stroke-linejoin="round" d="M15 39c3-13 13-21 17-21s14 8 17 21c-7 8-27 8-34 0Z"/>
+  <path fill="hsl(48 100% 70%)" stroke="rgba(8,12,24,.85)" stroke-width="3" stroke-linejoin="round" d="m32 8 6 12h-4v18h-4V20h-4Z"/>
+  <circle cx="25" cy="34" r="3" fill="rgba(8,12,24,.9)"/>
+  <circle cx="39" cy="34" r="3" fill="rgba(8,12,24,.9)"/>
+</svg>

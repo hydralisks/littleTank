@@ -1,0 +1,54 @@
+:root {
+  font-family: Bahnschrift, 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #f5efe2;
+  background:
+    radial-gradient(circle at top, rgba(255, 87, 34, 0.2), transparent 34%),
+    radial-gradient(circle at right, rgba(255, 214, 10, 0.12), transparent 24%),
+    linear-gradient(180deg, #110d10 0%, #070a0e 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --bg-page: #070a0e;
+  --bg-panel: rgba(18, 23, 31, 0.92);
+  --bg-panel-strong: rgba(24, 31, 40, 0.96);
+  --line-soft: rgba(255, 255, 255, 0.12);
+  --line-strong: rgba(255, 213, 79, 0.45);
+  --text-main: #fff8e8;
+  --text-muted: #c4cfdb;
+  --text-soft: #8f9aac;
+  --accent: #ffd54f;
+  --cast-high: #b86cff;
+  --hp: linear-gradient(90deg, #ff3b30 0%, #ff8a3d 100%);
+  --resource: linear-gradient(90deg, #d99900 0%, #ffe066 100%);
+  --pressure: linear-gradient(90deg, #d7263d 0%, #ff5d3d 100%);
+  --panel-shadow:
+    0 22px 60px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--bg-page);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}

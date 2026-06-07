@@ -1,0 +1,3 @@
+pub const DATA_PACK_KEY_HEX: &str = "aa4b9a44e7778766438a82fb248a77ee57d5b340ef792054c0215b775b97fdf9";
+pub const DATA_PACK_NONCE_HEX: &str = "4cb429e0596d730a1a532a5c";
+pub const EXPECTED_DATA_PACK_SHA256: &str = "3ebf4852381937e2fcd4f4994faa681cbb6efc9f1fcad4a44c50f4a8568c8fd4";

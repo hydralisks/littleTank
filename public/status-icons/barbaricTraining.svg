@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="战士T野蛮训练天赋图标">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="hsl(155 90% 22%)"/>
+      <stop offset="1" stop-color="hsl(119 95% 35%)"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+  <path fill="hsl(137 86% 60%)" stroke="rgba(8, 12, 24, 0.92)" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" d="M9 39c9-18 20 12 29-6 5-9 10-9 17-3-7 22-24 27-39 16Z"/><path fill="none" stroke="hsl(179 96% 76%)" stroke-width="5" d="M14 31c8-10 15 7 24-2 5-5 9-5 14-2"/>
+</svg>

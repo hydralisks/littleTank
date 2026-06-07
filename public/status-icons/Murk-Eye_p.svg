@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Murk-Eye party">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="hsl(253 70% 22%)"/>
+      <stop offset="1" stop-color="hsl(338 72% 30%)"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+  <path fill="hsl(75 84% 58%)" stroke="rgba(8,12,24,.9)" stroke-width="4" d="M9 28c6-9 14-13 23-13s17 4 23 13c-6 9-14 13-23 13S15 37 9 28Z"/>
+  <circle cx="32" cy="28" r="6" fill="rgba(8,12,24,.95)"/>
+  <path fill="none" stroke="hsl(8 96% 64%)" stroke-width="5" stroke-linecap="round" d="M18 45c8-7 20-7 28 0"/>
+  <path fill="none" stroke="hsl(48 100% 72%)" stroke-width="4" stroke-linecap="round" d="M15 53h34"/>
+</svg>

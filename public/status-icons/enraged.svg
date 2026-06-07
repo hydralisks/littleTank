@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="狂怒">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="hsl(119 90% 22%)"/>
+      <stop offset="1" stop-color="hsl(83 95% 35%)"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+  <circle cx="32" cy="32" r="24" fill="hsl(101 88% 48%)" stroke="rgba(8, 12, 24, 0.92)" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="32" cy="32" r="14" fill="hsl(143 96% 66%)" stroke="rgba(8, 12, 24, 0.92)" stroke-width="4"/><circle cx="32" cy="32" r="5" fill="rgba(8, 12, 24, 0.92)"/>
+</svg>

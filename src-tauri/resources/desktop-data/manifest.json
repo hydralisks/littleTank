@@ -1,0 +1,22 @@
+{
+  "format": "littleTank.desktopPack.v1",
+  "files": [
+    {
+      "name": "stage_content.xlsx",
+      "sha256": "6444d41e9635c38eccc97e1663ede26abc35010dc09dde8056349a2224780a0b"
+    },
+    {
+      "name": "encounter_balance.xlsx",
+      "sha256": "3a70115880f08c0157c21c3febb74469df29213d7b27ddbd177c5903560e62c8"
+    },
+    {
+      "name": "enemy_data.xlsx",
+      "sha256": "ddc0b59a4fb186295a05f37b90f2bdefb951005bf0044746ffc5ea90d3531f3c"
+    },
+    {
+      "name": "player_build.xlsx",
+      "sha256": "2497c3bd201c5f0e0e02e5ed2573de233bb061cac9628fda64678026f5b56891"
+    }
+  ],
+  "encryptedPack": "game-data.ltpkg"
+}

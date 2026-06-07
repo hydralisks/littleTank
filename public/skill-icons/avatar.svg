@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="战士T天神下凡图标">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="hsl(14 90% 22%)"/>
+      <stop offset="1" stop-color="hsl(338 95% 35%)"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+  <path fill="hsl(356 92% 54%)" stroke="rgba(8, 12, 24, 0.92)" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" d="m32 7 7 16 17 2-13 11 4 17-15-9-15 9 4-17L8 25l17-2Z"/><circle cx="32" cy="32" r="8" fill="hsl(38 96% 72%)"/>
+</svg>
