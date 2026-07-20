@@ -26,16 +26,18 @@ import type {
   SkillLoadout,
 } from '../game/encounter/encounterTypes'
 import {
+  campaignStageAreaOrder,
+  campaignStageOrder,
   getStageAreaById,
   getPassiveTalentUnlockTierForStage,
   getStageById,
   getUnlockedActiveSkillIdsForStage,
-  stageAreaOrder,
   stageOrder,
   type StageAreaId,
   type StageId,
   type StageLegendEntry,
   type StageSectionEntry,
+  stageCatalog,
 } from '../game/data/stageTemplates'
 import { buildMonsterCodexEntries } from '../game/data/monsterCodex'
 import { getStageNodeLayout } from './stageSelectMapLayout'
@@ -52,6 +54,7 @@ import { TutorialOverlay } from './TutorialOverlay'
 import { getMonsterCodexTutorialScript, getStageSelectTutorialScript } from './tutorialGuide'
 
 interface StageSelectScreenProps {
+  defaultMode?: StageSelectMode
   defaultSelectedStageId: StageId
   highestClearedStageIndex: number
   maxUnlockedStageIndex: number
@@ -61,7 +64,7 @@ interface StageSelectScreenProps {
   monsterCodexTutorialSeen?: boolean
   stageSelectTutorialSeenStageIds?: readonly StageId[]
   tutorialReplayVersion?: number
-  onStartStage: (stageId: StageId) => void
+  onStartStage: (stageId: StageId, mode: StageSelectMode) => void
   onResetTutorials?: () => void
   onMonsterCodexTutorialComplete?: () => void
   onStageSelectTutorialComplete?: (stageId: StageId) => void
@@ -71,12 +74,13 @@ interface StageSelectScreenProps {
 const AREA_CAPTIONS: Record<StageAreaId, { x: string; y: string }> = {
   harbor: { x: '12%', y: '24%' },
   midland: { x: '48%', y: '16%' },
-  highland: { x: '79%', y: '12%' },
+  highland: { x: '79%', y: '6%' },
 }
 
 const DEFAULT_AREA_CAPTION_IDS = Object.keys(AREA_CAPTIONS) as StageAreaId[]
 
 type StageInfoModal = 'none' | 'rule' | 'conflict' | 'legend' | 'build'
+export type StageSelectMode = 'campaign' | 'challenge'
 
 interface StageInfoRow {
   id: string
@@ -84,6 +88,43 @@ interface StageInfoRow {
   title: string
   description: string
   meta: string
+}
+
+interface ChallengeModeEntry {
+  id: string
+  stageId: StageId
+  title: string
+  subtitle: string
+  recommendedDifficulty: string
+  allowedClasses: string[]
+  enemySummary: string
+}
+
+function formatClassId(classId: string) {
+  if (classId === 'warrior_t') {
+    return '战士 T'
+  }
+
+  return classId
+}
+
+function buildChallengeModeEntries(): ChallengeModeEntry[] {
+  return stageOrder
+    .filter((stageId) => stageId.startsWith('Challenge-'))
+    .map((stageId) => {
+      const stage = getStageById(stageId)
+      return {
+        id: stage.challengeId ?? stage.id,
+        stageId: stage.id,
+        title: stage.title,
+        subtitle: stage.subtitle,
+        recommendedDifficulty: stage.recommendedDifficulty ?? 'unrated',
+        allowedClasses: (stage.allowedClassIds && stage.allowedClassIds.length > 0
+          ? stage.allowedClassIds
+          : ['warrior_t']).map(formatClassId),
+        enemySummary: stage.enemySummary ?? '',
+      }
+    })
 }
 
 function createStageSectionRows(meta: string, entries: StageSectionEntry[]): StageInfoRow[] {
@@ -175,7 +216,7 @@ function getStageAreaCaption(areaId: StageAreaId) {
     return explicitCaption
   }
 
-  const areaIndex = stageAreaOrder.indexOf(areaId)
+  const areaIndex = campaignStageAreaOrder.indexOf(areaId)
   const fallbackAreaId = DEFAULT_AREA_CAPTION_IDS[Math.max(0, areaIndex) % DEFAULT_AREA_CAPTION_IDS.length] ?? DEFAULT_AREA_CAPTION_IDS[0]
   return AREA_CAPTIONS[fallbackAreaId]
 }
@@ -207,7 +248,22 @@ function parseMapPercent(value: string) {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
+function resolveExistingStageId(stageId: StageId, fallbackStageId = campaignStageOrder[0] ?? stageOrder[0]) {
+  if (stageCatalog[stageId]) {
+    return stageId
+  }
+
+  if (stageCatalog[fallbackStageId]) {
+    return fallbackStageId
+  }
+
+  return campaignStageOrder.find((candidateStageId) => Boolean(stageCatalog[candidateStageId]))
+    ?? stageOrder.find((candidateStageId) => Boolean(stageCatalog[candidateStageId]))
+    ?? stageOrder[0]
+}
+
 export function StageSelectScreen({
+  defaultMode = 'campaign',
   defaultSelectedStageId,
   highestClearedStageIndex,
   maxUnlockedStageIndex,
@@ -228,7 +284,27 @@ export function StageSelectScreen({
   const [openBuildPanel, setOpenBuildPanel] = useState<'skills' | 'passives' | null>(null)
   const [isMonsterCodexOpen, setIsMonsterCodexOpen] = useState(false)
   const [selectedConfigHotkey, setSelectedConfigHotkey] = useState<SkillHotkey | null>('1')
-  const selectedStage = getStageById(selectedStageId)
+  const [stageSelectMode, setStageSelectMode] = useState<StageSelectMode>(defaultMode)
+  const challengeModeEntries = buildChallengeModeEntries()
+  const fallbackChallengeStageId = campaignStageOrder[0] ?? stageOrder[0]
+  const fallbackChallengeStage = getStageById(fallbackChallengeStageId)
+  const fallbackChallengeEntry: ChallengeModeEntry = {
+    id: fallbackChallengeStage.id,
+    stageId: fallbackChallengeStage.id,
+    title: fallbackChallengeStage.title,
+    subtitle: fallbackChallengeStage.subtitle,
+    recommendedDifficulty: 'unrated',
+    allowedClasses: ['战士 T'],
+    enemySummary: '',
+  }
+  const [selectedChallengeId, setSelectedChallengeId] = useState(challengeModeEntries[0]?.id ?? fallbackChallengeEntry.id)
+  const selectedChallenge = challengeModeEntries.find((entry) => entry.id === selectedChallengeId)
+    ?? challengeModeEntries[0]
+    ?? fallbackChallengeEntry
+  const selectedCampaignStageId = resolveExistingStageId(selectedStageId)
+  const selectedChallengeStageId = resolveExistingStageId(selectedChallenge.stageId, fallbackChallengeEntry.stageId)
+  const effectiveSelectedStageId = stageSelectMode === 'challenge' ? selectedChallengeStageId : selectedCampaignStageId
+  const selectedStage = getStageById(effectiveSelectedStageId)
   const tutorialScript = getStageSelectTutorialScript(selectedStage) ?? []
   const shouldShowSelectedStageTutorial = tutorialScript.length > 0 && !stageSelectTutorialSeenStageIds.includes(selectedStageId)
   const [tutorialState, setTutorialState] = useState(() => ({
@@ -245,7 +321,7 @@ export function StageSelectScreen({
     getPassiveTalentUnlockTierForStage(selectedStage),
     unlockedActiveSkillIds,
   )
-  const selectedStageIndex = stageOrder.indexOf(selectedStageId)
+  const selectedStageIndex = campaignStageOrder.indexOf(effectiveSelectedStageId)
   const isMonsterCodexUnlocked = highestClearedStageIndex >= 1
   const monsterCodexTutorialScript = isMonsterCodexUnlocked && !monsterCodexTutorialSeen
     ? getMonsterCodexTutorialScript()
@@ -289,7 +365,7 @@ export function StageSelectScreen({
     : null
   const buildConflictModal = buildStageSelectConflictModal(buildWarningMessages)
   const normalizedTutorialStepIndex =
-    tutorialState.stageId === selectedStageId && tutorialState.replayVersion === tutorialReplayVersion
+    tutorialState.stageId === effectiveSelectedStageId && tutorialState.replayVersion === tutorialReplayVersion
       ? tutorialState.stepIndex
       : activeTutorialScript.length > 0 ? 0 : -1
   const tutorialStep =
@@ -324,7 +400,7 @@ export function StageSelectScreen({
   const monsterCodexEntries = buildMonsterCodexEntries(seenEnemyDefinitionIds)
 
   function commitBuild(nextLoadout: SkillLoadout, nextPassiveTalentIds: PassiveTalentId[]) {
-    onBuildChange?.({ loadout: nextLoadout, passiveTalentIds: nextPassiveTalentIds }, selectedStageId)
+    onBuildChange?.({ loadout: nextLoadout, passiveTalentIds: nextPassiveTalentIds }, effectiveSelectedStageId)
   }
 
   function advanceTutorial() {
@@ -424,16 +500,47 @@ export function StageSelectScreen({
           ) : null}
           <p className="eyebrow">Little Tank 原型</p>
           <h1>战场地图</h1>
+          <div className="stage-mode-switch" role="tablist" aria-label="选择玩法模式">
+            <button
+              type="button"
+              className={[
+                'stage-mode-switch__button',
+                stageSelectMode === 'campaign' ? 'is-active' : '',
+              ].filter(Boolean).join(' ')}
+              aria-selected={stageSelectMode === 'campaign'}
+              onClick={() => {
+                setStageSelectMode('campaign')
+                setBuildInfoModal('none')
+                setOpenBuildPanel(null)
+              }}
+            >
+              主线战役
+            </button>
+            <button
+              type="button"
+              className={[
+                'stage-mode-switch__button',
+                stageSelectMode === 'challenge' ? 'is-active' : '',
+              ].filter(Boolean).join(' ')}
+              aria-selected={stageSelectMode === 'challenge'}
+              onClick={() => {
+                setStageSelectMode('challenge')
+                setBuildInfoModal('none')
+                setOpenBuildPanel(null)
+              }}
+            >
+              挑战模式
+            </button>
+          </div>
           {onResetTutorials ? (
             <button type="button" className="stage-select__reset-tutorial" onClick={onResetTutorials}>
               重置教程
             </button>
           ) : null}
-          <p className="stage-select__intro">
-            现在地图被拆成三个真实连接的区域，每个区域各自有六关。队伍旗标会停在当前推进位置，你可以回头复盘已通关节点，也可以直接从推荐推进点继续�?          </p>
         </section>
 
         <section className="stage-select__layout">
+          {stageSelectMode === 'campaign' ? (
           <div className="stage-map" aria-label="关卡地图">
             <div className="stage-map__terrain stage-map__terrain--sea" />
             <div className="stage-map__terrain stage-map__terrain--harbor-main" />
@@ -463,7 +570,7 @@ export function StageSelectScreen({
               ))}
             </svg>
 
-            {stageAreaOrder.map((areaId) => {
+            {campaignStageAreaOrder.map((areaId) => {
               const area = getStageAreaById(areaId)
               const caption = getStageAreaCaption(areaId)
               return (
@@ -520,7 +627,7 @@ export function StageSelectScreen({
               />
             </svg>
 
-            {stageOrder.map((stageId, index) => {
+            {campaignStageOrder.map((stageId, index) => {
               const stage = getStageById(stageId)
               const layout = getStageNodeLayout(stage)
               const area = getStageAreaById(stage.areaId)
@@ -579,16 +686,66 @@ export function StageSelectScreen({
               type="button"
               className="stage-map__enter-action"
               disabled={selectedStageIndex > maxUnlockedStageIndex}
-              onClick={() => onStartStage(selectedStageId)}
+              onClick={() => onStartStage(selectedStageId, 'campaign')}
             >
               {selectedStageIndex > maxUnlockedStageIndex ? '\u5c1a\u672a\u89e3\u9501' : '\u8fdb\u5165\u8fd9\u4e00\u5173'}
             </button>
           </div>
+          ) : (
+            <div className="challenge-board" aria-label="挑战模式">
+              <div className="challenge-board__header">
+                <span className="stage-brief__kicker">挑战模式</span>
+                <h2>自由挑战</h2>
+                <p>选择一组独立挑战，使用对应构筑规则、词缀和特殊规则进入战斗。</p>
+              </div>
+
+              <div className="challenge-list">
+                {challengeModeEntries.map((challenge) => {
+                  const challengeStageId = resolveExistingStageId(challenge.stageId, fallbackChallengeEntry.stageId)
+                  const challengeStage = getStageById(challengeStageId)
+                  const isSelectedChallenge = challenge.id === selectedChallenge.id
+
+                  return (
+                    <button
+                      key={challenge.id}
+                      type="button"
+                      className={[
+                        'challenge-card',
+                        isSelectedChallenge ? 'is-selected' : '',
+                      ].filter(Boolean).join(' ')}
+                      onClick={() => {
+                        setSelectedChallengeId(challenge.id)
+                        setBuildInfoModal('none')
+                        setOpenBuildPanel(null)
+                      }}
+                    >
+                      <span className="challenge-card__meta">
+                        {challenge.recommendedDifficulty} / {challengeStage.areaTitle}
+                      </span>
+                      <strong>{challenge.title}</strong>
+                      <span>{challenge.subtitle}</span>
+                      <em>{challenge.enemySummary}</em>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <button
+                type="button"
+                className="stage-map__enter-action"
+                onClick={() => onStartStage(selectedChallengeStageId, 'challenge')}
+              >
+                进入这一关
+              </button>
+            </div>
+          )}
 
           <aside className="panel stage-brief">
             <div className="stage-brief__header">
               <span className="stage-brief__index">
-                {selectedArea.shortTitle} {selectedStage.stageNumber} / 6
+                {stageSelectMode === 'challenge'
+                  ? selectedChallenge.recommendedDifficulty
+                  : `${selectedArea.shortTitle} ${selectedStage.stageNumber} / 6`}
               </span>
               <span
                 className={[
@@ -602,16 +759,39 @@ export function StageSelectScreen({
                   .filter(Boolean)
                   .join(' ')}
               >
-                {selectedStageIndex <= highestClearedStageIndex
+                {stageSelectMode === 'challenge'
+                  ? '挑战模式'
+                  : selectedStageIndex <= highestClearedStageIndex
                   ? '已通关'
                   : selectedStageIndex <= maxUnlockedStageIndex
                     ? selectedArea.title
                     : '尚未解锁'}
               </span>
             </div>
-            <h2>{selectedStage.title}</h2>
-            <p className="stage-brief__subtitle stage-brief__subtitle--clamp">{selectedStage.subtitle}</p>
-            <p className="stage-brief__area-summary stage-brief__area-summary--clamp">{selectedArea.description}</p>
+            <h2>{stageSelectMode === 'challenge' ? selectedChallenge.title : selectedStage.title}</h2>
+            {stageSelectMode === 'campaign' ? (
+              <>
+                <p className="stage-brief__subtitle stage-brief__subtitle--clamp">
+                  {selectedStage.subtitle}
+                </p>
+                <p className="stage-brief__area-summary stage-brief__area-summary--clamp">
+                  {selectedArea.description}
+                </p>
+              </>
+            ) : null}
+
+            {stageSelectMode === 'challenge' ? (
+              <div className="stage-brief__section">
+                <span className="stage-brief__kicker">可选职业</span>
+                <div className="stage-brief__focus-list">
+                  {selectedChallenge.allowedClasses.map((className) => (
+                    <span key={className} className="stage-brief__focus">
+                      {className}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <div className="stage-brief__info-list">
               {stageBriefRows.map((entry) => (
@@ -625,35 +805,37 @@ export function StageSelectScreen({
               ))}
             </div>
 
-            <button
-              type="button"
-              className="stage-brief__legend-button"
-              onClick={() => setBuildInfoModal('legend')}
-            >
-              <span className="stage-brief__detail-icon stage-brief__detail-icon--rule">{'\u56fe'}</span>
-              <span className="stage-brief__detail-copy">
-                <strong>{'\u672c\u5173\u56fe\u4f8b'}</strong>
-                <span>{'\u67e5\u770b\u8bcd\u7f00\u3001\u89c4\u5219\u4e0e\u72b6\u6001\u8bf4\u660e'}</span>
-              </span>
-            </button>
-            {selectedBuildRule ? (
+            <div className="stage-brief__action-stack">
               <button
                 type="button"
-                className="stage-brief__legend-button stage-brief__build-menu-button"
-                data-tutorial-id="stage-build-menu"
-                onClick={() => setBuildInfoModal('build')}
+                className="stage-brief__legend-button"
+                onClick={() => setBuildInfoModal('legend')}
               >
-                <span className="stage-brief__detail-icon stage-brief__detail-icon--rule">{'\u6784'}</span>
+                <span className="stage-brief__detail-icon stage-brief__detail-icon--rule">{'\u56fe'}</span>
                 <span className="stage-brief__detail-copy">
-                  <strong>{'\u672c\u5173\u6784\u7b51'}</strong>
-                  <span>
-                    {hasBuildConflict
-                      ? `${buildWarningMessages.length} \u9879\u9700\u8981\u8c03\u6574`
-                      : '\u67e5\u770b\u5f53\u524d\u6280\u80fd\u3001\u5929\u8d4b\u4e0e\u89c4\u5219'}
-                  </span>
+                  <strong>{'\u672c\u5173\u56fe\u4f8b'}</strong>
+                  <span>{'\u67e5\u770b\u8bcd\u7f00\u3001\u89c4\u5219\u4e0e\u72b6\u6001\u8bf4\u660e'}</span>
                 </span>
               </button>
-            ) : null}
+              {selectedBuildRule ? (
+                <button
+                  type="button"
+                  className="stage-brief__legend-button stage-brief__build-menu-button"
+                  data-tutorial-id="stage-build-menu"
+                  onClick={() => setBuildInfoModal('build')}
+                >
+                  <span className="stage-brief__detail-icon stage-brief__detail-icon--rule">{'\u6784'}</span>
+                  <span className="stage-brief__detail-copy">
+                    <strong>{'\u672c\u5173\u6784\u7b51'}</strong>
+                    <span>
+                      {hasBuildConflict
+                        ? `${buildWarningMessages.length} \u9879\u9700\u8981\u8c03\u6574`
+                        : '\u67e5\u770b\u5f53\u524d\u6280\u80fd\u3001\u5929\u8d4b\u4e0e\u89c4\u5219'}
+                    </span>
+                  </span>
+                </button>
+              ) : null}
+            </div>
 
             {activeBuildModal ? (
               <div className="stage-brief__modal-backdrop" role="presentation" onClick={() => setBuildInfoModal('none')}>

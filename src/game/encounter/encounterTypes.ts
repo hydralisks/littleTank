@@ -105,6 +105,7 @@ export interface SkillState {
   hotkey: SkillHotkey
   cooldownMs: number
   remainingCooldownMs: number
+  selfCooldownRemainingMs?: number
   resourceCost: number
   gcdMs: number
   maxCharges?: number
@@ -617,6 +618,7 @@ export type EncounterEvent =
       enemyId: string
       amount: number
       sourceSkillId: SkillId
+      sourceOwner?: 'player' | 'party'
     }
   | {
       type: 'enemy/cast-interrupted'

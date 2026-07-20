@@ -5,6 +5,7 @@ import type { CombatLogEvent, EncounterEvent, EncounterState, EnemyState, Status
 import {
   applyEnemyStatusChannelStopEffects,
   applyEnemyStatusEventEffects,
+  resolveEnemyIncomingDamage,
   type EnemyChannelStopReason,
 } from './enemyStatusEffectRegistry'
 import { changePlayerResource } from './playerResourceSystem'
@@ -95,10 +96,13 @@ function applyEncounterEvent(
   }
 
   if (event.type === 'enemy/damage-applied') {
-    return updateEnemy(state, event.enemyId, (enemy) => ({
-      ...enemy,
-      hp: Math.max(0, enemy.hp - event.amount),
-    }))
+    return updateEnemy(state, event.enemyId, (enemy) => {
+      const resolved = resolveEnemyIncomingDamage(enemy, event.amount)
+      return {
+        ...resolved.enemy,
+        hp: Math.max(0, resolved.enemy.hp - resolved.amount),
+      }
+    })
   }
 
   if (event.type === 'enemy/cast-interrupted') {

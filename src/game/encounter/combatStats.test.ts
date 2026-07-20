@@ -452,6 +452,63 @@ describe('combat stats aggregation', () => {
     ])
   })
 
+  it('splits party damage and player or party healing into separate stat buckets', () => {
+    const stats = buildEncounterStats(createState([
+      {
+        id: 'party-damage',
+        occurredAtMs: 1000,
+        type: 'damage',
+        source: { kind: 'enemy', id: 'enemy-caster', name: 'Enemy Caster' },
+        target: { kind: 'party', id: 'party', name: 'Party' },
+        ability: { kind: 'enemySkill', id: 'shadow-nova', name: 'Shadow Nova' },
+        amount: 18,
+      },
+      {
+        id: 'player-heal',
+        occurredAtMs: 2000,
+        type: 'healing',
+        source: { kind: 'player', id: 'player', name: 'Player' },
+        target: { kind: 'tank', id: 'tank', name: 'Tank' },
+        ability: { kind: 'playerSkill', id: 'rally', name: 'Rally' },
+        amount: 20,
+      },
+      {
+        id: 'party-heal',
+        occurredAtMs: 3000,
+        type: 'healing',
+        source: { kind: 'partyAutoHeal', id: 'party-auto-heal', name: 'Auto Heal' },
+        target: { kind: 'party', id: 'party', name: 'Party' },
+        ability: { kind: 'autoHeal', id: 'party-auto-heal', name: 'Auto Heal' },
+        amount: 30,
+      },
+      {
+        id: 'party-absorb',
+        occurredAtMs: 4000,
+        type: 'absorb-created',
+        source: { kind: 'player', id: 'player', name: 'Player' },
+        target: { kind: 'party', id: 'party', name: 'Party' },
+        ability: { kind: 'playerSkill', id: 'guard', name: 'Guard' },
+        amount: 10,
+      },
+    ]))
+
+    expect(stats.partyDamageTaken).toMatchObject([
+      { sourceName: 'Enemy Caster', effectName: 'Shadow Nova', total: 18, share: 1 },
+    ])
+    expect(stats.playerHealingAndAbsorb).toMatchObject([
+      { effectName: 'Rally', kind: 'healing', total: 20, share: 1 },
+    ])
+    expect(stats.partyHealingAndAbsorb).toMatchObject([
+      { effectName: 'Auto Heal', kind: 'healing', total: 30, share: 0.75 },
+      { effectName: 'Guard', kind: 'absorb', total: 10, share: 0.25 },
+    ])
+    expect(stats.healingAndAbsorb).toMatchObject([
+      { effectName: 'Auto Heal', kind: 'healing', total: 30, share: 0.5 },
+      { effectName: 'Rally', kind: 'healing', total: 20, share: 1 / 3 },
+      { effectName: 'Guard', kind: 'absorb', total: 10, share: 1 / 6 },
+    ])
+  })
+
   it('summarizes cast handling results', () => {
     const stats = buildEncounterStats(createState([
       {

@@ -20,6 +20,14 @@ export interface BalanceBuildGenerationOptions {
   maxPassiveVariants?: number
 }
 
+export interface StrategyTipBuildCandidateOptions {
+  maxActiveBuilds?: number
+  maxPassiveVariants?: number
+  maxCandidates?: number
+  maxActiveSkillCount?: number
+  minPassiveTalentCount?: number
+}
+
 export function getBuildSignature(build: PersistedBuildState) {
   const activePart = SKILL_HOTKEYS
     .map((hotkey) => `${hotkey}=${build.loadout[hotkey] ?? ''}`)
@@ -177,6 +185,93 @@ function generatePassiveVariants(
   }
 
   return selectedVariants.slice(0, maxPassiveVariants)
+}
+
+function getActiveSkillCount(build: PersistedBuildState) {
+  return Object.values(build.loadout).filter(Boolean).length
+}
+
+function getStrategyTipText(stage: StageInfo) {
+  return `${stage.strategyTips ?? ''}`.replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+export function shouldPreferPassiveHeavyBuildCandidates(stage: StageInfo) {
+  const tips = getStrategyTipText(stage)
+  if (!tips) {
+    return false
+  }
+
+  const mentionsPassiveInvestment =
+    tips.includes('被动') ||
+    tips.includes('天赋') ||
+    tips.includes('talent') ||
+    tips.includes('passive') ||
+    /tier\s*2/i.test(tips)
+  const mentionsActiveTradeoff =
+    tips.includes('放弃') ||
+    tips.includes('腾出') ||
+    tips.includes('少带') ||
+    tips.includes('少主动') ||
+    tips.includes('不适合当前关卡的主动技能') ||
+    tips.includes('drop active') ||
+    tips.includes('fewer active') ||
+    tips.includes('skip active')
+
+  return mentionsPassiveInvestment && mentionsActiveTradeoff
+}
+
+function getStrategyTipActiveSkillScore(skillId: SkillId) {
+  if (skillId === 'warrior_t_shield_wall' || skillId === 'warrior_t_mass_taunt') {
+    return 4
+  }
+  if (skillId === 'warrior_t_ignore_pain' || skillId === 'warrior_t_shield_block' || skillId === 'warrior_t_shield_reflection') {
+    return 3
+  }
+  if (skillId === 'warrior_t_taunt' || skillId === 'warrior_t_interrupt' || skillId === 'warrior_t_stun') {
+    return 2
+  }
+  return 0
+}
+
+function getStrategyTipBuildScore(buildRuleId: string, build: PersistedBuildState) {
+  const activeSkillIds = Object.values(build.loadout).filter(Boolean) as SkillId[]
+  const activeUtilityScore = activeSkillIds.reduce(
+    (score, skillId) => score + getStrategyTipActiveSkillScore(skillId),
+    0,
+  )
+  const remainingPoints = getRemainingBuildPoints(buildRuleId, build.loadout, build.passiveTalentIds)
+
+  return build.passiveTalentIds.length * 8 + activeUtilityScore - Math.max(0, remainingPoints) * 0.1
+}
+
+export function generateStrategyTipBuildCandidates(
+  stage: StageInfo,
+  options: StrategyTipBuildCandidateOptions = {},
+) {
+  if (!shouldPreferPassiveHeavyBuildCandidates(stage)) {
+    return []
+  }
+
+  const maxCandidates = Math.max(1, Math.floor(options.maxCandidates ?? 6))
+  const maxActiveSkillCount = Math.max(0, Math.floor(options.maxActiveSkillCount ?? 2))
+  const minPassiveTalentCount = Math.max(1, Math.floor(options.minPassiveTalentCount ?? 4))
+  const buildRuleId = getStageBuildRuleId(stage)
+  const candidates = generateStageBalanceBuilds(stage, {
+    maxActiveBuilds: options.maxActiveBuilds ?? 18,
+    maxPassiveVariants: options.maxPassiveVariants ?? 3,
+  })
+
+  return candidates
+    .filter((variant) =>
+      getActiveSkillCount(variant.build) <= maxActiveSkillCount &&
+      variant.build.passiveTalentIds.length >= minPassiveTalentCount &&
+      getRemainingBuildPoints(buildRuleId, variant.build.loadout, variant.build.passiveTalentIds) >= 0,
+    )
+    .sort((left, right) =>
+      getStrategyTipBuildScore(buildRuleId, right.build) - getStrategyTipBuildScore(buildRuleId, left.build) ||
+      left.id.localeCompare(right.id),
+    )
+    .slice(0, maxCandidates)
 }
 
 export function generateStageBalanceBuilds(stage: StageInfo, options: BalanceBuildGenerationOptions = {}) {

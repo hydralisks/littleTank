@@ -26,6 +26,12 @@ export function createEnemyStatusEffect(statusId: string, durationMs?: number): 
     ...(typeof definition.valueA === 'number' ? { valueA: definition.valueA } : {}),
     ...(typeof definition.valueB === 'number' ? { valueB: definition.valueB } : {}),
     ...(typeof definition.tickIntervalMs === 'number' ? { tickIntervalMs: definition.tickIntervalMs } : {}),
+    ...(definition.effectLogicId === 'soulSensitive_status' || definition.effectLogicId === 'soulSensitive_p_status'
+      ? { maxStacks: 5 }
+      : {}),
+    ...(definition.effectLogicId === 'shadowWaved_status'
+      ? { maxStacks: 99 }
+      : {}),
   }
 }
 

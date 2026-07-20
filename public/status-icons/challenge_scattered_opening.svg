@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="scattered opening">
+  <defs><linearGradient id="bg" x1="8" y1="8" x2="56" y2="56"><stop stop-color="hsl(218 66% 24%)"/><stop offset="1" stop-color="hsl(42 74% 34%)"/></linearGradient></defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+  <circle cx="19" cy="19" r="7" fill="hsl(46 96% 64%)" stroke="rgba(8,12,24,.92)" stroke-width="4"/>
+  <circle cx="45" cy="23" r="7" fill="hsl(190 86% 62%)" stroke="rgba(8,12,24,.92)" stroke-width="4"/>
+  <circle cx="30" cy="47" r="7" fill="hsl(0 88% 64%)" stroke="rgba(8,12,24,.92)" stroke-width="4"/>
+  <path fill="none" stroke="hsl(0 0% 100% / .75)" stroke-width="4" stroke-linecap="round" d="M27 19h10M25 25l3 13M42 30l-7 12"/>
+</svg>

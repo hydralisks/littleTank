@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="forest berserker potioned">
+  <defs><linearGradient id="bg" x1="8" y1="8" x2="56" y2="56"><stop stop-color="hsl(138 70% 20%)"/><stop offset="1" stop-color="hsl(12 82% 35%)"/></linearGradient></defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+  <path fill="hsl(132 74% 58%)" stroke="rgba(8,12,24,.92)" stroke-width="4" stroke-linejoin="round" d="M13 38c13-3 23-13 29-27 7 17 3 32-13 41 1-8-5-11-16-14Z"/>
+  <path fill="hsl(24 96% 58%)" stroke="rgba(8,12,24,.9)" stroke-width="3" d="M39 16h9v9L34 48c-2 4-9 0-6-5Z"/>
+</svg>

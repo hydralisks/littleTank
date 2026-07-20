@@ -54,7 +54,7 @@ export function getEncounterTutorialScript(stage: StageInfo): TutorialStep[] | n
       {
         id: 'za1-party-heal',
         title: '坚实可靠的你能让治疗有空捞一捞其他兄弟',
-        body: "从 Zul'Aman 开始，队伍每秒受到治疗。你把主要仇恨拉稳后，治疗就有余裕补队伍血量。",
+        body: "从 Zul'Aman 开始，队伍每秒受到治疗。队伍受到治疗时，压力会按实际治疗量等量下降，最低降到 0。你把主要仇恨拉稳后，治疗就有余裕补队伍血量并缓解压力。",
         target: '[data-tutorial-id="team-status"]',
         placement: 'left',
       },

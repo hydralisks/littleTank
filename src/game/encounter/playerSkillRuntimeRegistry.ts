@@ -2,10 +2,12 @@ import { getEnemyDefinition } from '../data/enemyCatalog'
 import { getActiveSkillDefinition, getPassiveModifiers, getSkillEffectsForSkill } from '../data/skillTemplates'
 import { createCombatLogEventId, recordCombatLogEvents } from './combatLog'
 import { enqueueEncounterEvent } from './encounterEvents'
+import { reducePartyPressureByEffectiveHealing } from './partyHealingPressure'
 import {
   createEnemyStatusEffect,
   createPlayerBuildStatusEffect,
 } from './encounterStatusEffects'
+import { getEnemyStatusDamageTakenMultiplier } from './enemyStatusEffectRegistry'
 import type {
   ActiveSkillEffectDefinition,
   EncounterEvent,
@@ -193,14 +195,10 @@ function buildDamageAndDeathEvents(
 ) {
   const playerDamageMultiplier = getPlayerDamageMultiplier(state)
   return enemies.flatMap((enemy) => {
-    const damageTakenMultiplier = enemy.statuses.reduce(
-      (multiplier, status) => multiplier * (1 + (status.damageTakenMultiplierBonus ?? 0)),
-      1,
-    )
     const damage =
       (enemy.id === primaryTargetId ? primaryDamage : secondaryDamage) *
       playerDamageMultiplier *
-      damageTakenMultiplier
+      getEnemyStatusDamageTakenMultiplier(enemy)
     const threat = resolveEffectThreat(effect, damage)
     const events: EncounterEvent[] = [
       {
@@ -272,6 +270,24 @@ function isHealingSuppressedByMurlocWatch(state: EncounterState, target: 'player
       (status) => status.effectLogicId === 'murlocWatching_status' && status.remainingMs !== 0,
     ),
   )
+}
+
+function getHealingReceivedMultiplier(state: EncounterState, target: 'player' | 'party') {
+  if (target === 'player') {
+    return state.player.debuffs.some((status) =>
+      status.effectLogicId === 'trollRuptured_status' &&
+      status.remainingMs !== 0
+    )
+      ? 0.5
+      : 1
+  }
+
+  return state.party.statuses.some((status) =>
+    status.effectLogicId === 'trollRuptured_p_status' &&
+    status.remainingMs !== 0
+  )
+    ? 0
+    : 1
 }
 
 function clampHealing(
@@ -795,14 +811,14 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
 
     const nextPlayerHp = clampHealing(
       state.player.hp,
-      state.player.hp + state.player.maxHp * playerHealRatio,
+      state.player.hp + state.player.maxHp * playerHealRatio * getHealingReceivedMultiplier(state, 'player'),
       state.player.maxHp,
       isHealingSuppressedByMurlocWatch(state, 'player'),
       helpers,
     )
     const nextPartyHp = clampHealing(
       state.party.hp,
-      state.party.hp + state.party.maxHp * partyHealRatio,
+      state.party.hp + state.party.maxHp * partyHealRatio * getHealingReceivedMultiplier(state, 'party'),
       state.party.maxHp,
       isHealingSuppressedByMurlocWatch(state, 'party'),
       helpers,
@@ -813,23 +829,23 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
         ...state.player,
         hp: nextPlayerHp,
       },
-      party: {
+      party: reducePartyPressureByEffectiveHealing({
         ...state.party,
         hp: nextPartyHp,
-      },
+      }, Math.max(0, nextPartyHp - state.party.hp)),
     }
     const events = [
       buildHealingTelemetryInput(
         { kind: 'tank' as const, id: 'tank', name: '坦克' },
         state.player.hp,
         nextPlayerHp,
-        state.player.maxHp * playerHealRatio,
+        state.player.maxHp * playerHealRatio * getHealingReceivedMultiplier(state, 'player'),
       ),
       buildHealingTelemetryInput(
         { kind: 'party' as const, id: 'party', name: '队伍' },
         state.party.hp,
         nextPartyHp,
-        state.party.maxHp * partyHealRatio,
+        state.party.maxHp * partyHealRatio * getHealingReceivedMultiplier(state, 'party'),
       ),
     ].filter((event) => event.amount > 0).map((event) => ({
       id: createCombatLogEventId(state, 'healing', `${skillId}:${event.target.kind}`),
@@ -930,25 +946,25 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
   panic_recovery: (state, skillId, helpers) => {
     const nextPartyHp = clampHealing(
       state.party.hp,
-      state.party.hp + 120,
+      state.party.hp + 120 * getHealingReceivedMultiplier(state, 'party'),
       state.party.maxHp,
       isHealingSuppressedByMurlocWatch(state, 'party'),
       helpers,
     )
     const nextPlayerHp = clampHealing(
       state.player.hp,
-      state.player.hp + 80,
+      state.player.hp + 80 * getHealingReceivedMultiplier(state, 'player'),
       state.player.maxHp,
       isHealingSuppressedByMurlocWatch(state, 'player'),
       helpers,
     )
     const nextState = {
       ...state,
-      party: {
+      party: reducePartyPressureByEffectiveHealing({
         ...state.party,
         hp: nextPartyHp,
         pressure: Math.max(0, state.party.pressure - 20),
-      },
+      }, Math.max(0, nextPartyHp - state.party.hp)),
       player: {
         ...state.player,
         hp: nextPlayerHp,
@@ -959,13 +975,13 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
         { kind: 'party' as const, id: 'party', name: '队伍' },
         state.party.hp,
         nextPartyHp,
-        120,
+        120 * getHealingReceivedMultiplier(state, 'party'),
       ),
       buildHealingTelemetryInput(
         { kind: 'tank' as const, id: 'tank', name: '坦克' },
         state.player.hp,
         nextPlayerHp,
-        80,
+        80 * getHealingReceivedMultiplier(state, 'player'),
       ),
     ].filter((event) => event.amount > 0).map((event) => ({
       id: createCombatLogEventId(state, 'healing', `${skillId}:${event.target.kind}`),

@@ -338,6 +338,30 @@ describe('playerBuildCatalog class-aware build data', () => {
     }
   })
 
+  it('lets workbook overrides pin passive talent unlock tier for independent challenge stages', () => {
+    applyStageWorkbookOverrides({
+      areaOverrides: [
+        { areaId: 'Challenge', title: 'Challenge' },
+      ],
+      stageOverrides: [
+        { stageId: 'Challenge-1', areaId: 'Challenge', order: 1 },
+        { stageId: 'Challenge-2', areaId: 'Challenge', order: 2 },
+        { stageId: 'Challenge-3', areaId: 'Challenge', order: 3, passiveTalentUnlockTier: 2 },
+      ],
+      legendOverrides: [],
+    })
+
+    try {
+      expect(getPassiveTalentUnlockTierForStage(getStageById('Challenge-3'))).toBe(2)
+    } finally {
+      applyStageWorkbookOverrides({
+        areaOverrides: [],
+        stageOverrides: [],
+        legendOverrides: [],
+      })
+    }
+  })
+
   it('blocks and normalizes passive talents above the unlocked tier', () => {
     const sourceBuild = getDefaultPersistedBuildForRule('standard_5slot')
     const lockedTierTalent = 'warrior_t_snap_interrupt'

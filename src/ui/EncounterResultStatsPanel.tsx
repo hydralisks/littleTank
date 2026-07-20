@@ -7,7 +7,15 @@ import type {
 } from '../game/encounter/combatStats'
 import type { EncounterOutcome } from '../game/encounter/encounterTypes'
 
-type ResultStatsTabId = 'tank' | 'pressure' | 'casts' | 'damage' | 'healing' | 'enemyHealing'
+type ResultStatsTabId =
+  | 'tank'
+  | 'partyDamage'
+  | 'pressure'
+  | 'casts'
+  | 'damage'
+  | 'playerHealing'
+  | 'partyHealing'
+  | 'enemyHealing'
 
 interface ResultStatsTab {
   id: ResultStatsTabId
@@ -26,10 +34,12 @@ interface EncounterResultStatsPanelProps {
 
 const TABS: ResultStatsTab[] = [
   { id: 'tank', label: '坦克承伤', description: '统计坦克实际受到的伤害，用来判断本场最需要防御或打断的来源。' },
+  { id: 'partyDamage', label: '队伍承伤', description: '统计队伍实际受到的伤害，用来判断哪些敌方技能或状态正在压低队伍血线。' },
   { id: 'pressure', label: '压力来源', description: '统计队伍压力增加的来源，用来判断哪些机制正在把后排推向崩盘。' },
   { id: 'casts', label: '打断情况', description: '记录敌方读条是否被打断或控制，用来判断关键读条是否漏处理。' },
   { id: 'damage', label: '造成伤害', description: '统计玩家技能、玩家自动攻击、队伍自动攻击和天赋造成的伤害。' },
-  { id: 'healing', label: '治疗/吸收', description: '统计治疗量和产生的吸收盾；当前吸收表示生成值，不表示实际消耗值。' },
+  { id: 'playerHealing', label: '玩家治疗/吸收', description: '统计作用在坦克身上的治疗量和产生的吸收盾；吸收表示生成值，不表示实际消耗值。' },
+  { id: 'partyHealing', label: '队伍治疗/吸收', description: '统计作用在队伍身上的治疗量和产生的吸收盾；吸收表示生成值，不表示实际消耗值。' },
   { id: 'enemyHealing', label: '敌方治疗/吸收', description: '单独统计敌方治疗量和敌方产生的吸收盾，不与玩家和队伍的治疗/吸收混算占比。' },
 ]
 
@@ -190,6 +200,12 @@ export function EncounterResultStatsPanel({
         table: <AmountTable rows={stats.tankDamageTaken} />,
       }
     }
+    if (activeTab === 'partyDamage') {
+      return {
+        summary: getTopSummary(stats.partyDamageTaken, ' 伤害'),
+        table: <AmountTable rows={stats.partyDamageTaken} />,
+      }
+    }
     if (activeTab === 'pressure') {
       return {
         summary: getTopSummary(stats.pressureGained, ' 压力'),
@@ -216,10 +232,16 @@ export function EncounterResultStatsPanel({
         table: <AmountTable rows={stats.damageDealt} />,
       }
     }
-    if (activeTab === 'healing') {
+    if (activeTab === 'playerHealing') {
       return {
-        summary: getTopSummary(stats.healingAndAbsorb, ' 治疗/吸收'),
-        table: <HealingTable rows={stats.healingAndAbsorb} />,
+        summary: getTopSummary(stats.playerHealingAndAbsorb, ' 治疗/吸收'),
+        table: <HealingTable rows={stats.playerHealingAndAbsorb} />,
+      }
+    }
+    if (activeTab === 'partyHealing') {
+      return {
+        summary: getTopSummary(stats.partyHealingAndAbsorb, ' 治疗/吸收'),
+        table: <HealingTable rows={stats.partyHealingAndAbsorb} />,
       }
     }
 

@@ -18,11 +18,16 @@ import { enqueueEncounterEvent } from './encounterEvents'
 import { createEnemyStatusEffect, createPlayerBuildStatusEffect } from './encounterStatusEffects'
 import {
   applyEnemyStatusChannelStopEffects,
+  applyEnemyStatusEventEffects,
   applyEnemyStatusOnApply,
   applyEnemyStatusTickEffectsWithApplications,
+  getEnemyStatusDamageTakenMultiplier,
+  getEnemyStatusOutgoingDamageMultiplier,
+  resolveEnemyIncomingDamage,
   type EnemyChannelStopReason,
 } from './enemyStatusEffectRegistry'
 import { getPartyStatusEffectHandler } from './partyStatusEffectRegistry'
+import { reducePartyPressureByEffectiveHealing } from './partyHealingPressure'
 import {
   changePlayerResource,
   getDamageTakenResourceGain,
@@ -51,6 +56,7 @@ import type {
   PartyStatusRuntimeEntry,
   SkillId,
   SkillLoadout,
+  SkillState,
   StatusEffect,
   ThreatState,
 } from './encounterTypes'
@@ -63,6 +69,7 @@ const PLAYER_AUTO_ATTACK_SOURCE_ID = 'player_auto_attack'
 const PARTY_AMBIENT_SOURCE_ID = 'party_ambient_random'
 const DAMAGE_TAKEN_RESOURCE_WINDOW_MS = 1_000
 const DAMAGE_TAKEN_RESOURCE_WINDOW_CAP = 10
+const NON_GCD_SELF_COOLDOWN_MS = 500
 
 const VICTORY_CHATTER = [
   '牧师：哇这 boss 给我蓝都熬空了。',
@@ -160,6 +167,37 @@ function getCombatLogTargetForCastTarget(target: CastState['target']) {
     return { kind: 'party' as const, id: 'party', name: '队伍' }
   }
   return { kind: 'tank' as const, id: 'tank', name: '坦克' }
+}
+
+function getForcedEnemyTargetIdFromStatuses(statuses: StatusEffect[], effectLogicId: string, enemies: EnemyState[]) {
+  const status = statuses.find((entry) =>
+    entry.effectLogicId === effectLogicId &&
+    isStatusActive(entry) &&
+    entry.combatLogSource?.kind === 'enemy',
+  )
+  const sourceEnemyId = status?.combatLogSource?.id
+
+  return sourceEnemyId && enemies.some((enemy) => enemy.id === sourceEnemyId && enemy.hp > 0)
+    ? sourceEnemyId
+    : null
+}
+
+function getForcedPlayerCurrentTargetId(player: PlayerState, enemies: EnemyState[]) {
+  return getForcedEnemyTargetIdFromStatuses(player.debuffs, 'trollTaunted_status', enemies)
+}
+
+function getForcedPartyCurrentTargetId(party: EncounterState['party'], enemies: EnemyState[]) {
+  return getForcedEnemyTargetIdFromStatuses(party.statuses, 'trollTaunted_p_status', enemies)
+}
+
+function resolvePlayerCurrentTargetId(player: PlayerState, enemies: EnemyState[]) {
+  return getForcedPlayerCurrentTargetId(player, enemies) ??
+    normalizeCurrentTargetId(player.currentTargetId, enemies)
+}
+
+function resolvePartyCurrentTargetId(party: EncounterState['party'], enemies: EnemyState[]) {
+  return getForcedPartyCurrentTargetId(party, enemies) ??
+    normalizeCurrentTargetId(party.currentTargetId, enemies)
 }
 
 function getStatusCombatLogSource(status: StatusEffect) {
@@ -357,6 +395,18 @@ function applyEnemyStatusOnApplyWithTelemetry(
     combatLogEvents: [
       createEnemyStatusHealingEvent(occurredAtMs, enemy, status, healing),
     ].filter((event): event is CombatLogEvent => Boolean(event)),
+  }
+}
+
+function applyEnemyDamageWithStatusMitigation(enemy: EnemyState, amount: number) {
+  const resolved = resolveEnemyIncomingDamage(enemy, amount)
+
+  return {
+    enemy: cleanupDeadEnemy({
+      ...resolved.enemy,
+      hp: Math.max(0, resolved.enemy.hp - resolved.amount),
+    }),
+    amount: resolved.amount,
   }
 }
 
@@ -1262,9 +1312,12 @@ function applyImmediatePlayerAutoAttack(state: EncounterState, targetEnemyId: st
   const modifiers = getPassiveModifiers(state.passiveTalentIds)
   const autoAttackSource = createPlayerAutoAttackDefinitionForStage(state.stage)
   const autoAttackRuntime = createDamageSourceRuntime(autoAttackSource)
-  const damage = resolveDamageSourceDamage(autoAttackRuntime, modifiers) *
+  const rawDamage = resolveDamageSourceDamage(autoAttackRuntime, modifiers) *
+    getPlayerOutgoingDamageMultiplier(state.player) *
     getPlayerOutgoingDamageMultiplierFromMurlocWatch(state.enemies) *
     getEnemyDamageTakenMultiplier(targetEnemy)
+  const damageResult = applyEnemyDamageWithStatusMitigation(targetEnemy, rawDamage)
+  const damage = damageResult.amount
   const nextPlayer = changePlayerResource(state.player, modifiers.playerAutoAttackResourceGainBonus)
 
   const enemyName = targetEnemy.name
@@ -1273,17 +1326,7 @@ function applyImmediatePlayerAutoAttack(state: EncounterState, targetEnemyId: st
     player: nextPlayer,
     enemies: state.enemies.map((enemy) =>
       enemy.id === targetEnemyId
-        ? cleanupDeadEnemy(
-            applyDamageSourceThreat(
-              {
-                ...enemy,
-                hp: Math.max(0, enemy.hp - damage),
-              },
-              autoAttackRuntime,
-              damage,
-              modifiers,
-            ),
-          )
+        ? applyDamageSourceThreat(damageResult.enemy, autoAttackRuntime, damage, modifiers)
         : enemy,
     ),
     runtime: {
@@ -1369,11 +1412,11 @@ function resolveDamageSourceTargetIds(
   source: DamageSourceRuntime,
   enemies: EnemyState[],
   playerCurrentTargetId: string | null,
-  partyCurrentTargetId: string | null,
+  party: EncounterState['party'],
 ) {
   if (source.targetRule === 'lockedCurrentTarget') {
     const currentTargetId =
-      source.ownerSide === 'party' ? partyCurrentTargetId : playerCurrentTargetId
+      source.ownerSide === 'party' ? party.currentTargetId : playerCurrentTargetId
     const lockedTargetId = currentTargetId ?? source.lockedTargetId
     if (lockedTargetId && enemies.some((enemy) => enemy.id === lockedTargetId && enemy.hp > 0)) {
       return [lockedTargetId]
@@ -1393,6 +1436,25 @@ function resolveDamageSourceTargetIds(
     source.ownerSide === 'party'
       ? livingEnemies.filter((enemy) => !isDisgustingEnemy(enemy))
       : livingEnemies
+  const partyLockedTargetId =
+    source.ownerSide === 'party' &&
+    source.targetRule === 'randomLivingEnemy' &&
+    source.targetCount > 1 &&
+    getActivePartyStatusByEffect(party, 'asHisWish_status') &&
+    party.currentTargetId &&
+    livingEnemies.some((enemy) => enemy.id === party.currentTargetId)
+      ? party.currentTargetId
+      : null
+  if (partyLockedTargetId) {
+    return [
+      partyLockedTargetId,
+      ...pickRandomEnemyIds(
+        preferredEnemies.length > 0 ? preferredEnemies : livingEnemies,
+        Math.max(0, source.targetCount - 1),
+        partyLockedTargetId,
+      ),
+    ]
+  }
 
   return pickRandomEnemyIds(
     preferredEnemies.length > 0 ? preferredEnemies : livingEnemies,
@@ -1410,7 +1472,7 @@ function applyDamageSources(state: EncounterState, deltaMs: number) {
     ...state.player,
     hp: clampSuppressedHealing(
       state.player.hp,
-      state.player.hp + state.stage.playerAutoHeal * (deltaMs / 1000),
+      state.player.hp + state.stage.playerAutoHeal * getPlayerHealingReceivedMultiplier(state.player) * (deltaMs / 1000),
       state.player.maxHp,
       playerHealingSuppressed,
     ),
@@ -1419,13 +1481,14 @@ function applyDamageSources(state: EncounterState, deltaMs: number) {
     ...state.party,
     hp: clampSuppressedHealing(
       state.party.hp,
-      state.party.hp + state.stage.partyAutoHeal * (deltaMs / 1000),
+      state.party.hp + state.stage.partyAutoHeal * getPartyHealingReceivedMultiplier(state.party) * (deltaMs / 1000),
       state.party.maxHp,
       partyHealingSuppressed,
     ),
   }
   const playerAutoHealing = Math.max(0, nextPlayer.hp - state.player.hp)
   const partyAutoHealing = Math.max(0, nextParty.hp - state.party.hp)
+  nextParty = reducePartyPressureByEffectiveHealing(nextParty, partyAutoHealing)
   if (playerAutoHealing > 0) {
     combatLogEvents.push({
       id: createCombatLogEventId(state, 'healing', `party-auto-heal:tank:${combatLogEvents.length}`),
@@ -1451,11 +1514,21 @@ function applyDamageSources(state: EncounterState, deltaMs: number) {
   const dislikedStatus = getActivePartyStatusByEffect(state.party, 'disliked_status')
   let partyStatusRuntime = { ...state.runtime.partyStatusRuntime }
   const modifiers = getPassiveModifiers(state.passiveTalentIds)
+  const effectivePlayerCurrentTargetId = resolvePlayerCurrentTargetId(state.player, nextEnemies)
+  const effectivePartyCurrentTargetId = resolvePartyCurrentTargetId(nextParty, nextEnemies)
+  nextPlayer = {
+    ...nextPlayer,
+    currentTargetId: effectivePlayerCurrentTargetId,
+  }
+  nextParty = {
+    ...nextParty,
+    currentTargetId: effectivePartyCurrentTargetId,
+  }
   const syncedSources = buildRuntimeDamageSources(
     state.stage,
     state.runtime.damageSources,
-    state.player.currentTargetId,
-    state.party.currentTargetId,
+    effectivePlayerCurrentTargetId,
+    effectivePartyCurrentTargetId,
   )
 
   const nextSources = syncedSources.map((source) => {
@@ -1480,8 +1553,8 @@ function applyDamageSources(state: EncounterState, deltaMs: number) {
       const targetIds = resolveDamageSourceTargetIds(
         nextSource,
         nextEnemies,
-        state.player.currentTargetId,
-        nextParty.currentTargetId,
+        effectivePlayerCurrentTargetId,
+        nextParty,
       )
 
       if (targetIds.length === 0) {
@@ -1491,8 +1564,8 @@ function applyDamageSources(state: EncounterState, deltaMs: number) {
           lockedTargetId:
             nextSource.targetRule === 'lockedCurrentTarget'
               ? nextSource.ownerSide === 'party'
-                ? nextParty.currentTargetId
-                : state.player.currentTargetId
+                ? effectivePartyCurrentTargetId
+                : effectivePlayerCurrentTargetId
               : nextSource.lockedTargetId,
         }
         break
@@ -1504,10 +1577,13 @@ function applyDamageSources(state: EncounterState, deltaMs: number) {
           return cleanupDeadEnemy(enemy)
         }
 
-        const damage =
+        const rawDamage =
           resolveDamageSourceDamage(nextSource, modifiers) *
+          (nextSource.ownerSide === 'player' ? getPlayerOutgoingDamageMultiplier(nextPlayer) : 1) *
           getDamageSourceMurlocWatchingMultiplier(nextSource, nextEnemies) *
           getEnemyDamageTakenMultiplier(enemy)
+        const damageResult = applyEnemyDamageWithStatusMitigation(enemy, rawDamage)
+        const damage = damageResult.amount
         let threatSource = nextSource
         if (dislikedStatus && nextSource.threatSource === 'party') {
           const runtimeEntry =
@@ -1558,17 +1634,41 @@ function applyDamageSources(state: EncounterState, deltaMs: number) {
             amount: damage,
           })
         }
-        return cleanupDeadEnemy(
-          applyDamageSourceThreat(
-            {
-              ...enemy,
-              hp: Math.max(0, enemy.hp - damage),
+        let nextEnemy = applyDamageSourceThreat(damageResult.enemy, threatSource, damage, modifiers)
+        if (
+          damage > 0 &&
+          (nextSource.ownerSide === 'player' || nextSource.ownerSide === 'party')
+        ) {
+          const stateBeforeEnemyStatusEvents = {
+            ...state,
+            player: nextPlayer,
+            party: nextParty,
+            enemies: nextEnemies.map((entry) => (entry.id === enemy.id ? nextEnemy : entry)),
+            runtime: {
+              ...state.runtime,
+              combatLog: [...state.runtime.combatLog, ...combatLogEvents],
             },
-            threatSource,
-            damage,
-            modifiers,
-          ),
-        )
+          }
+          const combatLogLengthBefore = stateBeforeEnemyStatusEvents.runtime.combatLog.length
+          const stateAfterEnemyStatusEvents = applyEnemyStatusEventEffects(
+            stateBeforeEnemyStatusEvents,
+            {
+              type: 'enemy/damage-applied',
+              occurredAtMs: state.timeMs,
+              enemyId: enemy.id,
+              amount: damage,
+              sourceSkillId: nextSource.sourceId,
+              sourceOwner: nextSource.ownerSide,
+            },
+          )
+          nextPlayer = stateAfterEnemyStatusEvents.player
+          nextParty = stateAfterEnemyStatusEvents.party
+          combatLogEvents.push(
+            ...stateAfterEnemyStatusEvents.runtime.combatLog.slice(combatLogLengthBefore),
+          )
+          nextEnemy = stateAfterEnemyStatusEvents.enemies.find((entry) => entry.id === enemy.id) ?? nextEnemy
+        }
+        return nextEnemy
       })
 
       nextSource = {
@@ -1577,8 +1677,8 @@ function applyDamageSources(state: EncounterState, deltaMs: number) {
         lockedTargetId:
           nextSource.targetRule === 'lockedCurrentTarget'
             ? nextSource.ownerSide === 'party'
-              ? nextParty.currentTargetId
-              : state.player.currentTargetId
+              ? effectivePartyCurrentTargetId
+              : effectivePlayerCurrentTargetId
             : nextSource.lockedTargetId,
       }
     }
@@ -1592,8 +1692,8 @@ function applyDamageSources(state: EncounterState, deltaMs: number) {
     enemies: nextEnemies.map(cleanupDeadEnemy),
     damageSources: syncDamageSourceTargets(
       nextSources,
-      state.player.currentTargetId,
-      nextParty.currentTargetId,
+      effectivePlayerCurrentTargetId,
+      effectivePartyCurrentTargetId,
     ),
     partyAutoDamageRemainingMs: getPartyAutoDamageRemainingMs(state.stage, nextSources),
     partyStatusRuntime,
@@ -1604,7 +1704,10 @@ function applyDamageSources(state: EncounterState, deltaMs: number) {
 function appendOrReplacePlayerDebuff(player: PlayerState, status: StatusEffect) {
   return applyPlayerDebuffOnApplyEffects({
     ...player,
-    debuffs: replaceStatusList(player.debuffs, status),
+    debuffs:
+      (status.maxStacks ?? 1) > 1
+        ? appendOrStackStatusList(player.debuffs, status)
+        : replaceStatusList(player.debuffs, status),
   }, status)
 }
 
@@ -1621,11 +1724,182 @@ function getPlayerBuffDamageMultiplier(player: PlayerState, damageType: EnemySki
   }, 1)
 }
 
-function getEnemyDamageTakenMultiplier(enemy: EnemyState) {
-  return enemy.statuses.reduce(
-    (multiplier, status) => multiplier * (1 + (status.damageTakenMultiplierBonus ?? 0)),
+function getPlayerOutgoingDamageMultiplier(player: PlayerState) {
+  return player.buffs.reduce(
+    (multiplier, status) => multiplier * (1 + (status.damageMultiplierBonus ?? 0)),
     1,
   )
+}
+
+function getEnemyDamageTakenMultiplier(enemy: EnemyState) {
+  return getEnemyStatusDamageTakenMultiplier(enemy)
+}
+
+function getEnemyMagicDamageMultiplier(enemy: EnemyState, damageType: EnemySkillDamageType) {
+  if (damageType !== 'magic') {
+    return 1
+  }
+
+  return enemy.statuses.reduce((multiplier, status) => {
+    if (status.effectLogicId !== 'challenge_magic_damage_boost_status') {
+      return multiplier
+    }
+
+    return multiplier * (1 + getStatusValue(status, 'valueA', 0))
+  }, 1)
+}
+
+function getPlayerDamageTakenMultiplierFromDebuffs(player: PlayerState, damageType: EnemySkillDamageType) {
+  return player.debuffs.reduce(
+    (multiplier, status) => {
+      const soulSensitiveBonus =
+        damageType === 'magic' && status.effectLogicId === 'soulSensitive_status'
+          ? getStatusValue(status, 'valueA', 50) / 100
+          : 0
+      const hunterMarkBonus =
+        damageType === 'physical' && status.effectLogicId === 'hunter\'sMarked_status'
+          ? getStatusValue(status, 'valueA', 25) / 100
+          : 0
+      const spearBreachBonus =
+        damageType === 'physical' && status.effectLogicId === 'challenge_spear_breach_player_status'
+          ? getStatusValue(status, 'valueA', 0.12)
+          : 0
+      return multiplier * (
+        1 + ((status.damageTakenMultiplierBonus ?? 0) + hunterMarkBonus + spearBreachBonus + soulSensitiveBonus) * (status.stacks ?? 1)
+      )
+    },
+    1,
+  )
+}
+
+function getPartyDamageTakenMultiplierFromStatuses(party: EncounterState['party'], damageType: EnemySkillDamageType) {
+  return party.statuses.reduce(
+    (multiplier, status) => {
+      const soulSensitiveBonus =
+        damageType === 'magic' && status.effectLogicId === 'soulSensitive_p_status'
+          ? getStatusValue(status, 'valueA', 50) / 100
+          : 0
+      return multiplier * (1 + ((status.damageTakenMultiplierBonus ?? 0) + soulSensitiveBonus) * (status.stacks ?? 1))
+    },
+    1,
+  )
+}
+
+function getPlayerHealingReceivedMultiplier(player: PlayerState) {
+  return player.debuffs.some((status) => status.effectLogicId === 'trollRuptured_status' && isStatusActive(status))
+    ? 0.5
+    : 1
+}
+
+function getPartyHealingReceivedMultiplier(party: EncounterState['party']) {
+  return party.statuses.some((status) => status.effectLogicId === 'trollRuptured_p_status' && isStatusActive(status))
+    ? 0
+    : 1
+}
+
+function isFishEnemy(enemy: EnemyState) {
+  return enemy.definitionId.includes('murloc') || enemy.definitionId.includes('Murk-Eye')
+}
+
+function appendOrStackPlayerDebuff(player: PlayerState, status: StatusEffect) {
+  return {
+    ...player,
+    debuffs:
+      (status.maxStacks ?? 1) > 1
+        ? appendOrStackStatusList(player.debuffs, status)
+        : replaceStatusList(player.debuffs, status),
+  }
+}
+
+function appendOrStackPartyStatus(party: EncounterState['party'], status: StatusEffect) {
+  return {
+    ...party,
+    statuses:
+      (status.maxStacks ?? 1) > 1
+        ? appendOrStackStatusList(party.statuses, status)
+        : replaceStatusList(party.statuses, status),
+  }
+}
+
+function applyTideCommandVulnerabilityToHitTarget(
+  enemy: EnemyState,
+  player: PlayerState,
+  party: EncounterState['party'],
+  target: 'tank' | 'party',
+) {
+  const tideCommand = enemy.statuses.find((status) =>
+    status.effectLogicId === 'challenge_tide_command_status' &&
+    isStatusActive(status) &&
+    (enemy.row >= 3 || isFishEnemy(enemy)),
+  )
+  if (!tideCommand) {
+    return { player, party }
+  }
+
+  const damageTakenBonus = getStatusValue(tideCommand, 'valueA', 0.08)
+  const maxStacks = Math.max(1, Math.floor(getStatusValue(tideCommand, 'valueB', 5)))
+  const baseStatus = {
+    id: target === 'tank' ? 'challenge_tidal_vulnerability' : 'challenge_tidal_vulnerability_p',
+    iconId: 'challenge_tidal_vulnerability',
+    label: '潮汐破绽',
+    shortLabel: '破绽',
+    remainingMs: 6000,
+    totalMs: 6000,
+    tone: 'danger' as const,
+    kind: target === 'tank' ? 'playerDebuff' as const : 'partyDebuff' as const,
+    effectLogicId: target === 'tank'
+      ? 'challenge_tidal_vulnerability_status'
+      : 'challenge_tidal_vulnerability_p_status',
+    valueA: damageTakenBonus,
+    valueB: maxStacks,
+    damageTakenMultiplierBonus: damageTakenBonus,
+    stacks: 1,
+    maxStacks,
+    combatLogSource: tideCommand.combatLogSource,
+    combatLogAbility: tideCommand.combatLogAbility,
+  }
+
+  return target === 'tank'
+    ? { player: appendOrStackPlayerDebuff(player, baseStatus), party }
+    : { player, party: appendOrStackPartyStatus(party, baseStatus) }
+}
+
+function applySpearBreachToTankHit(
+  enemy: EnemyState,
+  player: PlayerState,
+  damageType: EnemySkillDamageType,
+) {
+  if (damageType !== 'physical' || enemy.row < 3) {
+    return player
+  }
+
+  const spearBreach = enemy.statuses.find((status) =>
+    status.effectLogicId === 'challenge_spear_breach_status' &&
+    isStatusActive(status),
+  )
+  if (!spearBreach) {
+    return player
+  }
+
+  const damageTakenBonus = getStatusValue(spearBreach, 'valueA', 0.12)
+  const maxStacks = Math.max(1, Math.floor(getStatusValue(spearBreach, 'valueB', 3)))
+  return appendOrStackPlayerDebuff(player, {
+    id: 'challenge_spear_breach',
+    iconId: 'challenge_spear_breach',
+    label: '穿矛破口',
+    shortLabel: '破口',
+    remainingMs: 6000,
+    totalMs: 6000,
+    tone: 'danger',
+    kind: 'playerDebuff',
+    effectLogicId: 'challenge_spear_breach_player_status',
+    valueA: damageTakenBonus,
+    valueB: maxStacks,
+    stacks: 1,
+    maxStacks,
+    combatLogSource: spearBreach.combatLogSource,
+    combatLogAbility: spearBreach.combatLogAbility,
+  })
 }
 
 interface PlayerAbsorbConsumption {
@@ -1743,13 +2017,28 @@ function applyPlayerDebuffContinuousEffects(
     )
   }
 
+  const trollRupturedStatus = activeStatusSource.debuffs.find(
+    (status) => status.effectLogicId === 'trollRuptured_status' && isStatusActive(status),
+  )
+  if (trollRupturedStatus) {
+    nextPlayer = applyPlayerDamageWithAbsorb(
+      nextPlayer,
+      getStatusValue(trollRupturedStatus, 'valueA', 3) * (deltaMs / 1000),
+      'physical',
+    )
+  }
+
   return nextPlayer
 }
 
 function getPlayerContinuousDamageStatus(player: PlayerState) {
   return player.debuffs.find((status) =>
     isStatusActive(status) &&
-    (status.effectLogicId === 'battleHunger_status' || status.effectLogicId === 'waxed_status'),
+    (
+      status.effectLogicId === 'battleHunger_status' ||
+      status.effectLogicId === 'waxed_status' ||
+      status.effectLogicId === 'trollRuptured_status'
+    ),
   )
 }
 
@@ -1791,11 +2080,8 @@ function applyPlayerDebuffOnApplyEffects(player: PlayerState, status: StatusEffe
 
 function getEnemyOutgoingDamageMultiplier(enemy: EnemyState) {
   return enemy.statuses.reduce(
-    (multiplier, status) => {
-      return multiplier *
-        (1 - (status.outgoingDamageReductionRatio ?? 0) * (status.stacks ?? 1))
-    },
-    1,
+    (multiplier, status) => multiplier * (1 - (status.outgoingDamageReductionRatio ?? 0) * (status.stacks ?? 1)),
+    getEnemyStatusOutgoingDamageMultiplier(enemy),
   )
 }
 
@@ -1949,7 +2235,10 @@ function removePlayerDebuff(player: PlayerState, statusId: string) {
 function appendOrReplacePartyStatus(party: EncounterState['party'], status: StatusEffect) {
   return {
     ...party,
-    statuses: replaceStatusList(party.statuses, status),
+    statuses:
+      (status.maxStacks ?? 1) > 1
+        ? appendOrStackStatusList(party.statuses, status)
+        : replaceStatusList(party.statuses, status),
   }
 }
 
@@ -2001,20 +2290,38 @@ function applyPartyStatusContinuousEffects(
   const waxedStatus = activeStatusSource.statuses.find(
     (status) => status.effectLogicId === 'waxed_p_status' && isStatusActive(status),
   )
+  const trollRupturedStatus = activeStatusSource.statuses.find(
+    (status) => status.effectLogicId === 'trollRuptured_p_status' && isStatusActive(status),
+  )
 
-  if (deltaMs <= 0 || !waxedStatus) {
+  if (deltaMs <= 0) {
     return party
+  }
+
+  let nextParty = party
+  if (waxedStatus) {
+    nextParty = {
+      ...nextParty,
+      hp: Math.max(0, nextParty.hp - getStatusValue(waxedStatus, 'valueA', 1) * (deltaMs / 1000)),
+    }
+  }
+  if (trollRupturedStatus) {
+    nextParty = {
+      ...nextParty,
+      hp: Math.max(0, nextParty.hp - getStatusValue(trollRupturedStatus, 'valueA', 3) * (deltaMs / 1000)),
+    }
   }
 
   return {
     ...party,
-    hp: Math.max(0, party.hp - getStatusValue(waxedStatus, 'valueA', 1) * (deltaMs / 1000)),
+    hp: nextParty.hp,
   }
 }
 
 function getPartyContinuousDamageStatus(party: EncounterState['party']) {
   return party.statuses.find((status) =>
-    isStatusActive(status) && status.effectLogicId === 'waxed_p_status',
+    isStatusActive(status) &&
+    (status.effectLogicId === 'waxed_p_status' || status.effectLogicId === 'trollRuptured_p_status'),
   )
 }
 
@@ -2229,6 +2536,17 @@ function findEnemyCastTargetIndex(
     return -1
   }
 
+  if (lockedEnemyTargetId) {
+    const lockedTargetIndex = enemies.findIndex((enemy, index) =>
+      index !== casterIndex &&
+      enemy.id === lockedEnemyTargetId &&
+      enemy.hp > 0,
+    )
+    if (lockedTargetIndex >= 0) {
+      return lockedTargetIndex
+    }
+  }
+
   const candidateIndex = enemies.findIndex((enemy, index) => index !== casterIndex && enemy.hp > 0)
   return candidateIndex >= 0 ? candidateIndex : casterIndex
 }
@@ -2338,14 +2656,22 @@ function resolveCompletedCast(
   }
 
   const modifiers = getPassiveModifiers(passiveTalentIds)
-  const enemyOutgoingDamageMultiplier = getEnemyOutgoingDamageMultiplier(currentEnemy)
+  const enemyOutgoingDamageMultiplier =
+    getEnemyOutgoingDamageMultiplier(currentEnemy) *
+    getEnemyMagicDamageMultiplier(currentEnemy, skillDefinition.damageType)
   const damageTakenMultiplier =
     (player.mitigation ? 0.62 : 1) *
     modifiers.playerDamageTakenMultiplier *
     tuning.enemyDamageMultiplier *
-    enemyOutgoingDamageMultiplier
+    enemyOutgoingDamageMultiplier *
+    getPlayerDamageTakenMultiplierFromDebuffs(player, skillDefinition.damageType)
   const scalePartyDamage = (value: number) =>
-    Math.round(value * tuning.enemyDamageMultiplier * enemyOutgoingDamageMultiplier)
+    Math.round(
+      value *
+      tuning.enemyDamageMultiplier *
+      enemyOutgoingDamageMultiplier *
+      getPartyDamageTakenMultiplierFromStatuses(party, skillDefinition.damageType),
+    )
   const scalePressure = (value: number) => Math.round(value * tuning.enemyDamageMultiplier)
 
   let nextEnemies = enemies.map((enemy, index) =>
@@ -2365,7 +2691,8 @@ function resolveCompletedCast(
 
   const appliesTankAndPartyStatuses = skillDefinition.targetRuleId === 'tankAndParty'
   const didHitPlayer =
-    skillDefinition.targetRuleId === 'threatTarget' && lockedCastTarget === 'tank'
+    (skillDefinition.targetRuleId === 'threatTarget' && lockedCastTarget === 'tank') ||
+    (skillDefinition.targetRuleId === 'self' && skillDefinition.playerDamage > 0)
   const partyDamage =
     skillDefinition.targetRuleId === 'threatTarget'
       ? didHitPlayer
@@ -2466,6 +2793,19 @@ function resolveCompletedCast(
       )
       const dealtDamage = Math.max(0, previousPlayerHp - nextPlayer.hp)
       if (dealtDamage > 0) {
+        nextPlayer = applySpearBreachToTankHit(
+          currentEnemy,
+          nextPlayer,
+          skillDefinition.damageType,
+        )
+        const vulnerabilityResult = applyTideCommandVulnerabilityToHitTarget(
+          currentEnemy,
+          nextPlayer,
+          nextParty,
+          'tank',
+        )
+        nextPlayer = vulnerabilityResult.player
+        nextParty = vulnerabilityResult.party
         combatLogEvents.push({
           id: `${occurredAtMs}:damage:${currentEnemy.id}:${skillDefinition.skillId}:tank`,
           occurredAtMs,
@@ -2480,6 +2820,7 @@ function resolveCompletedCast(
   }
 
   if (partyDamage > 0 || partyPressure > 0) {
+    const previousPartyHp = nextParty.hp
     const previousPressure = nextParty.pressure
     const scaledPartyDamage = scalePartyDamage(partyDamage)
     const intervened = nextParty.statuses.find((status) => status.id === 'intervened')
@@ -2512,6 +2853,28 @@ function resolveCompletedCast(
       )
       nextParty = consumePartyStatus(nextParty, 'intervened')
     }
+    if (!intervened && scaledPartyDamage > 0) {
+      const vulnerabilityResult = applyTideCommandVulnerabilityToHitTarget(
+        currentEnemy,
+        nextPlayer,
+        nextParty,
+        'party',
+      )
+      nextPlayer = vulnerabilityResult.player
+      nextParty = vulnerabilityResult.party
+    }
+    const dealtPartyDamage = Math.max(0, previousPartyHp - nextParty.hp)
+    if (dealtPartyDamage > 0) {
+      combatLogEvents.push({
+        id: `${occurredAtMs}:damage:${currentEnemy.id}:${skillDefinition.skillId}:party`,
+        occurredAtMs,
+        type: 'damage',
+        ...castEventBase,
+        target: { kind: 'party', id: 'party', name: '队伍' },
+        amount: dealtPartyDamage,
+        damageType: skillDefinition.damageType,
+      })
+    }
     const pressureGained = Math.max(0, nextParty.pressure - previousPressure)
     if (pressureGained > 0) {
       combatLogEvents.push({
@@ -2530,18 +2893,22 @@ function resolveCompletedCast(
     if (!resolved) {
       continue
     }
+    const status = {
+      ...resolved.status,
+      combatLogSource: castEventBase.source,
+    }
 
-    if (resolved.status.kind === 'playerDebuff' && (didHitPlayer || appliesTankAndPartyStatuses) && !playerPortionReflected) {
+    if (status.kind === 'playerDebuff' && (didHitPlayer || appliesTankAndPartyStatuses) && !playerPortionReflected) {
       const previousStatusPlayer = nextPlayer
       nextPlayer =
-        resolved.status.effectLogicId === 'Murk-Eye_status'
+        status.effectLogicId === 'Murk-Eye_status'
           ? applyMurkEyePlayerEffect(nextPlayer, nextEnemies)
-          : applyPlayerDebuffImmediateEffects(appendOrReplacePlayerDebuff(nextPlayer, resolved.status))
+          : applyPlayerDebuffImmediateEffects(appendOrReplacePlayerDebuff(nextPlayer, status))
       combatLogEvents.push(
         ...createPlayerStatusImmediateEvents(
           occurredAtMs,
-          `${currentEnemy.id}:${skillDefinition.skillId}:${resolved.status.id}`,
-          resolved.status,
+          `${currentEnemy.id}:${skillDefinition.skillId}:${status.id}`,
+          status,
           previousStatusPlayer,
           nextPlayer,
         ),
@@ -2550,7 +2917,7 @@ function resolveCompletedCast(
     }
 
     if (
-      resolved.status.kind === 'partyDebuff' &&
+      status.kind === 'partyDebuff' &&
       (
         skillDefinition.targetRuleId === 'party' ||
         appliesTankAndPartyStatuses ||
@@ -2559,14 +2926,14 @@ function resolveCompletedCast(
     ) {
       const previousStatusParty = nextParty
       nextParty =
-        resolved.status.effectLogicId === 'Murk-Eye_p_status'
+        status.effectLogicId === 'Murk-Eye_p_status'
           ? applyMurkEyePartyEffect(nextParty, nextEnemies)
-          : applyPartyStatusImmediateEffects(appendOrReplacePartyStatus(nextParty, resolved.status))
+          : applyPartyStatusImmediateEffects(appendOrReplacePartyStatus(nextParty, status))
       combatLogEvents.push(
         ...createPartyStatusImmediateEvents(
           occurredAtMs,
-          `${currentEnemy.id}:${skillDefinition.skillId}:${resolved.status.id}`,
-          resolved.status,
+          `${currentEnemy.id}:${skillDefinition.skillId}:${status.id}`,
+          status,
           previousStatusParty,
           nextParty,
         ),
@@ -2574,7 +2941,7 @@ function resolveCompletedCast(
       continue
     }
 
-    if (resolved.status.kind === 'enemyBuff') {
+    if (status.kind === 'enemyBuff') {
       const targetIndex = findEnemyCastTargetIndex(
         nextEnemies,
         enemyIndex,
@@ -2583,10 +2950,10 @@ function resolveCompletedCast(
       )
 
       if (targetIndex >= 0) {
-        const enemyWithStatus = appendOrReplaceEnemyStatus(nextEnemies[targetIndex], resolved.status)
+        const enemyWithStatus = appendOrReplaceEnemyStatus(nextEnemies[targetIndex], status)
         const statusApplyResult = applyEnemyStatusOnApplyWithTelemetry(
           enemyWithStatus,
-          resolved.status,
+          status,
           resolved.effectLogicId,
           tuning,
           occurredAtMs,
@@ -2612,8 +2979,12 @@ function resolveCompletedCast(
         ? {
             ...resolved.status,
             channelSourceSkillId: skillDefinition.skillId,
+            combatLogSource: castEventBase.source,
           }
-        : resolved.status
+        : {
+            ...resolved.status,
+            combatLogSource: castEventBase.source,
+          }
     const enemyWithStatus = appendOrReplaceEnemyStatus(nextEnemies[enemyIndex], status)
     const statusApplyResult = applyEnemyStatusOnApplyWithTelemetry(
       enemyWithStatus,
@@ -2759,6 +3130,10 @@ export function getSkillActivationBlockReason(state: EncounterState, skillId: Sk
 
   if (skillNeedsTarget(skillId) && !state.player.currentTargetId && !isAllEnemyInterruptSkill(skillId)) {
     return '请先选择一个敌方目标。'
+  }
+
+  if ((skill.selfCooldownRemainingMs ?? 0) > 0) {
+    return `${skill.name} 仍在冷却中。`
   }
 
   if ((skill.maxCharges ?? 1) <= 1 && skill.remainingCooldownMs > 0) {
@@ -2995,8 +3370,8 @@ function finalizeEncounterState(state: EncounterState): EncounterState {
     normalizeEnemy(cleanupDeadEnemy(enemy), nextPlayer, nextParty, state.stage.partyAutoDamageMax),
   )
   const livingEnemies = getLivingEnemies(nextEnemies)
-  const currentTargetId = normalizeCurrentTargetId(state.player.currentTargetId, nextEnemies)
-  const partyCurrentTargetId = normalizeCurrentTargetId(state.party.currentTargetId, nextEnemies)
+  const currentTargetId = resolvePlayerCurrentTargetId(nextPlayer, nextEnemies)
+  const partyCurrentTargetId = resolvePartyCurrentTargetId(nextParty, nextEnemies)
   nextPlayer.currentTargetId = currentTargetId
   nextParty.currentTargetId = partyCurrentTargetId
   const nextDamageSources = buildRuntimeDamageSources(
@@ -3222,6 +3597,7 @@ export function tickEncounter(state: EncounterState, deltaMs = TICK_INTERVAL_MS)
   const nextSkills = commandFlushedState.skills.map((skill) => ({
     ...skill,
     remainingCooldownMs: Math.max(0, skill.remainingCooldownMs - skillCooldownDeltaMs),
+    selfCooldownRemainingMs: Math.max(0, (skill.selfCooldownRemainingMs ?? 0) - skillCooldownDeltaMs),
   }))
   const nextSkillsWithCharges = nextSkills.map((skill) => {
     if (!skill.maxCharges || skill.maxCharges <= 1) {
@@ -3670,24 +4046,25 @@ export function selectEnemy(state: EncounterState, enemyId: string): EncounterSt
   }
 
   const previousTargetId = state.player.currentTargetId
+  const targetEnemyId = getForcedPlayerCurrentTargetId(state.player, state.enemies) ?? enemyId
   const selectedState = {
     ...state,
     player: {
       ...state.player,
-      currentTargetId: enemyId,
+      currentTargetId: targetEnemyId,
     },
     runtime: {
       ...state.runtime,
       damageSources: buildRuntimeDamageSources(
         state.stage,
         state.runtime.damageSources,
-        enemyId,
+        targetEnemyId,
         state.party.currentTargetId,
       ),
     },
   }
 
-  return previousTargetId ? selectedState : applyImmediatePlayerAutoAttack(selectedState, enemyId)
+  return previousTargetId ? selectedState : applyImmediatePlayerAutoAttack(selectedState, targetEnemyId)
 }
 
 export function cycleEnemyTarget(state: EncounterState, direction: 1 | -1): EncounterState {
@@ -3733,39 +4110,64 @@ export function closePauseOverlay(state: EncounterState): EncounterState {
 }
 
 export function activateSkill(state: EncounterState, skillId: SkillId): EncounterState {
-  if (getSkillActivationBlockReason(state, skillId)) {
+  const effectivePlayerCurrentTargetId = resolvePlayerCurrentTargetId(state.player, state.enemies)
+  const activationState =
+    effectivePlayerCurrentTargetId === state.player.currentTargetId
+      ? state
+      : {
+          ...state,
+          player: {
+            ...state.player,
+            currentTargetId: effectivePlayerCurrentTargetId,
+          },
+          runtime: {
+            ...state.runtime,
+            damageSources: buildRuntimeDamageSources(
+              state.stage,
+              state.runtime.damageSources,
+              effectivePlayerCurrentTargetId,
+              state.party.currentTargetId,
+            ),
+          },
+        }
+
+  if (getSkillActivationBlockReason(activationState, skillId)) {
     return state
   }
 
-  const modifiers = getPassiveModifiers(state.passiveTalentIds)
-  const skill = state.skills.find((entry) => entry.id === skillId)
+  const modifiers = getPassiveModifiers(activationState.passiveTalentIds)
+  const skill = activationState.skills.find((entry) => entry.id === skillId)
   const skillDefinition = getActiveSkillDefinition(skillId)
 
   if (!skill || !skillDefinition) {
-    return state
+    return activationState
   }
 
   if (
-    getInterruptTargetValidationError(state, skillId) ||
-    (skillNeedsTarget(skillId) && !state.player.currentTargetId && !isAllEnemyInterruptSkill(skillId))
+    getInterruptTargetValidationError(activationState, skillId) ||
+    (skillNeedsTarget(skillId) && !activationState.player.currentTargetId && !isAllEnemyInterruptSkill(skillId))
   ) {
-    return state
+    return activationState
+  }
+
+  if ((skill.selfCooldownRemainingMs ?? 0) > 0) {
+    return activationState
   }
 
   if ((skill.maxCharges ?? 1) <= 1 && skill.remainingCooldownMs > 0) {
-    return state
+    return activationState
   }
 
   if ((skill.maxCharges ?? 1) > 1 && (skill.currentCharges ?? skill.maxCharges ?? 1) <= 0) {
-    return state
+    return activationState
   }
 
-  if (state.player.resource < skill.resourceCost) {
-    return state
+  if (activationState.player.resource < skill.resourceCost) {
+    return activationState
   }
 
-  if (!modifiers.interruptIgnoresGcd && skill.gcdMs > 0 && state.player.gcdRemainingMs > 0) {
-    return state
+  if (!modifiers.interruptIgnoresGcd && skill.gcdMs > 0 && activationState.player.gcdRemainingMs > 0) {
+    return activationState
   }
 
   const cooldownMultiplier =
@@ -3773,11 +4175,20 @@ export function activateSkill(state: EncounterState, skillId: SkillId): Encounte
     (skillDefinition.castStopMode === 'interrupt' || skillDefinition.castStopMode === 'control')
       ? 2
       : 1
-  const nextSkills = state.skills.map((entry) =>
+  const getNextSkillCooldownMs = (entry: SkillState) => {
+    const configuredCooldownMs = entry.cooldownMs * cooldownMultiplier
+    if (entry.gcdMs > 0 || (entry.maxCharges && entry.maxCharges > 1)) {
+      return configuredCooldownMs
+    }
+
+    return Math.max(configuredCooldownMs, NON_GCD_SELF_COOLDOWN_MS)
+  }
+  const nextSkills = activationState.skills.map((entry) =>
     entry.id === skillId
       ? {
           ...entry,
-          remainingCooldownMs: entry.cooldownMs * cooldownMultiplier,
+          remainingCooldownMs: getNextSkillCooldownMs(entry),
+          selfCooldownRemainingMs: entry.gcdMs <= 0 ? NON_GCD_SELF_COOLDOWN_MS : 0,
           currentCharges:
             entry.maxCharges && entry.maxCharges > 1
               ? Math.max(0, (entry.currentCharges ?? entry.maxCharges) - 1)
@@ -3787,12 +4198,16 @@ export function activateSkill(state: EncounterState, skillId: SkillId): Encounte
   )
 
   const nextState: EncounterState = {
-    ...state,
+    ...activationState,
     skills: nextSkills,
     player: {
-      ...state.player,
-      resource: clamp(state.player.resource - skill.resourceCost, 0, state.player.maxResource),
-      gcdRemainingMs: skill.gcdMs > 0 ? skill.gcdMs : state.player.gcdRemainingMs,
+      ...activationState.player,
+      resource: clamp(
+        activationState.player.resource - skill.resourceCost,
+        0,
+        activationState.player.maxResource,
+      ),
+      gcdRemainingMs: skill.gcdMs > 0 ? skill.gcdMs : activationState.player.gcdRemainingMs,
     },
   }
   return resolvePlayerSkillRuntime(nextState, skillId, {

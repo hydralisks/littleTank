@@ -148,6 +148,17 @@
 | `description` | 状态效果说明 | string | 是 | 面向策划与后续 UI 说明 |
 | `effectLogicId` | 状态效果逻辑接口 ID | string | 是 | 程序用受控 ID 去连接逻辑 |
 
+### 可叠加状态语义
+
+当前通用叠加规则是“整组刷新”，不是每层独立计时：
+
+- 首次施加可叠加状态时，创建 1 层。
+- 再次施加同一个 `statusId` 时，层数 +1，不超过运行时定义的 `maxStacks`。
+- 再次施加会用新状态覆盖整组状态的 `remainingMs / totalMs`，因此整组层数刷新到完整持续时间。
+- 持续时间结束时，整组状态一起移除，不逐层掉层。
+
+当前 `soulSensitive_status` 与 `soulSensitive_p_status` 运行时最大层数为 5。以当前第三章表为例，`灵魂敏感` 叠加后会刷新到完整 7000ms；从最近一次施加后经过 7000ms，所有层数一起消失。
+
 ### `effectLogicId` 当前约定
 
 Excel 不直接写代码，只写受控 ID。

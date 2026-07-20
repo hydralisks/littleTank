@@ -1,0 +1,1222 @@
+{
+  "generatedAt": "2026-07-16T14:28:25.995Z",
+  "title": "怪物图鉴数值估算",
+  "monsters": [
+    {
+      "enemyId": "troll_warlord",
+      "name": "巨魔督军",
+      "appearances": 1,
+      "stageIds": [
+        "Zul'Aman-5"
+      ],
+      "averageMaxHp": 700,
+      "threatLogic": "irregular",
+      "isSkull": true,
+      "expectedTankDamagePerSec": 7.08,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 7.08,
+      "interruptibleCastsPerSec": 0.08,
+      "controlOnlyCastsPerSec": 0.42,
+      "highDangerCastsPerSec": 0.08,
+      "statusCoverages": [
+        {
+          "statusId": "hunter'sMarked",
+          "statusName": "被猎人标记",
+          "kind": "playerDebuff",
+          "effectLogicId": "hunter'sMarked_status",
+          "applicationsPerSec": 0.08,
+          "expectedCoverage": 0.83
+        },
+        {
+          "statusId": "trollRuptured",
+          "statusName": "被巨魔撕裂",
+          "kind": "playerDebuff",
+          "effectLogicId": "trollRuptured_status",
+          "applicationsPerSec": 0.08,
+          "expectedCoverage": 0.83
+        },
+        {
+          "statusId": "trollRuptured_p",
+          "statusName": "都被巨魔撕裂",
+          "kind": "partyDebuff",
+          "effectLogicId": "trollRuptured_p_status",
+          "applicationsPerSec": 0.08,
+          "expectedCoverage": 0.83
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "troll_melee",
+          "skillName": "巨魔攻击",
+          "castsPerSec": 0.33,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "hunter's_mark",
+          "skillName": "猎人印记",
+          "castsPerSec": 0.08,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "high",
+          "castBreakRule": "interruptOrControl"
+        },
+        {
+          "skillId": "troll_rupture",
+          "skillName": "巨魔撕裂",
+          "castsPerSec": 0.08,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "medium",
+          "castBreakRule": "controlOnly"
+        }
+      ]
+    },
+    {
+      "enemyId": "kobold_apprentice",
+      "name": "学徒甲",
+      "appearances": 7,
+      "stageIds": [
+        "RingingDeeps-2",
+        "RingingDeeps-4",
+        "RingingDeeps-5",
+        "RingingDeeps-6"
+      ],
+      "averageMaxHp": 60,
+      "threatLogic": "normal",
+      "isSkull": false,
+      "expectedTankDamagePerSec": 5,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 5,
+      "interruptibleCastsPerSec": 0.33,
+      "controlOnlyCastsPerSec": 0,
+      "highDangerCastsPerSec": 0,
+      "statusCoverages": [],
+      "skills": [
+        {
+          "skillId": "flame_missiles",
+          "skillName": "烛火飞弹",
+          "castsPerSec": 0.33,
+          "targetRuleId": "threatTarget",
+          "damageType": "magic",
+          "dangerLevel": "low",
+          "castBreakRule": "interruptOrControl"
+        }
+      ]
+    },
+    {
+      "enemyId": "troll_shieldmasta",
+      "name": "巨魔持盾卫士",
+      "appearances": 1,
+      "stageIds": [
+        "Zul'Aman-6"
+      ],
+      "averageMaxHp": 800,
+      "threatLogic": "irregular",
+      "isSkull": true,
+      "expectedTankDamagePerSec": 5,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 5,
+      "interruptibleCastsPerSec": 0,
+      "controlOnlyCastsPerSec": 0.38,
+      "highDangerCastsPerSec": 0.08,
+      "statusCoverages": [
+        {
+          "statusId": "shellUp",
+          "statusName": "举盾",
+          "kind": "enemyBuff",
+          "effectLogicId": "shellUp_status",
+          "applicationsPerSec": 0.08,
+          "expectedCoverage": 0.38
+        },
+        {
+          "statusId": "trollTaunted",
+          "statusName": "被巨魔嘲讽",
+          "kind": "playerDebuff",
+          "effectLogicId": "trollTaunted_status",
+          "applicationsPerSec": 0.08,
+          "expectedCoverage": 0.38
+        },
+        {
+          "statusId": "trollTaunted_p",
+          "statusName": "都被巨魔嘲讽",
+          "kind": "partyDebuff",
+          "effectLogicId": "trollTaunted_p_status",
+          "applicationsPerSec": 0.08,
+          "expectedCoverage": 0.38
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "troll_melee",
+          "skillName": "巨魔攻击",
+          "castsPerSec": 0.23,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "shell_up",
+          "skillName": "举盾",
+          "castsPerSec": 0.08,
+          "targetRuleId": "self",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "troll_taunt",
+          "skillName": "巨魔嘲讽",
+          "castsPerSec": 0.08,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "high",
+          "castBreakRule": "controlOnly"
+        }
+      ]
+    },
+    {
+      "enemyId": "Old_Murk-Eye",
+      "name": "老瞎眼",
+      "appearances": 1,
+      "stageIds": [
+        "WestFall-6"
+      ],
+      "averageMaxHp": 800,
+      "threatLogic": "bloodlust",
+      "isSkull": true,
+      "expectedTankDamagePerSec": 3.4,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 3.4,
+      "interruptibleCastsPerSec": 0,
+      "controlOnlyCastsPerSec": 0.4,
+      "highDangerCastsPerSec": 0,
+      "statusCoverages": [
+        {
+          "statusId": "Murk-Eye",
+          "statusName": "瞎眼",
+          "kind": "playerDebuff",
+          "effectLogicId": "Murk-Eye_status",
+          "applicationsPerSec": 0.1,
+          "expectedCoverage": 0
+        },
+        {
+          "statusId": "Murk-Eye_p",
+          "statusName": "都瞎眼",
+          "kind": "partyDebuff",
+          "effectLogicId": "Murk-Eye_p_status",
+          "applicationsPerSec": 0.1,
+          "expectedCoverage": 0
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "Murk-Eye_melee",
+          "skillName": "瞎眼平砍",
+          "castsPerSec": 0.3,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "Murk-Eye_rush",
+          "skillName": "瞎眼冲锋",
+          "castsPerSec": 0.1,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        }
+      ]
+    },
+    {
+      "enemyId": "coldlight_oracle",
+      "name": "寒光智者",
+      "appearances": 3,
+      "stageIds": [
+        "WestFall-4",
+        "WestFall-5",
+        "WestFall-6"
+      ],
+      "averageMaxHp": 300,
+      "threatLogic": "normal",
+      "isSkull": true,
+      "expectedTankDamagePerSec": 3,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 3,
+      "interruptibleCastsPerSec": 0.33,
+      "controlOnlyCastsPerSec": 0,
+      "highDangerCastsPerSec": 0,
+      "statusCoverages": [],
+      "skills": [
+        {
+          "skillId": "murloc_earthquake",
+          "skillName": "鱼人地震术",
+          "castsPerSec": 0.25,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "medium",
+          "castBreakRule": "interruptOrControl"
+        },
+        {
+          "skillId": "murloc_lightning",
+          "skillName": "鱼人闪电术",
+          "castsPerSec": 0.08,
+          "targetRuleId": "threatTarget",
+          "damageType": "magic",
+          "dangerLevel": "low",
+          "castBreakRule": "interruptOrControl"
+        }
+      ]
+    },
+    {
+      "enemyId": "troll_headhunter",
+      "name": "负伤的巨魔猎头者",
+      "appearances": 12,
+      "stageIds": [
+        "Zul'Aman-1",
+        "Zul'Aman-2",
+        "Zul'Aman-6"
+      ],
+      "averageMaxHp": 300,
+      "threatLogic": "normal",
+      "isSkull": false,
+      "expectedTankDamagePerSec": 2.29,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 2.29,
+      "interruptibleCastsPerSec": 0,
+      "controlOnlyCastsPerSec": 0.36,
+      "highDangerCastsPerSec": 0,
+      "statusCoverages": [],
+      "skills": [
+        {
+          "skillId": "throw_lance",
+          "skillName": "投矛",
+          "castsPerSec": 0.29,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "pull_back",
+          "skillName": "撤回",
+          "castsPerSec": 0.07,
+          "targetRuleId": "self",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        }
+      ]
+    },
+    {
+      "enemyId": "The_Candle_King",
+      "name": "蜡烛之王",
+      "appearances": 1,
+      "stageIds": [
+        "RingingDeeps-6"
+      ],
+      "averageMaxHp": 400,
+      "threatLogic": "irregular",
+      "isSkull": true,
+      "expectedTankDamagePerSec": 2.14,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 2.14,
+      "interruptibleCastsPerSec": 0.14,
+      "controlOnlyCastsPerSec": 0.14,
+      "highDangerCastsPerSec": 0,
+      "statusCoverages": [
+        {
+          "statusId": "waxed",
+          "statusName": "好蜡",
+          "kind": "playerDebuff",
+          "effectLogicId": "waxed_status",
+          "applicationsPerSec": 0.07,
+          "expectedCoverage": 1
+        },
+        {
+          "statusId": "waxed_p",
+          "statusName": "都好蜡",
+          "kind": "partyDebuff",
+          "effectLogicId": "waxed_p_status",
+          "applicationsPerSec": 0.07,
+          "expectedCoverage": 1
+        },
+        {
+          "statusId": "hoe",
+          "statusName": "锄",
+          "kind": "playerDebuff",
+          "effectLogicId": "hoe_status",
+          "applicationsPerSec": 0.07,
+          "expectedCoverage": 0
+        },
+        {
+          "statusId": "hoe_p",
+          "statusName": "锄",
+          "kind": "partyDebuff",
+          "effectLogicId": "hoe_p_status",
+          "applicationsPerSec": 0.07,
+          "expectedCoverage": 0
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "flame_bolt",
+          "skillName": "火焰箭",
+          "castsPerSec": 0.14,
+          "targetRuleId": "threatTarget",
+          "damageType": "magic",
+          "dangerLevel": "low",
+          "castBreakRule": "interruptOrControl"
+        },
+        {
+          "skillId": "shadow_hoa",
+          "skillName": "暗影之锄",
+          "castsPerSec": 0.07,
+          "targetRuleId": "threatTarget",
+          "damageType": "magic",
+          "dangerLevel": "medium",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "wax_figure",
+          "skillName": "蜡像",
+          "castsPerSec": 0.07,
+          "targetRuleId": "threatTarget",
+          "damageType": "magic",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        }
+      ]
+    },
+    {
+      "enemyId": "troll_soul_summoner",
+      "name": "巨魔唤魂者",
+      "appearances": 4,
+      "stageIds": [
+        "Zul'Aman-4",
+        "Zul'Aman-5"
+      ],
+      "averageMaxHp": 250,
+      "threatLogic": "normal",
+      "isSkull": false,
+      "expectedTankDamagePerSec": 1.82,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 1.82,
+      "interruptibleCastsPerSec": 0.36,
+      "controlOnlyCastsPerSec": 0,
+      "highDangerCastsPerSec": 0,
+      "statusCoverages": [
+        {
+          "statusId": "soulSensitive",
+          "statusName": "灵魂敏感",
+          "kind": "playerDebuff",
+          "effectLogicId": "soulSensitive_status",
+          "applicationsPerSec": 0.09,
+          "expectedCoverage": 0.64
+        },
+        {
+          "statusId": "soulSensitive_p",
+          "statusName": "都灵魂敏感",
+          "kind": "partyDebuff",
+          "effectLogicId": "soulSensitive_p_status",
+          "applicationsPerSec": 0.09,
+          "expectedCoverage": 0.64
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "shadow_bolt",
+          "skillName": "暗影箭",
+          "castsPerSec": 0.27,
+          "targetRuleId": "threatTarget",
+          "damageType": "magic",
+          "dangerLevel": "low",
+          "castBreakRule": "interruptOrControl"
+        },
+        {
+          "skillId": "soul_cry",
+          "skillName": "灵魂呼号",
+          "castsPerSec": 0.09,
+          "targetRuleId": "threatTarget",
+          "damageType": "magic",
+          "dangerLevel": "medium",
+          "castBreakRule": "interruptOrControl"
+        }
+      ]
+    },
+    {
+      "enemyId": "troll_high_priest",
+      "name": "巨魔高阶牧师",
+      "appearances": 5,
+      "stageIds": [
+        "Zul'Aman-3",
+        "Zul'Aman-4",
+        "Zul'Aman-6"
+      ],
+      "averageMaxHp": 350,
+      "threatLogic": "normal",
+      "isSkull": false,
+      "expectedTankDamagePerSec": 1.5,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 5,
+      "expectedAbsorbPerSec": 0.38,
+      "requiredThreatPerSec": 1.5,
+      "interruptibleCastsPerSec": 0.38,
+      "controlOnlyCastsPerSec": 0,
+      "highDangerCastsPerSec": 0.06,
+      "statusCoverages": [
+        {
+          "statusId": "spiritShelled",
+          "statusName": "灵魂护盾中",
+          "kind": "enemyBuff",
+          "effectLogicId": "spiritShelled_status",
+          "applicationsPerSec": 0.13,
+          "expectedCoverage": 1
+        },
+        {
+          "statusId": "forestPotioned",
+          "statusName": "有森林药剂",
+          "kind": "enemyBuff",
+          "effectLogicId": "forestPotioned_status",
+          "applicationsPerSec": 0.06,
+          "expectedCoverage": 0.5
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "troll_smite",
+          "skillName": "巨魔惩击",
+          "castsPerSec": 0.25,
+          "targetRuleId": "threatTarget",
+          "damageType": "magic",
+          "dangerLevel": "low",
+          "castBreakRule": "interruptOrControl"
+        },
+        {
+          "skillId": "forest_potion",
+          "skillName": "森林药剂",
+          "castsPerSec": 0.06,
+          "targetRuleId": "mostInjured",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "interruptOrControl"
+        },
+        {
+          "skillId": "spirit_shell",
+          "skillName": "灵魂护盾",
+          "castsPerSec": 0.06,
+          "targetRuleId": "otherEnemy",
+          "damageType": "magic",
+          "dangerLevel": "high",
+          "castBreakRule": "interruptOrControl"
+        }
+      ]
+    },
+    {
+      "enemyId": "coldlight_seer",
+      "name": "寒光先知",
+      "appearances": 4,
+      "stageIds": [
+        "WestFall-3",
+        "WestFall-5",
+        "WestFall-6"
+      ],
+      "averageMaxHp": 200,
+      "threatLogic": "normal",
+      "isSkull": true,
+      "expectedTankDamagePerSec": 1.25,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 6.25,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 1.25,
+      "interruptibleCastsPerSec": 0.33,
+      "controlOnlyCastsPerSec": 0,
+      "highDangerCastsPerSec": 0.08,
+      "statusCoverages": [
+        {
+          "statusId": "murlocHealing",
+          "statusName": "鱼人在治疗",
+          "kind": "enemyBuff",
+          "effectLogicId": "murlocHealing_status",
+          "applicationsPerSec": 0.08,
+          "expectedCoverage": 0
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "murloc_smite",
+          "skillName": "鱼人惩击",
+          "castsPerSec": 0.25,
+          "targetRuleId": "threatTarget",
+          "damageType": "magic",
+          "dangerLevel": "low",
+          "castBreakRule": "interruptOrControl"
+        },
+        {
+          "skillId": "murloc_heal",
+          "skillName": "鱼人治疗术",
+          "castsPerSec": 0.08,
+          "targetRuleId": "mostInjured",
+          "damageType": "physical",
+          "dangerLevel": "high",
+          "castBreakRule": "interruptOrControl"
+        }
+      ]
+    },
+    {
+      "enemyId": "murloc_tidehunter",
+      "name": "鱼人猎潮者",
+      "appearances": 2,
+      "stageIds": [
+        "WestFall-1",
+        "WestFall-2"
+      ],
+      "averageMaxHp": 150,
+      "threatLogic": "normal",
+      "isSkull": false,
+      "expectedTankDamagePerSec": 1.2,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 1.2,
+      "interruptibleCastsPerSec": 0.1,
+      "controlOnlyCastsPerSec": 0.3,
+      "highDangerCastsPerSec": 0.1,
+      "statusCoverages": [
+        {
+          "statusId": "marked",
+          "statusName": "被标记",
+          "kind": "playerDebuff",
+          "effectLogicId": "marked_status",
+          "applicationsPerSec": 0.1,
+          "expectedCoverage": 1
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "murloc_melee",
+          "skillName": "鱼人攻击",
+          "castsPerSec": 0.3,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "murloc_mark",
+          "skillName": "鱼人标记",
+          "castsPerSec": 0.1,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "high",
+          "castBreakRule": "interruptOrControl"
+        }
+      ]
+    },
+    {
+      "enemyId": "kobold_miner",
+      "name": "狗头人矿工",
+      "appearances": 4,
+      "stageIds": [
+        "RingingDeeps-1",
+        "RingingDeeps-3",
+        "RingingDeeps-4"
+      ],
+      "averageMaxHp": 80,
+      "threatLogic": "normal",
+      "isSkull": false,
+      "expectedTankDamagePerSec": 1,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 1,
+      "interruptibleCastsPerSec": 0,
+      "controlOnlyCastsPerSec": 0.5,
+      "highDangerCastsPerSec": 0,
+      "statusCoverages": [],
+      "skills": [
+        {
+          "skillId": "mine_melee",
+          "skillName": "镐击",
+          "castsPerSec": 0.38,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "work_work",
+          "skillName": "工作工作",
+          "castsPerSec": 0.13,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "medium",
+          "castBreakRule": "controlOnly"
+        }
+      ]
+    },
+    {
+      "enemyId": "kobold_rummager",
+      "name": "狗头人拾荒者",
+      "appearances": 2,
+      "stageIds": [
+        "RingingDeeps-5",
+        "RingingDeeps-6"
+      ],
+      "averageMaxHp": 100,
+      "threatLogic": "irregular",
+      "isSkull": true,
+      "expectedTankDamagePerSec": 1,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 1,
+      "interruptibleCastsPerSec": 0.07,
+      "controlOnlyCastsPerSec": 0.21,
+      "highDangerCastsPerSec": 0.07,
+      "statusCoverages": [
+        {
+          "statusId": "disgusting",
+          "statusName": "恶心心",
+          "kind": "enemyBuff",
+          "effectLogicId": "disgusting_status",
+          "applicationsPerSec": 0.07,
+          "expectedCoverage": 1
+        },
+        {
+          "statusId": "got!",
+          "statusName": "拿下了",
+          "kind": "enemyBuff",
+          "effectLogicId": "got!_status",
+          "applicationsPerSec": 0.07,
+          "expectedCoverage": 0.36
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "throw",
+          "skillName": "扔",
+          "castsPerSec": 0.14,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "get_it！",
+          "skillName": "拿下",
+          "castsPerSec": 0.07,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "high",
+          "castBreakRule": "interruptOrControl"
+        },
+        {
+          "skillId": "trash",
+          "skillName": "垃圾",
+          "castsPerSec": 0.07,
+          "targetRuleId": "threatTarget",
+          "damageType": "magic",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        }
+      ]
+    },
+    {
+      "enemyId": "murloc_scout",
+      "name": "鱼人斥候",
+      "appearances": 13,
+      "stageIds": [
+        "WestFall-1",
+        "WestFall-2",
+        "WestFall-4",
+        "WestFall-6"
+      ],
+      "averageMaxHp": 100,
+      "threatLogic": "irregular",
+      "isSkull": false,
+      "expectedTankDamagePerSec": 1,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 1,
+      "interruptibleCastsPerSec": 0,
+      "controlOnlyCastsPerSec": 0.33,
+      "highDangerCastsPerSec": 0,
+      "statusCoverages": [
+        {
+          "statusId": "run!",
+          "statusName": "跑啊",
+          "kind": "enemyBuff",
+          "effectLogicId": "run!_status",
+          "applicationsPerSec": 0.08,
+          "expectedCoverage": 0.5
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "murloc_melee",
+          "skillName": "鱼人攻击",
+          "castsPerSec": 0.25,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "run!",
+          "skillName": "跑啊！",
+          "castsPerSec": 0.08,
+          "targetRuleId": "self",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        }
+      ]
+    },
+    {
+      "enemyId": "kobold_monk",
+      "name": "狗头人武僧",
+      "appearances": 3,
+      "stageIds": [
+        "RingingDeeps-3",
+        "RingingDeeps-4",
+        "RingingDeeps-5"
+      ],
+      "averageMaxHp": 180,
+      "threatLogic": "normal",
+      "isSkull": false,
+      "expectedTankDamagePerSec": 0.75,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 0.75,
+      "interruptibleCastsPerSec": 0,
+      "controlOnlyCastsPerSec": 0.63,
+      "highDangerCastsPerSec": 0.13,
+      "statusCoverages": [
+        {
+          "statusId": "windStrike!",
+          "statusName": "疾风连击！",
+          "kind": "enemyBuff",
+          "effectLogicId": "wind_strike!_status",
+          "applicationsPerSec": 0.13,
+          "expectedCoverage": 0.38
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "fist",
+          "skillName": "拳打",
+          "castsPerSec": 0.25,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "kick",
+          "skillName": "脚踢",
+          "castsPerSec": 0.25,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "wind_strike",
+          "skillName": "疾风连击",
+          "castsPerSec": 0.13,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "high",
+          "castBreakRule": "controlOnly"
+        }
+      ]
+    },
+    {
+      "enemyId": "murloc_warleader",
+      "name": "鱼人领军",
+      "appearances": 4,
+      "stageIds": [
+        "WestFall-3",
+        "WestFall-4",
+        "WestFall-5",
+        "WestFall-6"
+      ],
+      "averageMaxHp": 200,
+      "threatLogic": "irregular",
+      "isSkull": false,
+      "expectedTankDamagePerSec": 0.67,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 0.67,
+      "interruptibleCastsPerSec": 0.08,
+      "controlOnlyCastsPerSec": 0.25,
+      "highDangerCastsPerSec": 0,
+      "statusCoverages": [
+        {
+          "statusId": "murlocWatching",
+          "statusName": "鱼人在观察",
+          "kind": "enemyBuff",
+          "effectLogicId": "murlocWatching_status",
+          "applicationsPerSec": 0.08,
+          "expectedCoverage": 0.5
+        },
+        {
+          "statusId": "murlocUpgraded",
+          "statusName": "鱼人升级啦",
+          "kind": "enemyBuff",
+          "effectLogicId": "murlocUpgraded_status",
+          "applicationsPerSec": 0.08,
+          "expectedCoverage": 0
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "murloc_melee",
+          "skillName": "鱼人攻击",
+          "castsPerSec": 0.17,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "murloc_think",
+          "skillName": "鱼人思考",
+          "castsPerSec": 0.08,
+          "targetRuleId": "otherEnemy",
+          "damageType": "physical",
+          "dangerLevel": "medium",
+          "castBreakRule": "interruptOrControl"
+        },
+        {
+          "skillId": "murloc_watch",
+          "skillName": "鱼人观察",
+          "castsPerSec": 0.08,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        }
+      ]
+    },
+    {
+      "enemyId": "kobold_geomancer",
+      "name": "狗头人地卜师",
+      "appearances": 1,
+      "stageIds": [
+        "RingingDeeps-4"
+      ],
+      "averageMaxHp": 200,
+      "threatLogic": "irregular",
+      "isSkull": true,
+      "expectedTankDamagePerSec": 0.53,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 0.53,
+      "interruptibleCastsPerSec": 0.07,
+      "controlOnlyCastsPerSec": 0.27,
+      "highDangerCastsPerSec": 0,
+      "statusCoverages": [
+        {
+          "statusId": "slowDown",
+          "statusName": "慢下来",
+          "kind": "playerDebuff",
+          "effectLogicId": "slowDown_status",
+          "applicationsPerSec": 0.07,
+          "expectedCoverage": 0.33
+        },
+        {
+          "statusId": "slowDown_p",
+          "statusName": "都慢下来",
+          "kind": "partyDebuff",
+          "effectLogicId": "slowDown_p_status",
+          "applicationsPerSec": 0.07,
+          "expectedCoverage": 0.33
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "hit",
+          "skillName": "打",
+          "castsPerSec": 0.27,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "slow",
+          "skillName": "缓慢",
+          "castsPerSec": 0.07,
+          "targetRuleId": "threatTarget",
+          "damageType": "magic",
+          "dangerLevel": "medium",
+          "castBreakRule": "interruptOrControl"
+        }
+      ]
+    },
+    {
+      "enemyId": "murloc_blowgiller",
+      "name": "鱼人吹箭者",
+      "appearances": 6,
+      "stageIds": [
+        "WestFall-2",
+        "WestFall-3",
+        "WestFall-5"
+      ],
+      "averageMaxHp": 150,
+      "threatLogic": "normal",
+      "isSkull": false,
+      "expectedTankDamagePerSec": 0.4,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 0.4,
+      "interruptibleCastsPerSec": 0.1,
+      "controlOnlyCastsPerSec": 0.2,
+      "highDangerCastsPerSec": 0,
+      "statusCoverages": [
+        {
+          "statusId": "murlocUpgraded",
+          "statusName": "鱼人升级啦",
+          "kind": "enemyBuff",
+          "effectLogicId": "murlocUpgraded_status",
+          "applicationsPerSec": 0.1,
+          "expectedCoverage": 0
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "murloc_blowgun",
+          "skillName": "鱼人吹箭",
+          "castsPerSec": 0.2,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "murloc_upgrade",
+          "skillName": "鱼人升级",
+          "castsPerSec": 0.1,
+          "targetRuleId": "self",
+          "damageType": "physical",
+          "dangerLevel": "medium",
+          "castBreakRule": "interruptOrControl"
+        }
+      ]
+    },
+    {
+      "enemyId": "forest_troll_berserker",
+      "name": "森林巨魔狂战士",
+      "appearances": 4,
+      "stageIds": [
+        "Zul'Aman-3",
+        "Zul'Aman-4"
+      ],
+      "averageMaxHp": 400,
+      "threatLogic": "bloodlust",
+      "isSkull": false,
+      "expectedTankDamagePerSec": 0,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 2.5,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 0,
+      "interruptibleCastsPerSec": 0.06,
+      "controlOnlyCastsPerSec": 0.19,
+      "highDangerCastsPerSec": 0,
+      "statusCoverages": [
+        {
+          "statusId": "berserker!",
+          "statusName": "狂攻",
+          "kind": "enemyBuff",
+          "effectLogicId": "berserker!_status",
+          "applicationsPerSec": 0.19,
+          "expectedCoverage": 0.56
+        },
+        {
+          "statusId": "forestBerserkerPotioned",
+          "statusName": "有森林狂战药剂",
+          "kind": "enemyBuff",
+          "effectLogicId": "forestBerserkerPotioned_status",
+          "applicationsPerSec": 0.06,
+          "expectedCoverage": 0.5
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "berserker_melee",
+          "skillName": "狂攻",
+          "castsPerSec": 0.19,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "forest_berserker_potion",
+          "skillName": "森林狂战药剂",
+          "castsPerSec": 0.06,
+          "targetRuleId": "self",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "interruptOrControl"
+        }
+      ]
+    },
+    {
+      "enemyId": "troll_berserker",
+      "name": "负伤的巨魔狂战士",
+      "appearances": 4,
+      "stageIds": [
+        "Zul'Aman-1"
+      ],
+      "averageMaxHp": 400,
+      "threatLogic": "bloodlust",
+      "isSkull": false,
+      "expectedTankDamagePerSec": 0,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 3.13,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 0,
+      "interruptibleCastsPerSec": 0.06,
+      "controlOnlyCastsPerSec": 0.19,
+      "highDangerCastsPerSec": 0,
+      "statusCoverages": [
+        {
+          "statusId": "berserker!",
+          "statusName": "狂攻",
+          "kind": "enemyBuff",
+          "effectLogicId": "berserker!_status",
+          "applicationsPerSec": 0.19,
+          "expectedCoverage": 0.56
+        },
+        {
+          "statusId": "berserkerPotioned",
+          "statusName": "有狂战药剂",
+          "kind": "enemyBuff",
+          "effectLogicId": "berserkerPotioned_status",
+          "applicationsPerSec": 0.06,
+          "expectedCoverage": 0.5
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "berserker_melee",
+          "skillName": "狂攻",
+          "castsPerSec": 0.19,
+          "targetRuleId": "threatTarget",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        },
+        {
+          "skillId": "berserker_potion",
+          "skillName": "狂战药剂",
+          "castsPerSec": 0.06,
+          "targetRuleId": "self",
+          "damageType": "physical",
+          "dangerLevel": "low",
+          "castBreakRule": "interruptOrControl"
+        }
+      ]
+    },
+    {
+      "enemyId": "troll_shadow_priest",
+      "name": "巨魔暗影牧师",
+      "appearances": 4,
+      "stageIds": [
+        "Zul'Aman-3",
+        "Zul'Aman-5"
+      ],
+      "averageMaxHp": 350,
+      "threatLogic": "normal",
+      "isSkull": false,
+      "expectedTankDamagePerSec": 0,
+      "expectedPartyDamagePerSec": 0,
+      "expectedPressurePerSec": 0,
+      "expectedHealingPerSec": 0,
+      "expectedAbsorbPerSec": 0,
+      "requiredThreatPerSec": 0,
+      "interruptibleCastsPerSec": 0.2,
+      "controlOnlyCastsPerSec": 0.2,
+      "highDangerCastsPerSec": 0.2,
+      "statusCoverages": [
+        {
+          "statusId": "shadowWaved",
+          "statusName": "被暗影波",
+          "kind": "enemyBuff",
+          "effectLogicId": "shadowWaved_status",
+          "applicationsPerSec": 0.2,
+          "expectedCoverage": 1
+        }
+      ],
+      "skills": [
+        {
+          "skillId": "shadow_wave",
+          "skillName": "暗影波",
+          "castsPerSec": 0.2,
+          "targetRuleId": "otherEnemy",
+          "damageType": "magic",
+          "dangerLevel": "high",
+          "castBreakRule": "interruptOrControl"
+        },
+        {
+          "skillId": "troll_dark_nova",
+          "skillName": "巨魔黑星",
+          "castsPerSec": 0.2,
+          "targetRuleId": "self",
+          "damageType": "magic",
+          "dangerLevel": "low",
+          "castBreakRule": "controlOnly"
+        }
+      ]
+    }
+  ]
+}

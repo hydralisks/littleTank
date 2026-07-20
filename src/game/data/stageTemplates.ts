@@ -36,10 +36,15 @@ export interface StageInfo {
   title: string
   subtitle: string
   strategyTips?: string
+  challengeId?: string
+  recommendedDifficulty?: string
+  allowedClassIds?: string[]
+  enemySummary?: string
   affixes: StageSectionEntry[]
   rules: StageSectionEntry[]
   legend: StageLegendEntry[]
   unlockedActiveSkillIds: StageUnlockedActiveSkillId[]
+  passiveTalentUnlockTier?: number
 }
 
 export interface StageAreaWorkbookOverride {
@@ -58,6 +63,10 @@ export interface StageWorkbookOverride {
   title?: string
   subtitle?: string
   strategyTips?: string
+  challengeId?: string
+  recommendedDifficulty?: string
+  allowedClassIds?: string[]
+  enemySummary?: string
   affix1Title?: string
   affix1Description?: string
   affix1IconId?: string
@@ -71,6 +80,7 @@ export interface StageWorkbookOverride {
   rule2Description?: string
   rule2IconId?: string
   unlockedActiveSkillIds?: StageUnlockedActiveSkillId[]
+  passiveTalentUnlockTier?: number
 }
 
 export interface StageLegendWorkbookOverride {
@@ -87,6 +97,7 @@ export interface StageWorkbookOverrides {
   areaOverrides: StageAreaWorkbookOverride[]
   stageOverrides: StageWorkbookOverride[]
   legendOverrides: StageLegendWorkbookOverride[]
+  updateCampaignOrder?: boolean
 }
 
 interface StageSeed {
@@ -467,6 +478,7 @@ const highlandSeeds: StageSeed[] = [
 const BASE_STAGE_AREA_ORDER: StageAreaId[] = ['harbor', 'midland', 'highland']
 
 export let stageAreaOrder: StageAreaId[] = [...BASE_STAGE_AREA_ORDER]
+export let campaignStageAreaOrder: StageAreaId[] = [...BASE_STAGE_AREA_ORDER]
 
 const BASE_STAGE_AREA_CATALOG: Record<StageAreaId, StageAreaInfo> = {
   harbor: {
@@ -581,6 +593,7 @@ const BASE_STAGE_ORDER: StageId[] = [
 ]
 
 export let stageOrder: StageId[] = [...BASE_STAGE_ORDER]
+export let campaignStageOrder: StageId[] = [...BASE_STAGE_ORDER]
 
 const BASE_STAGE_CATALOG: Record<StageId, StageInfo> = {
   'harbor-1': createStage('harbor', 1, harborSeeds[0], harborCommon),
@@ -625,6 +638,7 @@ function cloneStageLegendEntry(entry: StageLegendEntry): StageLegendEntry {
 function cloneStageInfo(stage: StageInfo): StageInfo {
   return {
     ...stage,
+    allowedClassIds: stage.allowedClassIds ? [...stage.allowedClassIds] : undefined,
     affixes: stage.affixes.map(cloneStageEntry),
     rules: stage.rules.map(cloneStageEntry),
     legend: stage.legend.map(cloneStageLegendEntry),
@@ -656,6 +670,10 @@ function createFallbackStageInfo(
     title: override.title ?? override.stageId,
     subtitle: override.subtitle ?? '',
     strategyTips: override.strategyTips,
+    challengeId: override.challengeId,
+    recommendedDifficulty: override.recommendedDifficulty,
+    allowedClassIds: override.allowedClassIds ? [...override.allowedClassIds] : undefined,
+    enemySummary: override.enemySummary,
     affixes: [
       {
         id: `${override.stageId}-affix-a`,
@@ -686,6 +704,7 @@ function createFallbackStageInfo(
     ],
     legend: [],
     unlockedActiveSkillIds: [...(override.unlockedActiveSkillIds ?? [])],
+    passiveTalentUnlockTier: override.passiveTalentUnlockTier,
   }
 }
 
@@ -701,13 +720,29 @@ function createBaseStageCatalog() {
   ) as Record<StageId, StageInfo>
 }
 
+function cloneStageAreaCatalog(source: Record<StageAreaId, StageAreaInfo>) {
+  return Object.fromEntries(
+    Object.entries(source).map(([areaId, area]) => [areaId, cloneStageAreaInfo(area)]),
+  ) as Record<StageAreaId, StageAreaInfo>
+}
+
+function cloneStageCatalog(source: Record<StageId, StageInfo>) {
+  return Object.fromEntries(
+    Object.entries(source).map(([stageId, stage]) => [stageId, cloneStageInfo(stage)]),
+  ) as Record<StageId, StageInfo>
+}
+
 export let stageAreaCatalog: Record<StageAreaId, StageAreaInfo> = createBaseStageAreaCatalog()
 export let stageCatalog: Record<StageId, StageInfo> = createBaseStageCatalog()
 
-function buildAreaLegendMap(stageCatalogSource: Record<StageId, StageInfo>) {
+function buildAreaLegendMap(
+  stageCatalogSource: Record<StageId, StageInfo>,
+  areaOrderSource: readonly StageAreaId[],
+  stageOrderSource: readonly StageId[],
+) {
   return Object.fromEntries(
-    stageAreaOrder.map((areaId) => {
-      const firstStage = stageOrder.find((stageId) => stageCatalogSource[stageId].areaId === areaId)
+    areaOrderSource.map((areaId) => {
+      const firstStage = stageOrderSource.find((stageId) => stageCatalogSource[stageId].areaId === areaId)
       return [areaId, firstStage ? stageCatalogSource[firstStage].legend.map(cloneStageLegendEntry) : []]
     }),
   ) as Record<StageAreaId, StageLegendEntry[]>
@@ -715,11 +750,18 @@ function buildAreaLegendMap(stageCatalogSource: Record<StageId, StageInfo>) {
 
 export function applyStageWorkbookOverrides(overrides: StageWorkbookOverrides) {
   const hasDynamicStageRows = overrides.stageOverrides.some((override) => !BASE_STAGE_CATALOG[override.stageId])
-  const nextStageAreaOrder = hasDynamicStageRows
-    ? overrides.areaOverrides.map((override) => override.areaId)
-    : [...BASE_STAGE_AREA_ORDER]
-  const nextStageOrder = hasDynamicStageRows
-    ? [...overrides.stageOverrides]
+  const containsOnlyChallengeStages = overrides.stageOverrides.length > 0 && overrides.stageOverrides.every((override) =>
+    override.stageId.startsWith('Challenge-') || override.areaId === 'Challenge' || override.areaId === 'challenge'
+  )
+  const shouldUpdateCampaignOrder = overrides.updateCampaignOrder ?? !containsOnlyChallengeStages
+  const shouldAppendDynamicStages = hasDynamicStageRows && !shouldUpdateCampaignOrder
+  const nextStageAreaOrder = shouldAppendDynamicStages
+    ? [...stageAreaOrder]
+    : hasDynamicStageRows ? overrides.areaOverrides.map((override) => override.areaId) : [...BASE_STAGE_AREA_ORDER]
+  const nextStageOrder = shouldAppendDynamicStages
+    ? [...stageOrder]
+    : hasDynamicStageRows ? [] : [...BASE_STAGE_ORDER]
+  const sortedDynamicStageOverrides = [...overrides.stageOverrides]
         .sort((left, right) => {
           const leftAreaIndex = nextStageAreaOrder.indexOf(left.areaId ?? '')
           const rightAreaIndex = nextStageAreaOrder.indexOf(right.areaId ?? '')
@@ -730,10 +772,12 @@ export function applyStageWorkbookOverrides(overrides: StageWorkbookOverrides) {
             left.stageId.localeCompare(right.stageId)
           )
         })
-        .map((override) => override.stageId)
-    : [...BASE_STAGE_ORDER]
-  const nextStageAreaCatalog = hasDynamicStageRows ? {} as Record<StageAreaId, StageAreaInfo> : createBaseStageAreaCatalog()
-  const nextStageCatalog = hasDynamicStageRows ? {} as Record<StageId, StageInfo> : createBaseStageCatalog()
+  const nextStageAreaCatalog = shouldAppendDynamicStages
+    ? cloneStageAreaCatalog(stageAreaCatalog)
+    : hasDynamicStageRows ? {} as Record<StageAreaId, StageAreaInfo> : createBaseStageAreaCatalog()
+  const nextStageCatalog = shouldAppendDynamicStages
+    ? cloneStageCatalog(stageCatalog)
+    : hasDynamicStageRows ? {} as Record<StageId, StageInfo> : createBaseStageCatalog()
 
   for (const [index, override] of overrides.areaOverrides.entries()) {
     const currentArea = nextStageAreaCatalog[override.areaId] ?? createFallbackAreaInfo(override.areaId, index)
@@ -762,11 +806,14 @@ export function applyStageWorkbookOverrides(overrides: StageWorkbookOverrides) {
     }
   }
 
-  for (const override of overrides.stageOverrides) {
+  for (const override of sortedDynamicStageOverrides) {
     const fallbackAreaId = override.areaId ?? nextStageAreaOrder[0] ?? 'default'
     const fallbackArea =
       nextStageAreaCatalog[fallbackAreaId] ??
       (nextStageAreaCatalog[fallbackAreaId] = createFallbackAreaInfo(fallbackAreaId, nextStageAreaOrder.length))
+    if (!nextStageAreaOrder.includes(fallbackAreaId)) {
+      nextStageAreaOrder.push(fallbackAreaId)
+    }
     const currentStage = nextStageCatalog[override.stageId]
       ?? createFallbackStageInfo(override, fallbackArea)
 
@@ -784,6 +831,10 @@ export function applyStageWorkbookOverrides(overrides: StageWorkbookOverrides) {
       ...(override.title ? { title: override.title } : {}),
       ...(override.subtitle ? { subtitle: override.subtitle } : {}),
       ...(override.strategyTips ? { strategyTips: override.strategyTips } : {}),
+      ...(override.challengeId ? { challengeId: override.challengeId } : {}),
+      ...(override.recommendedDifficulty ? { recommendedDifficulty: override.recommendedDifficulty } : {}),
+      ...(override.allowedClassIds ? { allowedClassIds: [...override.allowedClassIds] } : {}),
+      ...(override.enemySummary ? { enemySummary: override.enemySummary } : {}),
       affixes: [
         {
           ...currentStage.affixes[0],
@@ -813,6 +864,7 @@ export function applyStageWorkbookOverrides(overrides: StageWorkbookOverrides) {
         },
       ],
       ...(override.unlockedActiveSkillIds ? { unlockedActiveSkillIds: [...override.unlockedActiveSkillIds] } : {}),
+      ...(override.passiveTalentUnlockTier !== undefined ? { passiveTalentUnlockTier: override.passiveTalentUnlockTier } : {}),
     }
 
     if (!nextStageOrder.includes(override.stageId)) {
@@ -822,8 +874,12 @@ export function applyStageWorkbookOverrides(overrides: StageWorkbookOverrides) {
 
   stageAreaOrder = nextStageAreaOrder
   stageOrder = nextStageOrder
+  if (shouldUpdateCampaignOrder) {
+    campaignStageAreaOrder = [...nextStageAreaOrder]
+    campaignStageOrder = [...nextStageOrder]
+  }
 
-  const areaLegendMap = buildAreaLegendMap(nextStageCatalog)
+  const areaLegendMap = buildAreaLegendMap(nextStageCatalog, nextStageAreaOrder, nextStageOrder)
 
   for (const override of overrides.legendOverrides) {
     const currentLegendList = areaLegendMap[override.areaId]
@@ -877,12 +933,12 @@ export function getStageAreaById(areaId: StageAreaId) {
 }
 
 export function getNextStageId(stageId: StageId) {
-  const currentIndex = stageOrder.indexOf(stageId)
-  if (currentIndex < 0 || currentIndex === stageOrder.length - 1) {
+  const currentIndex = campaignStageOrder.indexOf(stageId)
+  if (currentIndex < 0 || currentIndex === campaignStageOrder.length - 1) {
     return null
   }
 
-  return stageOrder[currentIndex + 1]
+  return campaignStageOrder[currentIndex + 1]
 }
 
 function getStageAreaTier(stage: StageInfo) {
@@ -890,7 +946,11 @@ function getStageAreaTier(stage: StageInfo) {
 }
 
 export function getPassiveTalentUnlockTierForStage(stage: StageInfo) {
-  const stageIndex = stageOrder.indexOf(stage.id)
+  if (stage.passiveTalentUnlockTier !== undefined) {
+    return stage.passiveTalentUnlockTier
+  }
+
+  const stageIndex = campaignStageOrder.indexOf(stage.id)
   if (stageIndex >= 0 && stageIndex < 3) {
     return -1
   }
@@ -900,13 +960,13 @@ export function getPassiveTalentUnlockTierForStage(stage: StageInfo) {
 }
 
 export function getUnlockedActiveSkillIdsForStage(stage: StageInfo) {
-  const stageIndex = stageOrder.indexOf(stage.id)
+  const stageIndex = campaignStageOrder.indexOf(stage.id)
   if (stageIndex < 0) {
-    return []
+    return stage.unlockedActiveSkillIds
   }
 
   const unlockedIds = new Set<StageUnlockedActiveSkillId>()
-  for (const stageId of stageOrder.slice(0, stageIndex + 1)) {
+  for (const stageId of campaignStageOrder.slice(0, stageIndex + 1)) {
     for (const skillId of stageCatalog[stageId].unlockedActiveSkillIds) {
       unlockedIds.add(skillId)
     }

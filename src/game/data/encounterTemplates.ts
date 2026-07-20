@@ -437,19 +437,25 @@ export let AFFIX_DEFINITIONS = cloneAffixDefinitions(BASE_AFFIX_DEFINITIONS)
 export let STAGE_SPECIAL_RULE_BINDINGS = cloneStringArrayRecord(BASE_STAGE_SPECIAL_RULE_BINDINGS)
 export let SPECIAL_RULE_DEFINITIONS = cloneSpecialRuleDefinitions(BASE_SPECIAL_RULE_DEFINITIONS)
 
-export function applyEncounterWorkbookOverrides(overrides: EncounterWorkbookOverrides) {
-  STAGE_OPENING_OVERRIDES = cloneOpeningOverrides(BASE_STAGE_OPENING_OVERRIDES)
-  STAGE_ENEMY_PLACEMENTS = clonePlacementsRecord(BASE_STAGE_ENEMY_PLACEMENTS)
-  STAGE_OPENING_STATUS_OVERRIDES = cloneOpeningStatusOverrides(BASE_STAGE_OPENING_STATUS_OVERRIDES)
-  STAGE_AFFIX_BINDINGS = cloneStringArrayRecord(BASE_STAGE_AFFIX_BINDINGS)
-  AFFIX_DEFINITIONS = cloneAffixDefinitions(BASE_AFFIX_DEFINITIONS)
-  STAGE_SPECIAL_RULE_BINDINGS = cloneStringArrayRecord(BASE_STAGE_SPECIAL_RULE_BINDINGS)
-  SPECIAL_RULE_DEFINITIONS = cloneSpecialRuleDefinitions(BASE_SPECIAL_RULE_DEFINITIONS)
+export interface AppendEncounterWorkbookOverridesOptions {
+  stageIdPrefix: string
+}
 
+function shouldApplyStageOverride(stageId: StageId, stageIdPrefix?: string) {
+  return !stageIdPrefix || stageId.startsWith(stageIdPrefix)
+}
+
+function applyEncounterOverridesToCurrentCatalog(
+  overrides: EncounterWorkbookOverrides,
+  stageIdPrefix?: string,
+) {
   for (const [stageId, opening] of Object.entries(overrides.openingOverrides) as [
     StageId,
     Partial<EncounterOpeningConfig>,
   ][]) {
+    if (!shouldApplyStageOverride(stageId, stageIdPrefix)) {
+      continue
+    }
     STAGE_OPENING_OVERRIDES[stageId] = {
       ...STAGE_OPENING_OVERRIDES[stageId],
       ...opening,
@@ -460,6 +466,9 @@ export function applyEncounterWorkbookOverrides(overrides: EncounterWorkbookOver
     StageId,
     EncounterEnemyPlacement[],
   ][]) {
+    if (!shouldApplyStageOverride(stageId, stageIdPrefix)) {
+      continue
+    }
     if (placements.length > 0) {
       STAGE_ENEMY_PLACEMENTS[stageId] = placements.map(clonePlacement)
     }
@@ -469,10 +478,16 @@ export function applyEncounterWorkbookOverrides(overrides: EncounterWorkbookOver
     StageId,
     EncounterOpeningStatusEntry[],
   ][]) {
+    if (!shouldApplyStageOverride(stageId, stageIdPrefix)) {
+      continue
+    }
     STAGE_OPENING_STATUS_OVERRIDES[stageId] = entries.map(cloneOpeningStatusEntry)
   }
 
   for (const [stageId, affixIds] of Object.entries(overrides.affixBindings) as [StageId, string[]][]) {
+    if (!shouldApplyStageOverride(stageId, stageIdPrefix)) {
+      continue
+    }
     STAGE_AFFIX_BINDINGS[stageId] = [...affixIds]
   }
 
@@ -481,12 +496,34 @@ export function applyEncounterWorkbookOverrides(overrides: EncounterWorkbookOver
   }
 
   for (const [stageId, ruleIds] of Object.entries(overrides.specialRuleBindings) as [StageId, string[]][]) {
+    if (!shouldApplyStageOverride(stageId, stageIdPrefix)) {
+      continue
+    }
     STAGE_SPECIAL_RULE_BINDINGS[stageId] = [...ruleIds]
   }
 
   for (const [ruleId, definition] of Object.entries(overrides.specialRuleDefinitions)) {
     SPECIAL_RULE_DEFINITIONS[ruleId] = cloneSpecialRuleDefinition(definition)
   }
+}
+
+export function applyEncounterWorkbookOverrides(overrides: EncounterWorkbookOverrides) {
+  STAGE_OPENING_OVERRIDES = cloneOpeningOverrides(BASE_STAGE_OPENING_OVERRIDES)
+  STAGE_ENEMY_PLACEMENTS = clonePlacementsRecord(BASE_STAGE_ENEMY_PLACEMENTS)
+  STAGE_OPENING_STATUS_OVERRIDES = cloneOpeningStatusOverrides(BASE_STAGE_OPENING_STATUS_OVERRIDES)
+  STAGE_AFFIX_BINDINGS = cloneStringArrayRecord(BASE_STAGE_AFFIX_BINDINGS)
+  AFFIX_DEFINITIONS = cloneAffixDefinitions(BASE_AFFIX_DEFINITIONS)
+  STAGE_SPECIAL_RULE_BINDINGS = cloneStringArrayRecord(BASE_STAGE_SPECIAL_RULE_BINDINGS)
+  SPECIAL_RULE_DEFINITIONS = cloneSpecialRuleDefinitions(BASE_SPECIAL_RULE_DEFINITIONS)
+
+  applyEncounterOverridesToCurrentCatalog(overrides)
+}
+
+export function appendEncounterWorkbookOverrides(
+  overrides: EncounterWorkbookOverrides,
+  options: AppendEncounterWorkbookOverridesOptions,
+) {
+  applyEncounterOverridesToCurrentCatalog(overrides, options.stageIdPrefix)
 }
 
 function makeStatus(

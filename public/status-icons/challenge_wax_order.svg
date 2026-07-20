@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="wax order">
+  <defs><linearGradient id="bg" x1="8" y1="8" x2="56" y2="56"><stop stop-color="hsl(44 90% 24%)"/><stop offset="1" stop-color="hsl(344 82% 34%)"/></linearGradient></defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+  <path fill="hsl(48 98% 67%)" stroke="rgba(8,12,24,.92)" stroke-width="4" d="M24 20h16l4 31H20Z"/>
+  <path fill="hsl(20 96% 56%)" stroke="rgba(8,12,24,.92)" stroke-width="3" d="M32 7c7 7 7 13 0 18-7-5-7-11 0-18Z"/>
+  <path fill="none" stroke="hsl(0 0% 100% / .8)" stroke-width="4" stroke-linecap="round" d="M15 23h9M40 23h9M19 15l7 6M45 15l-7 6"/>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="coldlight guard">
+  <defs><linearGradient id="bg" x1="8" y1="8" x2="56" y2="56"><stop stop-color="hsl(206 88% 22%)"/><stop offset="1" stop-color="hsl(176 74% 34%)"/></linearGradient></defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+  <path fill="hsl(188 92% 72%)" stroke="rgba(8,12,24,.92)" stroke-width="4" stroke-linejoin="round" d="M32 8c10 6 17 8 21 9-1 17-8 30-21 38-13-8-20-21-21-38 4-1 11-3 21-9Z"/>
+  <path fill="none" stroke="hsl(250 100% 86%)" stroke-width="4" stroke-linecap="round" d="M22 32h20M32 22v20"/>
+</svg>

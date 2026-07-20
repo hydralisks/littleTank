@@ -1,7 +1,7 @@
 import type { BalanceScenarioResult, DifficultyLabel } from './difficultyScoring'
 import type { BalanceScoringMode, BestBuildProfileSummary } from './balanceSimulator'
 
-export type ManualDifficultyLabel = DifficultyLabel | 'near_impossible / impossible'
+export type ManualDifficultyLabel = DifficultyLabel | 'near_impossible / impossible' | 'unrated'
 
 export interface BalanceStageReport {
   stageId: string
@@ -42,8 +42,17 @@ export const WESTFALL_MANUAL_BASELINES: Record<string, ManualDifficultyLabel> = 
   'WestFall-6': 'hard',
 }
 
+export const ZULAMAN_MANUAL_BASELINES: Record<string, ManualDifficultyLabel> = {
+  "Zul'Aman-1": 'hard',
+  "Zul'Aman-2": 'balanced',
+  "Zul'Aman-3": 'balanced',
+  "Zul'Aman-4": 'balanced',
+  "Zul'Aman-5": 'hard',
+  "Zul'Aman-6": 'expert',
+}
+
 export function getManualDifficultyBaseline(stageId: string): ManualDifficultyLabel {
-  return WESTFALL_MANUAL_BASELINES[stageId] ?? RINGING_DEEPS_MANUAL_BASELINES[stageId] ?? 'unrated'
+  return ZULAMAN_MANUAL_BASELINES[stageId] ?? WESTFALL_MANUAL_BASELINES[stageId] ?? RINGING_DEEPS_MANUAL_BASELINES[stageId] ?? 'unrated'
 }
 
 function formatPercent(value: number) {

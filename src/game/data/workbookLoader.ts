@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import {
+  appendEncounterWorkbookOverrides,
   applyEncounterWorkbookOverrides,
   type EncounterEnemyPlacement,
   type EncounterOpeningConfig,
@@ -43,11 +44,15 @@ const STAGE_WORKBOOK_PATH = `${DESIGNER_DATA_BASE_URL}/stage_content.xlsx`
 const ENCOUNTER_WORKBOOK_PATH = `${DESIGNER_DATA_BASE_URL}/encounter_balance.xlsx`
 const ENEMY_WORKBOOK_PATH = `${DESIGNER_DATA_BASE_URL}/enemy_data.xlsx`
 const PLAYER_BUILD_WORKBOOK_PATH = `${DESIGNER_DATA_BASE_URL}/player_build.xlsx`
+const CHALLENGE_STAGE_WORKBOOK_PATH = `${DESIGNER_DATA_BASE_URL}/challenge_stage_content.xlsx`
+const CHALLENGE_ENCOUNTER_WORKBOOK_PATH = `${DESIGNER_DATA_BASE_URL}/challenge_encounter_balance.xlsx`
 const DESKTOP_DATA_PACK_FILES = [
   'stage_content.xlsx',
   'encounter_balance.xlsx',
   'enemy_data.xlsx',
   'player_build.xlsx',
+  'challenge_stage_content.xlsx',
+  'challenge_encounter_balance.xlsx',
 ] as const
 
 type CellValue = string | number | boolean | null | undefined
@@ -226,6 +231,11 @@ export function parseStageWorkbook(workbook: XLSX.WorkBook): StageWorkbookOverri
       rule2Description: readOptionalText(row.rule2Description),
       rule2IconId: readOptionalText(row.rule2IconId),
       unlockedActiveSkillIds: parseCsvList<string>(row.unlockedActiveSkillIdsCsv),
+      passiveTalentUnlockTier: readOptionalNumber(row.passiveTalentUnlockTier),
+      challengeId: readOptionalText(row.challengeId),
+      recommendedDifficulty: readOptionalText(row.recommendedDifficulty),
+      allowedClassIds: parseCsvList<string>(row.allowedClassIdsCsv),
+      enemySummary: readOptionalText(row.enemySummary),
     })
   }
 
@@ -822,19 +832,51 @@ export function parsePlayerBuildWorkbook(workbook: XLSX.WorkBook): PlayerBuildWo
 export async function loadDesignerWorkbooks() {
   try {
     const source = resolveDesignerDataSource()
-    const [stageWorkbook, encounterWorkbook, enemyWorkbook, playerBuildWorkbook] = source === 'desktop'
+    const [
+      stageWorkbook,
+      encounterWorkbook,
+      enemyWorkbook,
+      playerBuildWorkbook,
+      challengeStageWorkbook,
+      challengeEncounterWorkbook,
+    ] = source === 'desktop'
       ? await Promise.all(DESKTOP_DATA_PACK_FILES.map((fileName) => readDesktopDataPackFile(fileName)))
       : await Promise.all([
           fetchWorkbook(STAGE_WORKBOOK_PATH),
           fetchWorkbook(ENCOUNTER_WORKBOOK_PATH),
           fetchWorkbook(ENEMY_WORKBOOK_PATH),
           fetchWorkbook(PLAYER_BUILD_WORKBOOK_PATH),
+          fetchWorkbook(CHALLENGE_STAGE_WORKBOOK_PATH),
+          fetchWorkbook(CHALLENGE_ENCOUNTER_WORKBOOK_PATH),
         ])
 
     applyStageWorkbookOverrides(parseStageWorkbook(stageWorkbook))
     applyEncounterWorkbookOverrides(parseEncounterWorkbook(encounterWorkbook))
     applyEnemyWorkbookOverrides(parseEnemyWorkbook(enemyWorkbook))
     applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(playerBuildWorkbook))
+
+    const challengeStageRows = readSheetRows<SheetRow>(challengeStageWorkbook, '关卡')
+      .filter((row) => readOptionalText(row.stageId) && readOptionalBoolean(row.enabled) !== false)
+    if (challengeStageRows.length > 0) {
+      const challengeStageOverrides = parseStageWorkbook(challengeStageWorkbook)
+      applyStageWorkbookOverrides({
+        ...challengeStageOverrides,
+        stageOverrides: challengeStageRows.map((row, index) => {
+          const stageId = readOptionalText(row.stageId)!
+
+          return {
+            stageId,
+            ...(challengeStageOverrides.stageOverrides.find((override) => override.stageId === stageId) ?? {}),
+            order: (readOptionalNumber(row.order) ?? index + 1) as StageWorkbookOverride['order'],
+          }
+        }),
+        updateCampaignOrder: false,
+      })
+      appendEncounterWorkbookOverrides(
+        parseEncounterWorkbook(challengeEncounterWorkbook),
+        { stageIdPrefix: 'Challenge-' },
+      )
+    }
   } catch (error) {
     console.warn('设计表读取失败，已回退到内置数据。', error)
   }

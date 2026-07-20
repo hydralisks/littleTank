@@ -15,7 +15,7 @@ import {
   parsePlayerBuildWorkbook,
   parseStageWorkbook,
 } from '../data/workbookLoader'
-import { applyEnemyWorkbookOverrides } from '../data/enemyCatalog'
+import { applyEnemyWorkbookOverrides, getEnemyDefinition, getEnemySkillDefinition } from '../data/enemyCatalog'
 import { getEnemyStatusDefinition } from '../data/enemyCatalog'
 import { applyStageWorkbookOverrides, getStageById } from '../data/stageTemplates'
 import {
@@ -40,7 +40,7 @@ import {
   flushEncounterCommands,
 } from './encounterCommandSystem'
 import { enqueueEncounterEvent } from './encounterEvents'
-import type { DamageSourceThreatSource, EncounterState } from './encounterTypes'
+import type { CombatTarget, DamageSourceThreatSource, EncounterState } from './encounterTypes'
 
 function createHarborEncounter() {
   const stage = getStageById('harbor-1')
@@ -598,6 +598,56 @@ describe('encounterFactory hand-cast flow', () => {
       expect(targetBefore.hp - (targetAfter?.hp ?? 0)).toBe(7)
       expect(afterOneSecond.player.hp - encounter.player.hp).toBe(5)
       expect(afterOneSecond.party.hp - encounter.party.hp).toBe(9)
+    } finally {
+      applyEncounterWorkbookOverrides(emptyEncounterWorkbookOverrides())
+    }
+  })
+
+  it('reduces party pressure by effective party auto healing even with barbaric training', () => {
+    try {
+      applyEncounterWorkbookOverrides({
+        ...emptyEncounterWorkbookOverrides(),
+        openingOverrides: {
+          'harbor-1': {
+            partyHp: 70,
+            partyMaxHp: 100,
+            partyPressure: 12,
+            partyAutoHeal: 9,
+            partyAutoDamageIntervalMs: 0,
+            partyAutoDamageTargetCount: 0,
+          },
+        },
+      })
+
+      const encounter = stripStageSpecialRules(createInitialEncounterState(getStageById('harbor-1'), {
+        ...getDefaultPersistedBuildForRule('standard_5slot'),
+        passiveTalentIds: ['warrior_t_barbaric_training'],
+      }))
+      const configured = {
+        ...encounter,
+        stage: {
+          ...encounter.stage,
+          specialRules: [],
+          damageSources: encounter.stage.damageSources.filter((source) => source.sourceId !== 'party_ambient_random'),
+        },
+        runtime: {
+          ...encounter.runtime,
+          stageRuleRuntime: {},
+          pendingAffixTriggers: [],
+          damageSources: [],
+        },
+      }
+      const withoutHealing = tickEncounter({
+        ...configured,
+        stage: {
+          ...configured.stage,
+          partyAutoHeal: 0,
+        },
+      }, 1000)
+      const nextState = tickEncounter(configured, 1000)
+
+      expect(nextState.party.hp - encounter.party.hp).toBe(9)
+      expect(withoutHealing.party.pressure - nextState.party.pressure).toBe(9)
     } finally {
       applyEncounterWorkbookOverrides(emptyEncounterWorkbookOverrides())
     }
@@ -3354,6 +3404,114 @@ describe('encounterFactory hand-cast flow', () => {
     }
   })
 
+  it('shield reflection suppresses reflected player debuffs but does not cancel enemy self buffs', () => {
+    applyEnemyWorkbookOverrides({
+      enemyDefinitions: [],
+      skillDefinitions: [
+        {
+          skillId: 'reflect-status-test',
+          targetRuleId: 'threatTarget',
+          castTimeMs: 0,
+          recoveryMs: 1000,
+          playerDamage: 40,
+          partyDamageOnHit: 0,
+          partyDamageOnMiss: 0,
+          pressureOnHit: 0,
+          pressureOnMiss: 0,
+          damageType: 'magic',
+          appliedTargetStatusIds: ['reflect_test_mark'],
+          appliedSelfStatusIds: ['reflect_test_self_buff'],
+          castBreakRule: 'unstoppable',
+        },
+      ],
+      enemyBuffDefinitions: [
+        {
+          statusId: 'reflect_test_self_buff',
+          statusName: 'Reflect Test Self Buff',
+          durationMs: 5000,
+          effectLogicId: 'none',
+        },
+      ],
+      playerDebuffDefinitions: [
+        {
+          statusId: 'reflect_test_mark',
+          statusName: 'Reflect Test Mark',
+          durationMs: 5000,
+          effectLogicId: 'none',
+        },
+      ],
+      partyDebuffDefinitions: [],
+    })
+
+    try {
+      const encounter = createHarborEncounterWithBuildOverride({
+        F: 'warrior_t_shield_reflection',
+      })
+      const setup = withEnemyCasting(encounter, 'reflect-status-test', 'unstoppable', {
+        remainingMs: 1,
+      })
+      const configured = {
+        ...stripStageSpecialRules(setup.encounter),
+        stage: {
+          ...setup.encounter.stage,
+          playerAutoHeal: 0,
+          partyAutoHeal: 0,
+          tuning: {
+            ...setup.encounter.stage.tuning,
+            ambientPressurePerSecond: 0,
+            enemyDamageMultiplier: 1,
+          },
+        },
+        player: {
+          ...setup.encounter.player,
+          hp: 200,
+          resource: 100,
+          mitigation: null,
+          buffs: [],
+          debuffs: [],
+        },
+        runtime: {
+          ...setup.encounter.runtime,
+          damageSources: [],
+          pendingAffixTriggers: [],
+          stageRuleRuntime: {},
+          combatLog: [],
+        },
+        enemies: setup.encounter.enemies.map((enemy) =>
+          enemy.id === setup.targetEnemyId
+            ? {
+                ...enemy,
+                hp: 200,
+                statuses: [],
+                target: 'tank' as const,
+                cast: enemy.cast ? { ...enemy.cast, target: 'tank' as const } : enemy.cast,
+              }
+            : {
+                ...enemy,
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              },
+        ),
+      }
+
+      const reflectedReady = tickEncounter(activateSkill(configured, 'warrior_t_shield_reflection'), 0)
+      const afterCast = tickEncounter(reflectedReady, 1)
+      const caster = afterCast.enemies.find((enemy) => enemy.id === setup.targetEnemyId)
+
+      expect(afterCast.player.hp).toBe(200)
+      expect(afterCast.player.debuffs.some((status) => status.id === 'reflect_test_mark')).toBe(false)
+      expect(caster?.statuses.some((status) => status.id === 'reflect_test_self_buff')).toBe(true)
+    } finally {
+      applyEnemyWorkbookOverrides({
+        enemyDefinitions: [],
+        skillDefinitions: [],
+        enemyBuffDefinitions: [],
+        playerDebuffDefinitions: [],
+        partyDebuffDefinitions: [],
+      })
+    }
+  })
+
   it('WF-5 shield reflection ignores physical skills and records the first reflected magic skill in combat stats', () => {
     loadCurrentDesignerWorkbooks()
 
@@ -3540,6 +3698,21 @@ describe('encounterFactory hand-cast flow', () => {
               damageReductionTypes: ['physical' as const],
             },
           ],
+          debuffs: [
+            {
+              id: 'soulSensitive',
+              label: '灵魂敏感',
+              shortLabel: '敏',
+              remainingMs: 7000,
+              totalMs: 7000,
+              tone: 'danger' as const,
+              kind: 'playerDebuff' as const,
+              effectLogicId: 'soulSensitive_status',
+              valueA: 50,
+              stacks: 5,
+              maxStacks: 5,
+            },
+          ],
         },
         runtime: {
           ...strippedSetup.runtime,
@@ -3615,6 +3788,41 @@ describe('encounterFactory hand-cast flow', () => {
     expect((targetAfter?.tankThreat ?? 0) - targetEnemy.tankThreat).toBe(112.5)
   })
 
+  it('avatar increases player auto attack damage while the buff is active', () => {
+    const encounter = createHarborEncounterWithBuildOverride({
+      E: 'warrior_t_avatar',
+    })
+    const targetEnemy = encounter.enemies[0]
+    const avatarState = tickEncounter(activateSkill({
+      ...encounter,
+      stage: {
+        ...encounter.stage,
+        partyAutoDamageIntervalMs: 0,
+        partyAutoDamageTargetCount: 0,
+      },
+      player: {
+        ...encounter.player,
+        currentTargetId: targetEnemy.id,
+        resource: 20,
+      },
+      runtime: {
+        ...encounter.runtime,
+        damageSources: [],
+        partyAutoDamageRemainingMs: 0,
+      },
+      enemies: encounter.enemies.map((enemy) => ({
+        ...enemy,
+        cast: null,
+        recoveryRemainingMs: 5000,
+      })),
+    }, 'warrior_t_avatar'), 0)
+
+    const afterAutoAttack = tickEncounter(avatarState, 1000)
+    const targetAfter = afterAutoAttack.enemies.find((enemy) => enemy.id === targetEnemy.id)
+
+    expect(targetEnemy.hp - (targetAfter?.hp ?? 0)).toBe(4.5)
+  })
+
   it('shockwave stuns a cross target set and can control casts', () => {
     const encounter = createHarborEncounterWithBuildOverride({
       F: 'warrior_t_shockwave',
@@ -3686,9 +3894,9 @@ describe('encounterFactory hand-cast flow', () => {
   })
 
   it('rallying cry heals player and party for 20 percent max hp', () => {
-    const encounter = createHarborEncounterWithBuildOverride({
+    const encounter = stripStageSpecialRules(createHarborEncounterWithBuildOverride({
       F: 'warrior_t_rallying_cry',
-    })
+    }))
     const configured = {
       ...encounter,
       player: {
@@ -3707,6 +3915,40 @@ describe('encounterFactory hand-cast flow', () => {
     expect(nextState.player.resource).toBe(90)
     expect(nextState.player.hp).toBe(configured.player.hp + configured.player.maxHp * 0.2)
     expect(nextState.party.hp).toBe(800)
+  })
+
+  it('reduces party pressure by effective player skill party healing even with barbaric training', () => {
+    const encounter = createHarborEncounterWithBuildOverride({
+      F: 'warrior_t_rallying_cry',
+    })
+    const configured = {
+      ...encounter,
+      passiveTalentIds: ['warrior_t_barbaric_training'],
+      player: {
+        ...encounter.player,
+        hp: 500,
+        resource: 100,
+      },
+      party: {
+        ...encounter.party,
+        hp: 600,
+        pressure: 250,
+        maxPressure: 300,
+      },
+    }
+    const withoutPartyHealing = {
+      ...configured,
+      party: {
+        ...configured.party,
+        hp: configured.party.maxHp,
+      },
+    }
+
+    const baselineState = tickEncounter(activateSkill(withoutPartyHealing, 'warrior_t_rallying_cry'), 0)
+    const nextState = tickEncounter(activateSkill(configured, 'warrior_t_rallying_cry'), 0)
+
+    expect(nextState.party.hp - configured.party.hp).toBe(200)
+    expect(baselineState.party.pressure - nextState.party.pressure).toBe(200)
   })
 
   it('intervene redirects the next party damage to the player and then expires', () => {
@@ -4007,6 +4249,63 @@ describe('encounterFactory hand-cast flow', () => {
       label: '被嘲讽',
       shortLabel: '被',
     })
+  })
+
+  it('adds a short self cooldown to non-gcd skills after successful activation', () => {
+    const encounter = createHarborEncounterWithStandardBuild()
+    const setup = withEnemyCasting(encounter, 'ember-bolt', 'interruptOrControl')
+    const configured = {
+      ...setup.encounter,
+      skills: setup.encounter.skills.map((skill) =>
+        skill.id === 'warrior_t_interrupt'
+          ? {
+              ...skill,
+              cooldownMs: 0,
+              remainingCooldownMs: 0,
+              gcdMs: 0,
+            }
+          : skill,
+      ),
+    }
+
+    const interrupted = activateSkill(configured, 'warrior_t_interrupt')
+    const immediateReason = getSkillActivationBlockReason(interrupted, 'warrior_t_interrupt')
+    const beforeReady = tickEncounter(interrupted, 499)
+    const ready = tickEncounter(interrupted, 500)
+
+    expect(interrupted.skills.find((skill) => skill.id === 'warrior_t_interrupt')?.remainingCooldownMs).toBe(500)
+    expect(immediateReason).toContain('仍在冷却')
+    expect(beforeReady.skills.find((skill) => skill.id === 'warrior_t_interrupt')?.remainingCooldownMs).toBe(1)
+    expect(ready.skills.find((skill) => skill.id === 'warrior_t_interrupt')?.remainingCooldownMs).toBe(0)
+    expect(interrupted.player.gcdRemainingMs).toBe(configured.player.gcdRemainingMs)
+  })
+
+  it('does not add the short self cooldown to gcd skills with no configured cooldown', () => {
+    const baseEncounter = createHarborEncounter()
+    const encounter = selectEnemy(baseEncounter, baseEncounter.enemies[0].id)
+    const configured = {
+      ...encounter,
+      player: {
+        ...encounter.player,
+        resource: 100,
+        gcdRemainingMs: 0,
+      },
+      skills: encounter.skills.map((skill) =>
+        skill.id === 'warrior_t_taunt'
+          ? {
+              ...skill,
+              cooldownMs: 0,
+              remainingCooldownMs: 0,
+              gcdMs: 800,
+            }
+          : skill,
+      ),
+    }
+
+    const nextState = activateSkill(configured, 'warrior_t_taunt')
+
+    expect(nextState.skills.find((skill) => skill.id === 'warrior_t_taunt')?.remainingCooldownMs).toBe(0)
+    expect(nextState.player.gcdRemainingMs).toBe(800)
   })
 
   it('reports a target requirement before using enemy-targeted skills', () => {
@@ -4430,6 +4729,360 @@ describe('encounterFactory hand-cast flow', () => {
         playerDebuffDefinitions: [],
         partyDebuffDefinitions: [],
       })
+    }
+  })
+
+  it('berserker melee channel damages the locked current tank target from current designer data', () => {
+    loadCurrentDesignerWorkbooks()
+
+    try {
+      const stage = getStageById("Zul'Aman-1")
+      const base = stripStageSpecialRules(createInitialEncounterState(
+        stage,
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+      ))
+      const berserker = base.enemies.find((enemy) => enemy.definitionId === 'troll_berserker')
+      const berserkerStatusDefinition = getEnemyStatusDefinition('berserker!')
+      if (!berserker || !berserkerStatusDefinition) {
+        throw new Error('Expected ZulAman berserker and berserker status from current workbook')
+      }
+
+      const configured = {
+        ...base,
+        stage: {
+          ...base.stage,
+          playerAutoHeal: 0,
+          partyAutoHeal: 0,
+          damageSources: [],
+          tuning: {
+            ...base.stage.tuning,
+            enemyDamageMultiplier: 1,
+          },
+        },
+        runtime: {
+          ...base.runtime,
+          pendingAffixTriggers: [],
+          damageSources: [],
+          stageRuleRuntime: {},
+        },
+        player: {
+          ...base.player,
+          hp: 100,
+          maxHp: 100,
+          mitigation: null,
+          buffs: [],
+        },
+        enemies: base.enemies.map((enemy) =>
+          enemy.id === berserker.id
+            ? {
+                ...enemy,
+                target: 'tank' as const,
+                cast: {
+                  id: 'berserker_melee',
+                  name: '狂攻',
+                  target: 'tank' as const,
+                  remainingMs: 0,
+                  totalMs: 1,
+                  breakRule: 'controlOnly' as const,
+                  dangerLevel: 'low' as const,
+                },
+                recoveryRemainingMs: 0,
+              }
+            : {
+                ...enemy,
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              },
+        ),
+      }
+
+      const channeling = tickEncounter(configured, 0)
+      const afterOneSecond = tickEncounter(channeling, 1000)
+
+      expect(channeling.enemies.find((enemy) => enemy.id === berserker.id)?.statuses.some((status) => status.id === 'berserker!')).toBe(true)
+      expect(afterOneSecond.player.hp).toBe(100 - (berserkerStatusDefinition.valueA ?? 4))
+    } finally {
+      resetDesignerWorkbookOverrides()
+    }
+  })
+
+  it('ZulAman enemy skills apply their current designer damage, statuses, and support effects', () => {
+    loadCurrentDesignerWorkbooks()
+
+    try {
+      const castDesignerSkill = (
+        stageId: string,
+        casterDefinitionId: string,
+        skillId: string,
+        target: CombatTarget = 'tank',
+        lockedTargetDefinitionId?: string,
+      ) => {
+        const stage = getStageById(stageId)
+        const base = stripStageSpecialRules(createInitialEncounterState(
+          stage,
+          getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+        ))
+        const caster = base.enemies.find((enemy) => enemy.definitionId === casterDefinitionId)
+        const lockedTarget = lockedTargetDefinitionId
+          ? base.enemies.find((enemy) => enemy.definitionId === lockedTargetDefinitionId && enemy.id !== caster?.id)
+          : null
+        const skill = getEnemySkillDefinition(skillId)
+        if (!caster || !skill) {
+          throw new Error(`Expected ${casterDefinitionId} to cast ${skillId}`)
+        }
+        if (lockedTargetDefinitionId && !lockedTarget) {
+          throw new Error(`Expected locked target ${lockedTargetDefinitionId}`)
+        }
+
+        const configured = {
+          ...base,
+          stage: {
+            ...base.stage,
+            playerAutoHeal: 0,
+            partyAutoHeal: 0,
+            partyAutoDamageIntervalMs: 0,
+            partyAutoDamageTargetCount: 0,
+            partyAutoDamageMin: 0,
+            partyAutoDamageMax: 0,
+            damageSources: [],
+            tuning: {
+              ...base.stage.tuning,
+              enemyDamageMultiplier: 1,
+              enemyHealingMultiplier: 1,
+            },
+          },
+          runtime: {
+            ...base.runtime,
+            pendingAffixTriggers: [],
+            damageSources: [],
+            stageRuleRuntime: {},
+            partyAutoDamageRemainingMs: 0,
+          },
+          player: {
+            ...base.player,
+            hp: 100,
+            maxHp: 100,
+            mitigation: null,
+            buffs: [],
+            currentTargetId: caster.id,
+          },
+          party: {
+            ...base.party,
+            hp: 100,
+            maxHp: 100,
+            pressure: 0,
+            maxPressure: 100,
+            currentTargetId: caster.id,
+          },
+          enemies: base.enemies.map((enemy) => {
+            const isLockedTarget = lockedTarget && enemy.id === lockedTarget.id
+            const hp = isLockedTarget ? Math.max(1, enemy.maxHp - 40) : enemy.hp
+            return enemy.id === caster.id
+              ? {
+                  ...enemy,
+                  hp,
+                  target: target === 'ally' || target === 'party' ? 'ally' as const : 'tank' as const,
+                  cast: {
+                    id: skillId,
+                    name: skill.skillName,
+                    target,
+                    lockedEnemyTargetId: lockedTarget?.id ?? null,
+                    remainingMs: 0,
+                    totalMs: 1,
+                    breakRule: skill.castBreakRule,
+                    dangerLevel: skill.dangerLevel,
+                  },
+                  recoveryRemainingMs: 0,
+                }
+              : {
+                  ...enemy,
+                  hp,
+                  cast: null,
+                  recoveryRemainingMs: 999_999,
+                }
+          }),
+        }
+
+        return {
+          before: configured,
+          after: tickEncounter(configured, 0),
+          casterId: caster.id,
+          lockedTargetId: lockedTarget?.id ?? null,
+          skill,
+        }
+      }
+
+      const getEnemy = (state: EncounterState, enemyId: string | null) => {
+        const enemy = enemyId ? state.enemies.find((entry) => entry.id === enemyId) : null
+        if (!enemy) {
+          throw new Error(`Expected enemy ${enemyId}`)
+        }
+        return enemy
+      }
+      const getStatusValueA = (statusId: string, fallback: number) => getEnemyStatusDefinition(statusId)?.valueA ?? fallback
+      const getStatusValueB = (statusId: string, fallback: number) => getEnemyStatusDefinition(statusId)?.valueB ?? fallback
+
+      const throwTank = castDesignerSkill("Zul'Aman-1", 'troll_headhunter', 'throw_lance', 'tank')
+      const throwParty = castDesignerSkill("Zul'Aman-1", 'troll_headhunter', 'throw_lance', 'ally')
+      expect(throwTank.after.player.hp).toBe(100 - throwTank.skill.playerDamage)
+      expect(throwParty.after.party.hp).toBe(100 - throwParty.skill.partyDamageOnMiss)
+      expect(throwParty.after.party.pressure).toBe(throwParty.skill.pressureOnMiss)
+
+      const pullBack = castDesignerSkill("Zul'Aman-1", 'troll_headhunter', 'pull_back', 'self')
+      expect(pullBack.after.player.hp).toBe(100)
+      expect(pullBack.after.party.hp).toBe(100)
+      expect(pullBack.after.party.pressure).toBe(0)
+
+      const berserkerPotion = castDesignerSkill("Zul'Aman-1", 'troll_berserker', 'berserker_potion', 'self')
+      expect(getEnemy(berserkerPotion.after, berserkerPotion.casterId).statuses.some((status) => status.id === 'berserkerPotioned')).toBe(true)
+
+      const forestBerserkerPotion = castDesignerSkill("Zul'Aman-3", 'forest_troll_berserker', 'forest_berserker_potion', 'self')
+      const forestBerserkerMeleeSkill = getEnemySkillDefinition('troll_melee')
+      if (!forestBerserkerMeleeSkill) {
+        throw new Error('Expected troll_melee from current workbook')
+      }
+      const forestBerserkerMelee = tickEncounter({
+        ...forestBerserkerPotion.after,
+        player: {
+          ...forestBerserkerPotion.after.player,
+          hp: 100,
+          mitigation: null,
+          buffs: [],
+        },
+        enemies: forestBerserkerPotion.after.enemies.map((enemy) =>
+          enemy.id === forestBerserkerPotion.casterId
+            ? {
+                ...enemy,
+                cast: {
+                  id: 'troll_melee',
+                  name: forestBerserkerMeleeSkill.skillName,
+                  target: 'tank',
+                  remainingMs: 0,
+                  totalMs: 1,
+                  breakRule: forestBerserkerMeleeSkill.castBreakRule,
+                  dangerLevel: forestBerserkerMeleeSkill.dangerLevel,
+                },
+                recoveryRemainingMs: 0,
+              }
+            : {
+                ...enemy,
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              },
+        ),
+      }, 0)
+      expect(getEnemy(forestBerserkerPotion.after, forestBerserkerPotion.casterId).statuses.some((status) => status.id === 'forestBerserkerPotioned')).toBe(true)
+      expect(forestBerserkerMelee.player.hp).toBe(
+        100 - Math.round(forestBerserkerMeleeSkill.playerDamage * (1 + getStatusValueA('forestBerserkerPotioned', 50) / 100)),
+      )
+
+      const forestPotion = castDesignerSkill("Zul'Aman-3", 'troll_high_priest', 'forest_potion', 'enemy', 'forest_troll_berserker')
+      const forestPotionTarget = getEnemy(forestPotion.after, forestPotion.lockedTargetId)
+      const forestPotionAfterTick = tickEncounter(forestPotion.after, 1000)
+      expect(forestPotionTarget.statuses.some((status) => status.id === 'forestPotioned')).toBe(true)
+      expect(getEnemy(forestPotionAfterTick, forestPotion.lockedTargetId).hp).toBe(forestPotionTarget.hp + getStatusValueB('forestPotioned', 10))
+
+      const smiteTank = castDesignerSkill("Zul'Aman-3", 'troll_high_priest', 'troll_smite', 'tank')
+      const smiteParty = castDesignerSkill("Zul'Aman-3", 'troll_high_priest', 'troll_smite', 'ally')
+      expect(smiteTank.after.player.hp).toBe(100 - smiteTank.skill.playerDamage)
+      expect(smiteParty.after.party.hp).toBe(100 - smiteParty.skill.partyDamageOnMiss)
+      expect(smiteParty.after.party.pressure).toBe(smiteParty.skill.pressureOnMiss)
+
+      const spiritShell = castDesignerSkill("Zul'Aman-3", 'troll_high_priest', 'spirit_shell', 'enemy', 'forest_troll_berserker')
+      expect(getEnemy(spiritShell.after, spiritShell.casterId).statuses.find((status) => status.id === 'spiritShelled')).toMatchObject({
+        stacks: getStatusValueA('spiritShelled', 3),
+      })
+      expect(getEnemy(spiritShell.after, spiritShell.lockedTargetId).statuses.find((status) => status.id === 'spiritShelled')).toMatchObject({
+        stacks: getStatusValueA('spiritShelled', 3),
+      })
+
+      const shadowWave = castDesignerSkill("Zul'Aman-3", 'troll_shadow_priest', 'shadow_wave', 'enemy', 'forest_troll_berserker')
+      const shadowWaveTargetBefore = getEnemy(shadowWave.before, shadowWave.lockedTargetId)
+      const shadowWaveTargetAfter = getEnemy(shadowWave.after, shadowWave.lockedTargetId)
+      expect(shadowWaveTargetAfter.statuses.some((status) => status.id === 'shadowWaved')).toBe(true)
+      expect(shadowWaveTargetAfter.hp).toBe(Math.min(shadowWaveTargetAfter.maxHp, shadowWaveTargetBefore.hp + getStatusValueA('shadowWaved', 30)))
+      expect(shadowWave.after.player.hp).toBe(100)
+
+      const hunterMark = castDesignerSkill("Zul'Aman-5", 'troll_warlord', 'hunter\'s_mark', 'tank')
+      const hunterMarkParty = castDesignerSkill("Zul'Aman-5", 'troll_warlord', 'hunter\'s_mark', 'ally')
+      expect(hunterMark.after.player.debuffs.some((status) => status.id === 'hunter\'sMarked')).toBe(true)
+      expect(hunterMarkParty.after.party.pressure).toBe(hunterMarkParty.skill.pressureOnMiss)
+
+      const trollMeleeTank = castDesignerSkill("Zul'Aman-5", 'troll_warlord', 'troll_melee', 'tank')
+      const trollMeleeParty = castDesignerSkill("Zul'Aman-5", 'troll_warlord', 'troll_melee', 'ally')
+      expect(trollMeleeTank.after.player.hp).toBe(100 - trollMeleeTank.skill.playerDamage)
+      expect(trollMeleeParty.after.party.hp).toBe(100 - trollMeleeParty.skill.partyDamageOnMiss)
+      expect(trollMeleeParty.after.party.pressure).toBe(trollMeleeParty.skill.pressureOnMiss)
+
+      const trollRuptureTank = castDesignerSkill("Zul'Aman-5", 'troll_warlord', 'troll_rupture', 'tank')
+      const trollRuptureParty = castDesignerSkill("Zul'Aman-5", 'troll_warlord', 'troll_rupture', 'ally')
+      expect(trollRuptureTank.after.player.hp).toBe(100 - trollRuptureTank.skill.playerDamage)
+      expect(trollRuptureTank.after.player.debuffs.some((status) => status.id === 'trollRuptured')).toBe(true)
+      expect(trollRuptureParty.after.party.hp).toBe(100 - trollRuptureParty.skill.partyDamageOnMiss)
+      expect(trollRuptureParty.after.party.pressure).toBe(trollRuptureParty.skill.pressureOnMiss)
+      expect(trollRuptureParty.after.party.statuses.some((status) => status.id === 'trollRuptured_p')).toBe(true)
+
+      const shellUp = castDesignerSkill("Zul'Aman-6", 'troll_shieldmasta', 'shell_up', 'self')
+      expect(getEnemy(shellUp.after, shellUp.casterId).statuses.find((status) => status.id === 'shellUp')).toMatchObject({
+        damageTakenMultiplierBonus: -(getStatusValueA('shellUp', 70) / 100),
+      })
+
+      const trollTauntTank = castDesignerSkill("Zul'Aman-6", 'troll_shieldmasta', 'troll_taunt', 'tank')
+      const trollTauntParty = castDesignerSkill("Zul'Aman-6", 'troll_shieldmasta', 'troll_taunt', 'ally')
+      expect(trollTauntTank.after.player.hp).toBe(100 - trollTauntTank.skill.playerDamage)
+      expect(trollTauntTank.after.player.currentTargetId).toBe(trollTauntTank.casterId)
+      expect(trollTauntParty.after.party.hp).toBe(100 - trollTauntParty.skill.partyDamageOnMiss)
+      expect(trollTauntParty.after.party.currentTargetId).toBe(trollTauntParty.casterId)
+
+      const soulCryTank = castDesignerSkill("Zul'Aman-4", 'troll_soul_summoner', 'soul_cry', 'tank')
+      const soulCryParty = castDesignerSkill("Zul'Aman-4", 'troll_soul_summoner', 'soul_cry', 'ally')
+      expect(soulCryTank.after.player.hp).toBe(100 - soulCryTank.skill.playerDamage)
+      expect(soulCryTank.after.player.debuffs.some((status) => status.id === 'soulSensitive')).toBe(true)
+      expect(soulCryParty.after.party.hp).toBe(100 - soulCryParty.skill.partyDamageOnMiss)
+      expect(soulCryParty.after.party.statuses.some((status) => status.id === 'soulSensitive_p')).toBe(true)
+
+      const shadowBoltTank = castDesignerSkill("Zul'Aman-4", 'troll_soul_summoner', 'shadow_bolt', 'tank')
+      const shadowBoltParty = castDesignerSkill("Zul'Aman-4", 'troll_soul_summoner', 'shadow_bolt', 'ally')
+      expect(shadowBoltTank.after.player.hp).toBe(100 - shadowBoltTank.skill.playerDamage)
+      expect(shadowBoltParty.after.party.hp).toBe(100 - shadowBoltParty.skill.partyDamageOnMiss)
+
+      const darkNova = castDesignerSkill("Zul'Aman-3", 'troll_shadow_priest', 'troll_dark_nova', 'self')
+      expect(darkNova.after.player.hp).toBe(100 - darkNova.skill.playerDamage)
+      expect(darkNova.after.party.hp).toBe(100 - darkNova.skill.partyDamageOnMiss)
+
+      const coveredSkillIds = new Set([
+        'throw_lance',
+        'pull_back',
+        'berserker_potion',
+        'berserker_melee',
+        'forest_berserker_potion',
+        'forest_potion',
+        'troll_smite',
+        'spirit_shell',
+        'shadow_wave',
+        'hunter\'s_mark',
+        'troll_melee',
+        'troll_rupture',
+        'shell_up',
+        'troll_taunt',
+        'soul_cry',
+        'shadow_bolt',
+        'troll_dark_nova',
+      ])
+      const zulAmanEnemyIds = [
+        'troll_headhunter',
+        'troll_berserker',
+        'forest_troll_berserker',
+        'troll_high_priest',
+        'troll_shadow_priest',
+        'troll_soul_summoner',
+        'troll_warlord',
+        'troll_shieldmasta',
+      ]
+      const currentSkillIds = new Set(zulAmanEnemyIds.flatMap((enemyId) => getEnemyDefinition(enemyId)?.skillIds ?? []))
+      expect([...coveredSkillIds].sort()).toEqual([...currentSkillIds].sort())
+    } finally {
+      resetDesignerWorkbookOverrides()
     }
   })
 
@@ -5469,7 +6122,7 @@ describe('encounterFactory hand-cast flow', () => {
         getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
       ))
       const markedDefinition = getEnemyStatusDefinition('marked')
-      const upgradedDefinition = getEnemyStatusDefinition('murloc_upgraded')
+      const upgradedDefinition = getEnemyStatusDefinition('murlocUpgraded')
       const tidehunter = base.enemies.find((enemy) => enemy.definitionId === 'murloc_tidehunter')
       const blowgiller = base.enemies.find((enemy) => enemy.definitionId === 'murloc_blowgiller')
 
@@ -5477,13 +6130,13 @@ describe('encounterFactory hand-cast flow', () => {
         throw new Error('Expected marked player debuff definition from current workbook')
       }
       if (!upgradedDefinition || upgradedDefinition.kind !== 'enemyBuff') {
-        throw new Error('Expected murloc_upgraded enemy buff definition from current workbook')
+        throw new Error('Expected murlocUpgraded enemy buff definition from current workbook')
       }
       if (!tidehunter || !blowgiller) {
         throw new Error('Expected WestFall-2 to contain a tidehunter and a blowgiller')
       }
       const markedStatus = createEnemyStatusEffect('marked')
-      const upgradedStatus = createEnemyStatusEffect('murloc_upgraded')
+      const upgradedStatus = createEnemyStatusEffect('murlocUpgraded')
       if (!markedStatus || !upgradedStatus) {
         throw new Error('Expected WestFall-2 status runtime definitions from current workbook')
       }
@@ -5865,7 +6518,7 @@ describe('encounterFactory hand-cast flow', () => {
       const healedMostInjuredEnemy = healed.enemies
         .filter((_enemy, index) => index !== murkIndex && index !== seerIndex)
         .find((enemy) => enemy.maxHp - enemy.hp === 5)
-      const murlocHealingDefinition = getEnemyStatusDefinition('murloc_healing')
+      const murlocHealingDefinition = getEnemyStatusDefinition('murlocHealing')
 
       const livingFishCount = isolatedBase.enemies.filter(
         (enemy) =>
@@ -5882,7 +6535,7 @@ describe('encounterFactory hand-cast flow', () => {
         expect.arrayContaining([
           expect.objectContaining({
             effectName: expect.stringContaining('瞎眼'),
-            category: '状态',
+            category: '压力',
             total: livingFishCount * 5,
           }),
         ]),
@@ -5891,11 +6544,682 @@ describe('encounterFactory hand-cast flow', () => {
         expect.arrayContaining([
           expect.objectContaining({
             effectName: expect.stringContaining('瞎眼'),
-            category: '状态',
+            category: '敌人技能',
             total: livingFishCount * 5,
           }),
         ]),
       )
+    } finally {
+      resetDesignerWorkbookOverrides()
+    }
+  })
+
+  it('ZulAman enemy buffs apply potion damage, healing, shield immunity, shadow wave, and shell-up mitigation', () => {
+    loadCurrentDesignerWorkbooks()
+
+    try {
+      const stage = getStageById('WestFall-1')
+      const base = stripStageSpecialRules(createInitialEncounterState(
+        stage,
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+      ))
+      const target = base.enemies[0]
+      if (!target) {
+        throw new Error('Expected a target enemy')
+      }
+      const status = (statusId: string) => {
+        const created = createEnemyStatusEffect(statusId)
+        if (!created) {
+          throw new Error(`Expected status ${statusId}`)
+        }
+        return created
+      }
+      const quietBase = {
+        ...base,
+        runtime: {
+          ...base.runtime,
+          pendingAffixTriggers: [],
+          damageSources: base.runtime.damageSources.map((source) => ({
+            ...source,
+            remainingMs: 999_999,
+          })),
+        },
+        stage: {
+          ...base.stage,
+          playerAutoDamage: 10,
+          playerAutoHeal: 0,
+          partyAutoHeal: 0,
+          partyAutoDamageMin: 0,
+          partyAutoDamageMax: 0,
+        },
+        player: {
+          ...base.player,
+          hp: 100,
+          mitigation: null,
+          currentTargetId: target.id,
+        },
+      }
+      const withPlayerAutoReady = {
+        ...quietBase,
+        runtime: {
+          ...quietBase.runtime,
+          damageSources: quietBase.runtime.damageSources.map((source) => ({
+            ...source,
+            remainingMs: source.sourceId === 'player_auto_attack' ? 0 : 999_999,
+          })),
+        },
+      }
+      const withCaster = (
+        enemyStatusIds: string[],
+        skillId: string,
+        options: { hp?: number; target?: 'tank' | 'enemy'; lockedEnemyTargetId?: string | null } = {},
+      ) => ({
+        ...withPlayerAutoReady,
+        enemies: withPlayerAutoReady.enemies.map((enemy) =>
+          enemy.id === target.id
+            ? {
+                ...enemy,
+                hp: options.hp ?? enemy.hp,
+                statuses: enemyStatusIds.map(status),
+                cast: {
+                  id: skillId,
+                  name: skillId,
+                  target: options.target ?? 'tank',
+                  lockedEnemyTargetId: options.lockedEnemyTargetId,
+                  remainingMs: 0,
+                  totalMs: 1,
+                  breakRule: 'controlOnly' as const,
+                  dangerLevel: 'low' as const,
+                },
+                recoveryRemainingMs: 0,
+              }
+            : {
+                ...enemy,
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              },
+        ),
+      })
+
+      const potionedAttack = tickEncounter(withCaster(['berserkerPotioned'], 'troll_melee'), 0)
+      const forestPotionTick = tickEncounter({
+        ...quietBase,
+        enemies: quietBase.enemies.map((enemy) =>
+          enemy.id === target.id
+            ? {
+                ...enemy,
+                hp: enemy.maxHp - 20,
+                statuses: [status('forestPotioned')],
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              }
+            : {
+                ...enemy,
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              },
+        ),
+      }, 1000)
+      const shellUpHit = tickEncounter({
+        ...withPlayerAutoReady,
+        enemies: withPlayerAutoReady.enemies.map((enemy) =>
+          enemy.id === target.id
+            ? {
+                ...enemy,
+                statuses: [status('shellUp')],
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              }
+            : {
+                ...enemy,
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              },
+        ),
+      }, 1000)
+      const spiritShieldHit = tickEncounter({
+        ...withPlayerAutoReady,
+        enemies: withPlayerAutoReady.enemies.map((enemy) =>
+          enemy.id === target.id
+            ? {
+                ...enemy,
+                statuses: [status('spiritShelled')],
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              }
+            : {
+                ...enemy,
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              },
+        ),
+      }, 1000)
+      const shadowWave = tickEncounter({
+        ...quietBase,
+        enemies: quietBase.enemies.map((enemy, index) => {
+          if (enemy.id === target.id) {
+            return {
+              ...enemy,
+              hp: target.maxHp - 40,
+              target: 'tank' as const,
+              cast: null,
+              recoveryRemainingMs: 999_999,
+            }
+          }
+
+          if (index === 1) {
+            return {
+              ...enemy,
+              cast: {
+                id: 'shadow_wave',
+                name: '暗影波',
+                target: 'enemy' as const,
+                lockedEnemyTargetId: target.id,
+                remainingMs: 0,
+                totalMs: 1,
+                breakRule: 'interruptOrControl' as const,
+                dangerLevel: 'high' as const,
+              },
+              recoveryRemainingMs: 0,
+            }
+          }
+
+          return {
+            ...enemy,
+            cast: null,
+            recoveryRemainingMs: 999_999,
+          }
+        }),
+      }, 0)
+      const shadowWavedTarget = shadowWave.enemies.find((enemy) => enemy.id === target.id)
+      const shadowWavePlayerAutoHit = tickEncounter({
+        ...shadowWave,
+        player: {
+          ...shadowWave.player,
+          hp: 100,
+          currentTargetId: target.id,
+        },
+        party: {
+          ...shadowWave.party,
+          hp: 100,
+          currentTargetId: target.id,
+        },
+        enemies: shadowWave.enemies.map((enemy) =>
+          enemy.id === target.id
+            ? {
+                ...enemy,
+                statuses: [{ ...status('shadowWaved'), stacks: 2, maxStacks: 99 }],
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              }
+            : {
+                ...enemy,
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              },
+        ),
+        runtime: {
+          ...shadowWave.runtime,
+          damageSources: shadowWave.runtime.damageSources.map((source) => ({
+            ...source,
+            remainingMs: source.sourceId === 'player_auto_attack' ? 0 : 999_999,
+          })),
+        },
+      }, 1000)
+      const shadowWavePartyAutoHit = tickEncounter({
+        ...shadowWave,
+        stage: {
+          ...shadowWave.stage,
+          partyAutoDamageIntervalMs: 1000,
+          partyAutoDamageTargetCount: 1,
+          partyAutoDamageMin: 10,
+          partyAutoDamageMax: 10,
+        },
+        player: {
+          ...shadowWave.player,
+          hp: 100,
+          currentTargetId: target.id,
+        },
+        party: {
+          ...shadowWave.party,
+          hp: 100,
+          currentTargetId: target.id,
+        },
+        enemies: shadowWave.enemies.map((enemy) =>
+          enemy.id === target.id
+            ? {
+                ...enemy,
+                statuses: [{ ...status('shadowWaved'), stacks: 2, maxStacks: 99 }],
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              }
+            : {
+                ...enemy,
+                hp: 0,
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              },
+        ),
+        runtime: {
+          ...shadowWave.runtime,
+          damageSources: shadowWave.runtime.damageSources.map((source) => ({
+            ...source,
+            remainingMs: source.sourceId === 'party_ambient_random' ? 1000 : 999_999,
+          })),
+        },
+      }, 1000)
+      const shadowWavePlayerTarget = shadowWavePlayerAutoHit.enemies.find((enemy) => enemy.id === target.id)
+      const shadowWavePartyTarget = shadowWavePartyAutoHit.enemies.find((enemy) => enemy.id === target.id)
+
+      expect(potionedAttack.player.hp).toBe(70)
+      expect(forestPotionTick.enemies.find((enemy) => enemy.id === target.id)?.hp).toBe(target.maxHp - 10)
+      expect(shellUpHit.enemies.find((enemy) => enemy.id === target.id)?.hp).toBe(target.hp - 3)
+      expect(spiritShieldHit.enemies.find((enemy) => enemy.id === target.id)?.hp).toBe(target.hp)
+      expect(spiritShieldHit.enemies.find((enemy) => enemy.id === target.id)?.statuses.find((entry) => entry.id === 'spiritShelled')?.stacks).toBe(2)
+      expect(shadowWavedTarget?.hp).toBe(target.maxHp - 10)
+      expect(shadowWavedTarget?.statuses.find((entry) => entry.id === 'shadowWaved')).toMatchObject({ stacks: 1 })
+      expect(shadowWave.player.hp).toBe(100)
+      expect(shadowWavePlayerAutoHit.player.hp).toBe(90)
+      expect(shadowWavePlayerTarget?.statuses.find((entry) => entry.id === 'shadowWaved')?.stacks).toBe(1)
+      expect(shadowWavePartyAutoHit.party.hp).toBe(90)
+      expect(shadowWavePartyTarget?.statuses.find((entry) => entry.id === 'shadowWaved')?.stacks).toBe(1)
+      expect(buildEncounterStats(shadowWavePartyAutoHit).partyDamageTaken).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            effectName: '被暗影波',
+            category: '敌人技能',
+            total: 10,
+          }),
+        ]),
+      )
+    } finally {
+      resetDesignerWorkbookOverrides()
+    }
+  })
+
+  it('ZulAman player and party debuffs modify physical damage, healing, damage over time, and forced targets', () => {
+    loadCurrentDesignerWorkbooks()
+
+    try {
+      const stage = getStageById('WestFall-1')
+      const base = stripStageSpecialRules(createInitialEncounterState(
+        stage,
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+      ))
+      const firstEnemy = base.enemies[0]
+      const secondEnemy = base.enemies[1]
+      if (!firstEnemy || !secondEnemy) {
+        throw new Error('Expected two enemies')
+      }
+      const status = (statusId: string) => {
+        const created = createEnemyStatusEffect(statusId)
+        if (!created) {
+          throw new Error(`Expected status ${statusId}`)
+        }
+        return created
+      }
+      const quietBase = {
+        ...base,
+        runtime: {
+          ...base.runtime,
+          pendingAffixTriggers: [],
+          damageSources: base.runtime.damageSources.map((source) => ({
+            ...source,
+            remainingMs: 999_999,
+          })),
+        },
+        stage: {
+          ...base.stage,
+          playerAutoHeal: 10,
+          partyAutoHeal: 10,
+          partyAutoDamageMin: 0,
+          partyAutoDamageMax: 0,
+        },
+        player: {
+          ...base.player,
+          hp: 100,
+          mitigation: null,
+          currentTargetId: firstEnemy.id,
+        },
+        party: {
+          ...base.party,
+          hp: 100,
+          currentTargetId: firstEnemy.id,
+        },
+        enemies: base.enemies.map((enemy) => ({
+          ...enemy,
+          cast: null,
+          recoveryRemainingMs: 999_999,
+        })),
+      }
+      const source = { kind: 'enemy' as const, id: secondEnemy.id, name: secondEnemy.name }
+      const hunterMarked = tickEncounter({
+        ...quietBase,
+        player: {
+          ...quietBase.player,
+          debuffs: [status('hunter\'sMarked')],
+        },
+        enemies: quietBase.enemies.map((enemy) =>
+          enemy.id === firstEnemy.id
+            ? {
+                ...enemy,
+                cast: {
+                  id: 'troll_melee',
+                  name: '巨魔攻击',
+                  target: 'tank',
+                  remainingMs: 0,
+                  totalMs: 1,
+                  breakRule: 'controlOnly' as const,
+                  dangerLevel: 'low' as const,
+                },
+              }
+            : {
+                ...enemy,
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              },
+        ),
+      }, 0)
+      const ruptured = tickEncounter({
+        ...quietBase,
+        player: {
+          ...quietBase.player,
+          hp: 50,
+          debuffs: [status('trollRuptured')],
+        },
+        party: {
+          ...quietBase.party,
+          hp: 50,
+          statuses: [status('trollRuptured_p')],
+        },
+      }, 1000)
+      const taunted = tickEncounter({
+        ...quietBase,
+        player: {
+          ...quietBase.player,
+          debuffs: [{ ...status('trollTaunted'), combatLogSource: source }],
+        },
+        party: {
+          ...quietBase.party,
+          statuses: [{ ...status('trollTaunted_p'), combatLogSource: source }],
+        },
+      }, 0)
+      const soulSensitiveMagic = tickEncounter({
+        ...quietBase,
+        player: {
+          ...quietBase.player,
+          debuffs: [status('soulSensitive')],
+        },
+        enemies: quietBase.enemies.map((enemy) =>
+          enemy.id === firstEnemy.id
+            ? {
+                ...enemy,
+                cast: {
+                  id: 'shadow_bolt',
+                  name: '暗影箭',
+                  target: 'tank',
+                  remainingMs: 0,
+                  totalMs: 1,
+                  breakRule: 'interruptOrControl' as const,
+                  dangerLevel: 'low' as const,
+                },
+              }
+            : {
+                ...enemy,
+                cast: null,
+                recoveryRemainingMs: 999_999,
+            },
+        ),
+      }, 0)
+      const soulSensitivePhysical = tickEncounter({
+        ...quietBase,
+        player: {
+          ...quietBase.player,
+          debuffs: [status('soulSensitive')],
+        },
+        enemies: quietBase.enemies.map((enemy) =>
+          enemy.id === firstEnemy.id
+            ? {
+                ...enemy,
+                cast: {
+                  id: 'troll_melee',
+                  name: '巨魔攻击',
+                  target: 'tank',
+                  remainingMs: 0,
+                  totalMs: 1,
+                  breakRule: 'controlOnly' as const,
+                  dangerLevel: 'low' as const,
+                },
+              }
+            : {
+                ...enemy,
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              },
+        ),
+      }, 0)
+      const soulSensitiveStacked = tickEncounter({
+        ...quietBase,
+        player: {
+          ...quietBase.player,
+          debuffs: [status('soulSensitive')],
+        },
+        enemies: quietBase.enemies.map((enemy) =>
+          enemy.id === firstEnemy.id
+            ? {
+                ...enemy,
+                cast: {
+                  id: 'soul_cry',
+                  name: '灵魂呼号',
+                  target: 'tank',
+                  remainingMs: 0,
+                  totalMs: 1,
+                  breakRule: 'interruptOrControl' as const,
+                  dangerLevel: 'medium' as const,
+                },
+              }
+            : {
+                ...enemy,
+                cast: null,
+                recoveryRemainingMs: 999_999,
+            },
+        ),
+      }, 0)
+      const hunterMarkSkill = getEnemySkillDefinition('hunter\'s_mark')
+      const hunterMarkPartyPressure = tickEncounter({
+        ...quietBase,
+        party: {
+          ...quietBase.party,
+          pressure: 0,
+        },
+        enemies: quietBase.enemies.map((enemy) =>
+          enemy.id === firstEnemy.id
+            ? {
+                ...enemy,
+                target: 'ally' as const,
+                cast: {
+                  id: 'hunter\'s_mark',
+                  name: '猎人印记',
+                  target: 'ally',
+                  remainingMs: 0,
+                  totalMs: 1,
+                  breakRule: 'interruptOrControl' as const,
+                  dangerLevel: 'high' as const,
+                },
+              }
+            : {
+                ...enemy,
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              },
+        ),
+      }, 0)
+      const shadowBoltSkill = getEnemySkillDefinition('shadow_bolt')
+      const soulSensitiveDefinition = getEnemyStatusDefinition('soulSensitive')
+      const trollRupturedPartyDefinition = getEnemyStatusDefinition('trollRuptured_p')
+      const stackedSoulSensitive = soulSensitiveStacked.player.debuffs.find((entry) => entry.id === 'soulSensitive')
+      const stackedStatusTickBase = {
+        ...soulSensitiveStacked,
+        enemies: soulSensitiveStacked.enemies.map((enemy) => ({
+          ...enemy,
+          cast: null,
+          recoveryRemainingMs: 999_999,
+        })),
+      }
+      const soulSensitiveBeforeExpiry = tickEncounter(stackedStatusTickBase, 6999)
+      const soulSensitiveAfterExpiry = tickEncounter(stackedStatusTickBase, 7000)
+      const soulSensitiveBeforeExpiryStatus = soulSensitiveBeforeExpiry.player.debuffs.find((entry) => entry.id === 'soulSensitive')
+
+      expect(hunterMarked.player.hp).toBe(75)
+      expect(ruptured.player.hp).toBe(52)
+      expect(ruptured.party.hp).toBe(50 - (trollRupturedPartyDefinition?.valueA ?? 3))
+      expect(taunted.player.currentTargetId).toBe(secondEnemy.id)
+      expect(taunted.party.currentTargetId).toBe(secondEnemy.id)
+      expect(hunterMarkPartyPressure.party.pressure).toBe(hunterMarkSkill?.pressureOnMiss ?? 0)
+      expect(soulSensitiveMagic.player.hp).toBe(
+        100 - Math.round((shadowBoltSkill?.playerDamage ?? 0) * (1 + (soulSensitiveDefinition?.valueA ?? 50) / 100)),
+      )
+      expect(soulSensitivePhysical.player.hp).toBe(80)
+      expect(soulSensitiveStacked.player.debuffs.find((entry) => entry.id === 'soulSensitive')).toMatchObject({
+        stacks: 2,
+        maxStacks: 5,
+      })
+      expect(stackedSoulSensitive?.remainingMs).toBe(7000)
+      expect(stackedSoulSensitive?.totalMs).toBe(7000)
+      expect(soulSensitiveBeforeExpiryStatus).toMatchObject({
+        stacks: 2,
+        remainingMs: 1,
+      })
+      expect(soulSensitiveAfterExpiry.player.debuffs.some((entry) => entry.id === 'soulSensitive')).toBe(false)
+    } finally {
+      resetDesignerWorkbookOverrides()
+    }
+  })
+
+  it('troll taunt forces player skill and auto attack targets to the caster while active', () => {
+    loadCurrentDesignerWorkbooks()
+
+    try {
+      const encounter = stripStageSpecialRules(createWestFallEncounterWithBuildOverride({
+        F: 'warrior_t_shield_slam',
+      }))
+      const firstEnemy = encounter.enemies[0]
+      const tauntCaster = encounter.enemies[1]
+      if (!firstEnemy || !tauntCaster) {
+        throw new Error('Expected two enemies')
+      }
+
+      const tauntStatus = createEnemyStatusEffect('trollTaunted')
+      if (!tauntStatus) {
+        throw new Error('Expected trollTaunted status definition from current workbook')
+      }
+
+      const base = {
+        ...encounter,
+        stage: {
+          ...encounter.stage,
+          playerAutoDamage: 3,
+          playerAutoHeal: 0,
+          partyAutoHeal: 0,
+          partyAutoDamageMin: 0,
+          partyAutoDamageMax: 0,
+        },
+        player: {
+          ...encounter.player,
+          currentTargetId: firstEnemy.id,
+          resource: 20,
+          debuffs: [
+            {
+              ...tauntStatus,
+              combatLogSource: { kind: 'enemy' as const, id: tauntCaster.id, name: tauntCaster.name },
+            },
+          ],
+        },
+        party: {
+          ...encounter.party,
+          currentTargetId: firstEnemy.id,
+        },
+        enemies: encounter.enemies.map((enemy) => ({
+          ...enemy,
+          cast: null,
+          recoveryRemainingMs: 999_999,
+        })),
+        runtime: {
+          ...encounter.runtime,
+          pendingAffixTriggers: [],
+          damageSources: encounter.runtime.damageSources.map((source) => ({
+            ...source,
+            remainingMs: source.sourceId === 'player_auto_attack' ? 0 : 999_999,
+          })),
+        },
+      }
+
+      const forced = tickEncounter(base, 0)
+      const attemptedRetarget = selectEnemy(forced, firstEnemy.id)
+      const afterSkill = tickEncounter(activateSkill(attemptedRetarget, 'warrior_t_shield_slam'), 0)
+      const afterAuto = tickEncounter({
+        ...attemptedRetarget,
+        skills: attemptedRetarget.skills.map((skill) => ({
+          ...skill,
+          remainingCooldownMs: 999_999,
+          selfCooldownRemainingMs: 999_999,
+        })),
+      }, 1000)
+
+      const firstAfterSkill = afterSkill.enemies.find((enemy) => enemy.id === firstEnemy.id)
+      const casterAfterSkill = afterSkill.enemies.find((enemy) => enemy.id === tauntCaster.id)
+      const firstAfterAuto = afterAuto.enemies.find((enemy) => enemy.id === firstEnemy.id)
+      const casterAfterAuto = afterAuto.enemies.find((enemy) => enemy.id === tauntCaster.id)
+
+      expect(forced.player.currentTargetId).toBe(tauntCaster.id)
+      expect(attemptedRetarget.player.currentTargetId).toBe(tauntCaster.id)
+      expect(firstAfterSkill?.hp).toBe(firstEnemy.hp)
+      expect(casterAfterSkill?.hp).toBe(tauntCaster.hp - 15)
+      expect(firstAfterAuto?.hp).toBe(firstEnemy.hp)
+      expect(casterAfterAuto?.hp).toBe(tauntCaster.hp - 3)
+    } finally {
+      resetDesignerWorkbookOverrides()
+    }
+  })
+
+  it('trollRuptured party status blocks party healing while player rupture keeps half healing', () => {
+    const encounter = stripStageSpecialRules(createHarborEncounterWithBuildOverride({
+      F: 'warrior_t_rallying_cry',
+    }))
+    loadCurrentDesignerWorkbooks()
+
+    try {
+      const partyRuptured = createEnemyStatusEffect('trollRuptured_p')
+      const playerRuptured = createEnemyStatusEffect('trollRuptured')
+      if (!partyRuptured || !playerRuptured) {
+        throw new Error('Expected troll rupture status definitions from current workbook')
+      }
+      const configured = {
+        ...encounter,
+        stage: {
+          ...encounter.stage,
+          playerAutoHeal: 0,
+          partyAutoHeal: 0,
+        },
+        player: {
+          ...encounter.player,
+          hp: 100,
+          maxHp: 200,
+          resource: 100,
+          debuffs: [playerRuptured],
+        },
+        party: {
+          ...encounter.party,
+          hp: 50,
+          maxHp: 100,
+          statuses: [partyRuptured],
+        },
+      }
+
+      const nextState = tickEncounter(activateSkill(configured, 'warrior_t_rallying_cry'), 0)
+
+      expect(nextState.player.hp).toBe(120)
+      expect(nextState.party.hp).toBe(50)
     } finally {
       resetDesignerWorkbookOverrides()
     }
@@ -7375,6 +8699,287 @@ describe('encounterFactory hand-cast flow', () => {
     expect(afterThreePartyAttacks.party.statuses.some((status) => status.id === 'disliked')).toBe(false)
   })
 
+  it('challenge affix statuses provide readable pressure hooks', () => {
+    loadCurrentDesignerWorkbooks()
+    applyStageWorkbookOverrides({
+      ...parseStageWorkbook(XLSX.readFile('public/designer-data/challenge_stage_content.xlsx')),
+      updateCampaignOrder: false,
+    })
+    applyEncounterWorkbookOverrides(parseEncounterWorkbook(XLSX.readFile('public/designer-data/challenge_encounter_balance.xlsx')))
+
+    try {
+      const stage = getStageById('Challenge-6')
+      const base = createInitialEncounterState(
+        stage,
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+      )
+      const enemy = base.enemies[0]
+
+      if (!enemy) {
+        throw new Error('Expected challenge encounter to have enemies')
+      }
+
+      const armEnemyCast = (
+        status: EncounterState['enemies'][number]['statuses'][number],
+        overrides: Partial<EncounterState['enemies'][number]> = {},
+      ) => ({
+        ...base,
+        enemies: base.enemies.map((entry, index) =>
+          index === 0
+            ? {
+                ...entry,
+                ...overrides,
+                statuses: [status],
+                cast: {
+                  id: 'murloc_lightning',
+                  name: '鱼人闪电术',
+                  target: 'tank' as const,
+                  remainingMs: 0,
+                  totalMs: 0,
+                  breakRule: 'interruptOrControl' as const,
+                  dangerLevel: 'medium' as const,
+                },
+              }
+            : { ...entry, cast: null, recoveryRemainingMs: 999_999 },
+        ),
+      })
+
+      const magicBoosted = tickEncounter(armEnemyCast({
+        id: 'challenge_tidefire_magic',
+        iconId: 'challenge_tidefire_magic',
+        label: '潮火交错',
+        shortLabel: '潮火',
+        remainingMs: 3000,
+        totalMs: 3000,
+        tone: 'buff',
+        kind: 'enemyBuff',
+        effectLogicId: 'challenge_magic_damage_boost_status',
+        valueA: 0.5,
+      }), 0)
+      const shielded = tickEncounter({
+        ...base,
+        enemies: base.enemies.map((entry, index) =>
+          index === 0
+            ? {
+                ...entry,
+                hp: 50,
+                statuses: [{
+                  id: 'challenge_coldlight_guard',
+                  iconId: 'challenge_coldlight_guard',
+                  label: '寒光护援',
+                  shortLabel: '护援',
+                  remainingMs: 10_000,
+                  totalMs: 10_000,
+                  tone: 'buff' as const,
+                  kind: 'enemyBuff' as const,
+                  effectLogicId: 'challenge_periodic_absorb_status',
+                  valueA: 20,
+                  tickIntervalMs: 1000,
+                }],
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              }
+            : { ...entry, cast: null, recoveryRemainingMs: 999_999 },
+        ),
+      }, 1000)
+      const commanded = tickEncounter({
+        ...base,
+        enemies: base.enemies.map((entry, index) =>
+          index === 0
+            ? {
+                ...entry,
+                hp: 80,
+                maxHp: 100,
+                isSkull: true,
+                statuses: [{
+                  id: 'challenge_wax_order',
+                  iconId: 'challenge_wax_order',
+                  label: '蜡影号令',
+                  shortLabel: '号令',
+                  remainingMs: 10_000,
+                  totalMs: 10_000,
+                  tone: 'buff' as const,
+                  kind: 'enemyBuff' as const,
+                  effectLogicId: 'challenge_periodic_elite_reinforce_status',
+                  valueA: 10,
+                  tickIntervalMs: 1000,
+                }],
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              }
+            : { ...entry, cast: null, recoveryRemainingMs: 999_999 },
+        ),
+      }, 5000)
+      const vulnerable = tickEncounter(armEnemyCast({
+        id: 'challenge_tide_order',
+        iconId: 'challenge_tide_order',
+        label: '潮汐军令',
+        shortLabel: '军令',
+        remainingMs: 10_000,
+        totalMs: 10_000,
+        tone: 'buff',
+        kind: 'enemyBuff',
+        effectLogicId: 'challenge_tide_command_status',
+        valueA: 0.08,
+        valueB: 5,
+      }, {
+        row: 4,
+        definitionId: 'murloc_warleader',
+      }), 0)
+
+      expect(magicBoosted.player.hp).toBeLessThan(base.player.hp - 10)
+      expect(shielded.enemies[0]?.statuses.find((status) => status.id === 'challenge_coldlight_barrier')?.absorbRemaining).toBe(20)
+      expect(commanded.enemies[0]?.statuses.some((status) => status.id === 'challenge_elite_reinforced')).toBe(true)
+      expect(vulnerable.player.debuffs.find((status) => status.id === 'challenge_tidal_vulnerability')?.stacks).toBe(1)
+    } finally {
+      resetDesignerWorkbookOverrides()
+    }
+  })
+
+  it('challenge 7-9 affix statuses apply spear breach, regen mist, and shield formation hooks', () => {
+    loadCurrentDesignerWorkbooks()
+    applyStageWorkbookOverrides({
+      ...parseStageWorkbook(XLSX.readFile('public/designer-data/challenge_stage_content.xlsx')),
+      updateCampaignOrder: false,
+    })
+    applyEncounterWorkbookOverrides(parseEncounterWorkbook(XLSX.readFile('public/designer-data/challenge_encounter_balance.xlsx')))
+
+    try {
+      const stage = getStageById('Challenge-6')
+      const base = createInitialEncounterState(
+        stage,
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+      )
+      const targetEnemyId = base.enemies[0]?.id
+
+      if (!targetEnemyId) {
+        throw new Error('Expected challenge encounter to have enemies')
+      }
+
+      const spearBreachStatus: EncounterState['enemies'][number]['statuses'][number] = {
+        id: 'challenge_spear_breach_source',
+        iconId: 'challenge_spear_breach',
+        label: '穿矛破口',
+        shortLabel: '破口',
+        remainingMs: 10_000,
+        totalMs: 10_000,
+        tone: 'buff',
+        kind: 'enemyBuff',
+        effectLogicId: 'challenge_spear_breach_status',
+        valueA: 0.12,
+        valueB: 3,
+      }
+      const regenMistStatus: EncounterState['enemies'][number]['statuses'][number] = {
+        id: 'challenge_troll_regen_mist',
+        iconId: 'challenge_troll_regen_mist',
+        label: '药雾回甘',
+        shortLabel: '药雾',
+        remainingMs: 10_000,
+        totalMs: 10_000,
+        tone: 'buff',
+        kind: 'enemyBuff',
+        effectLogicId: 'challenge_troll_regen_mist_status',
+        valueA: 12,
+        tickIntervalMs: 1000,
+      }
+      const shieldFormationStatus: EncounterState['enemies'][number]['statuses'][number] = {
+        id: 'challenge_shield_formation',
+        iconId: 'challenge_shield_formation',
+        label: '盾阵换防',
+        shortLabel: '盾阵',
+        remainingMs: 10_000,
+        totalMs: 10_000,
+        tone: 'buff',
+        kind: 'enemyBuff',
+        effectLogicId: 'challenge_shield_formation_status',
+        valueA: 0.45,
+        valueB: 3500,
+      }
+
+      const ruptured = tickEncounter({
+        ...base,
+        enemies: base.enemies.map((entry, index) =>
+          index === 0
+            ? {
+                ...entry,
+                row: 4,
+                tankThreat: 100,
+                allyThreat: 0,
+                statuses: [spearBreachStatus],
+                cast: {
+                  id: 'throw_lance',
+                  name: '投矛',
+                  target: 'tank' as const,
+                  remainingMs: 0,
+                  totalMs: 0,
+                  breakRule: 'controlOnly' as const,
+                  dangerLevel: 'low' as const,
+                },
+              }
+            : { ...entry, cast: null, recoveryRemainingMs: 999_999 },
+        ),
+      }, 0)
+
+      const misted = tickEncounter({
+        ...base,
+        stage: {
+          ...base.stage,
+          partyAutoDamageIntervalMs: 0,
+          partyAutoDamageTargetCount: 0,
+          damageSources: [],
+        },
+        runtime: {
+          ...base.runtime,
+          damageSources: [],
+          partyAutoDamageRemainingMs: 0,
+        },
+        enemies: base.enemies.map((entry, index) =>
+          index === 0
+            ? {
+                ...entry,
+                definitionId: 'troll_high_priest',
+                hp: 50,
+                maxHp: 120,
+                statuses: [regenMistStatus],
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              }
+            : { ...entry, cast: null, recoveryRemainingMs: 999_999 },
+        ),
+      }, 1000)
+
+      const braced = tickEncounter(enqueueEncounterEvent({
+        ...base,
+        enemies: base.enemies.map((entry, index) =>
+          index === 0
+            ? {
+                ...entry,
+                hp: 100,
+                maxHp: 120,
+                isSkull: true,
+                statuses: [shieldFormationStatus],
+                cast: null,
+                recoveryRemainingMs: 999_999,
+              }
+            : { ...entry, cast: null, recoveryRemainingMs: 999_999 },
+        ),
+      }, {
+        type: 'enemy/damage-applied',
+        occurredAtMs: base.timeMs,
+        enemyId: targetEnemyId,
+        amount: 10,
+        sourceSkillId: 'warrior_t_burst',
+      }), 0)
+
+      expect(ruptured.player.debuffs.find((status) => status.id === 'challenge_spear_breach')?.stacks).toBe(1)
+      expect(misted.enemies[0]?.hp).toBe(62)
+      expect(braced.enemies[0]?.statuses.some((status) => status.id === 'challenge_shield_formation_braced')).toBe(true)
+      expect(braced.enemies[0]?.statuses.some((status) => status.id === 'challenge_shield_formation')).toBe(false)
+    } finally {
+      resetDesignerWorkbookOverrides()
+    }
+  })
+
   it('asHisWish locks the party target to the highest player threat enemy at the interval only', () => {
     const encounter = createHarborEncounterWithStandardBuild()
     const firstEnemyId = encounter.enemies[0].id
@@ -7450,6 +9055,92 @@ describe('encounterFactory hand-cast flow', () => {
       locked.enemies.find((enemy) => enemy.id === secondEnemyId)?.tankThreat ?? 0,
     )
     expect((afterPostIntervalTaunt.party as { currentTargetId?: string | null }).currentTargetId).toBe(secondEnemyId)
+  })
+
+  it('asHisWish keeps the highest player threat enemy in multi-target party auto attacks', () => {
+    const randomSpy = vi.spyOn(Math, 'random')
+    randomSpy.mockReturnValueOnce(0.6).mockReturnValueOnce(0)
+
+    try {
+      const encounter = createHarborEncounterWithStandardBuild()
+      const firstEnemyId = encounter.enemies[0].id
+      const secondEnemyId = encounter.enemies[1].id
+      const thirdEnemyId = encounter.enemies[2].id
+      const configured = {
+        ...stripStageSpecialRules(encounter),
+        stage: {
+          ...encounter.stage,
+          specialRules: [],
+          partyAutoDamageIntervalMs: 0,
+          partyAutoDamageTargetCount: 0,
+          damageSources: [
+            {
+              sourceId: 'test-party-multi',
+              sourceKind: 'party_ambient_random',
+              ownerSide: 'party' as const,
+              sourceTags: ['party', 'ambient', 'random'],
+              intervalMs: 10_000,
+              startReady: true,
+              invalidTargetPolicy: 'retargetLivingEnemy' as const,
+              targetRule: 'randomLivingEnemy' as const,
+              targetSelector: 'randomLivingEnemy',
+              targetCount: 2,
+              damageMode: 'fixed' as const,
+              baseDamage: 10,
+              minDamage: 10,
+              maxDamage: 10,
+              threatMode: 'formula' as const,
+              threatMultiplier: 1,
+              flatThreat: 0,
+              threatSource: 'party' as const,
+              enabled: true,
+            },
+          ],
+        },
+        party: {
+          ...encounter.party,
+          currentTargetId: firstEnemyId,
+          statuses: [
+            {
+              id: 'asHisWish',
+              label: '如他所愿',
+              shortLabel: '愿',
+              remainingMs: -1,
+              totalMs: -1,
+              tone: 'danger' as const,
+              kind: 'partyDebuff' as const,
+              effectLogicId: 'asHisWish_status',
+            },
+          ],
+        },
+        runtime: {
+          ...encounter.runtime,
+          damageSources: [],
+          partyStatusRuntime: {},
+        },
+        enemies: encounter.enemies.map((enemy, index) => ({
+          ...enemy,
+          hp: index <= 2 ? 100 : 0,
+          maxHp: index <= 2 ? 100 : enemy.maxHp,
+          tankThreat: index === 1 ? 500 : 100 - index,
+          allyThreat: 0,
+          cast: null,
+          recoveryRemainingMs: 999_999,
+          pendingRetryCastSkillId: null,
+        })),
+      }
+
+      const nextState = tickEncounter(configured, 10_000)
+      const partyAutoAttackTargets = nextState.runtime.combatLog
+        .filter((event) => event.type === 'damage' && event.source.id === 'test-party-multi')
+        .map((event) => event.target.id)
+
+      expect(nextState.party.currentTargetId).toBe(secondEnemyId)
+      expect(new Set(partyAutoAttackTargets)).toEqual(new Set([secondEnemyId, firstEnemyId]))
+      expect(partyAutoAttackTargets).not.toContain(thirdEnemyId)
+    } finally {
+      randomSpy.mockRestore()
+    }
   })
 
   it('slowDown_status pauses player skill cooldown recovery', () => {
@@ -7969,13 +9660,19 @@ describe('encounterFactory hand-cast flow', () => {
       F: 'warrior_t_shield_wall',
     })
     const firstCast = activateSkill(encounter, 'warrior_t_shield_wall')
-    const secondCast = activateSkill(firstCast, 'warrior_t_shield_wall')
+    const immediateSecondCast = activateSkill(firstCast, 'warrior_t_shield_wall')
+    const secondCast = activateSkill(tickEncounter(firstCast, 500), 'warrior_t_shield_wall')
 
     expect(encounter.skills.find((skill) => skill.id === 'warrior_t_shield_wall')).toMatchObject({
       maxCharges: 2,
       currentCharges: 2,
     })
     expect(firstCast.skills.find((skill) => skill.id === 'warrior_t_shield_wall')).toMatchObject({
+      maxCharges: 2,
+      currentCharges: 1,
+      remainingCooldownMs: 60000,
+    })
+    expect(immediateSecondCast.skills.find((skill) => skill.id === 'warrior_t_shield_wall')).toMatchObject({
       maxCharges: 2,
       currentCharges: 1,
       remainingCooldownMs: 60000,

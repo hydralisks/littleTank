@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="shield formation braced">
+  <defs><linearGradient id="bg" x1="8" y1="8" x2="56" y2="56"><stop stop-color="hsl(214 72% 22%)"/><stop offset="1" stop-color="hsl(166 70% 30%)"/></linearGradient></defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+  <path fill="hsl(184 84% 68%)" stroke="rgba(8,12,24,.92)" stroke-width="4" stroke-linejoin="round" d="M32 8c10 6 17 8 21 9-1 17-8 30-21 38-13-8-20-21-21-38 4-1 11-3 21-9Z"/>
+  <path fill="none" stroke="hsl(48 100% 72%)" stroke-width="5" stroke-linecap="round" d="M19 38h26M24 26h16"/>
+</svg>

@@ -6,6 +6,27 @@
 - In particular, do not run `npm run generate:designer-data` or `node scripts/generateDesignerWorkbooks.mjs` by default.
 - Treat `public/designer-data/*.xlsx` and public art/resource samples as user/planner-owned working content. Read them when needed, but do not regenerate or overwrite them without explicit user approval.
 
+## 2026-07-20 player tank class expansion handoff
+
+- New class expansion entry document: `docs/player-tank-class-expansion-handoff.md`.
+- The next recommended feature direction is to add new tank classes after `warrior_t`, starting with Guardian Druid / 熊T, then Blood Death Knight / 死亡骑士T.
+- Design stance:
+  - `warrior_t`: predictive shield tank, already implemented as the baseline.
+  - `guardian_druid_t`: first recommended new class because it can reuse the current rage resource and most survival/stat/telemetry systems.
+  - `blood_death_knight_t`: second recommended new class because it likely needs a recent-damage healing window, Bone Shield style stacks, and possibly a secondary rune resource.
+- Important boundary: do not make the new classes direct reskins of Warrior T. The handoff doc records expected strengths, weaknesses, candidate skills, passive themes, AI strategy needs, and validation points.
+- No `public/designer-data` workbook was modified for this documentation handoff. The next implementation agent should first write tests and code/data-interface support, and only edit planner workbooks if the user explicitly asks for that step.
+
+## 2026-07-16 Zul'Aman chapter 3 balance data sync
+
+- Current web demo reads planner workbooks at runtime from `/designer-data/*.xlsx`; after planner tables are replaced, a browser refresh is enough for the Vite demo to load the newest Chapter 3 values. Restart the dev server only if browser/static caching is suspected.
+- This sync keeps main campaign and challenge data separated:
+  - Story: `stage_content.xlsx`, `encounter_balance.xlsx`, `enemy_data.xlsx`, `player_build.xlsx`.
+  - Challenge: `challenge_stage_content.xlsx`, `challenge_encounter_balance.xlsx`.
+- Do not run `npm run generate:designer-data` for Chapter 3 balance refreshes. The correct first check is `npm run validate:designer-data`.
+- `soulSensitive_status` and `soulSensitive_p_status` are stackable to 5. Reapplying the debuff refreshes the full stack duration to the current workbook duration, now verified at 7000ms; all stacks expire together when that refreshed duration elapses.
+- Chapter 3 development record: `docs/zulaman-chapter3-dev.md`.
+
 ## 2026-06-02 combat stats settlement V1 and release package
 
 - Combat settlement V1 is implemented as a five-tab result panel:

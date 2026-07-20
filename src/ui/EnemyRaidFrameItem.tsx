@@ -29,6 +29,15 @@ function targetLabel(target: 'tank' | 'ally' | 'party' | 'enemy' | 'self') {
   return '自身'
 }
 
+function formatEnemyHpValue(value: number) {
+  if (!Number.isFinite(value)) {
+    return '0'
+  }
+
+  const rounded = Math.round(value * 10) / 10
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
+}
+
 export function EnemyRaidFrameItem({
   enemy,
   isSelected,
@@ -95,7 +104,7 @@ export function EnemyRaidFrameItem({
 
       <div className="enemy-frame__line enemy-frame__line--title">
         <span className="enemy-name">{enemy.name}</span>
-        <span className="enemy-hp-inline">{`${enemy.hp}/${enemy.maxHp}`}</span>
+        <span className="enemy-hp-inline">{`${formatEnemyHpValue(enemy.hp)}/${formatEnemyHpValue(enemy.maxHp)}`}</span>
         <span className="enemy-arrow">{'>'}</span>
         <span className="enemy-target-small">
           {isDead ? '已死亡' : targetLabel(enemy.cast?.target ?? enemy.target)}

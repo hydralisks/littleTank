@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   RINGING_DEEPS_MANUAL_BASELINES,
   WESTFALL_MANUAL_BASELINES,
+  ZULAMAN_MANUAL_BASELINES,
   getManualDifficultyBaseline,
   renderBalanceReportMarkdown,
   type BalanceReport,
@@ -28,6 +29,17 @@ describe('balance report rendering', () => {
     expect(getManualDifficultyBaseline('WestFall-4')).toBe('hard')
     expect(getManualDifficultyBaseline('WestFall-5')).toBe('balanced')
     expect(getManualDifficultyBaseline('WestFall-6')).toBe('hard')
+  })
+
+  it('uses the current ZulAman manual difficulty baselines', () => {
+    expect(ZULAMAN_MANUAL_BASELINES["Zul'Aman-1"]).toBe('hard')
+    expect(ZULAMAN_MANUAL_BASELINES["Zul'Aman-2"]).toBe('balanced')
+    expect(ZULAMAN_MANUAL_BASELINES["Zul'Aman-3"]).toBe('balanced')
+    expect(ZULAMAN_MANUAL_BASELINES["Zul'Aman-4"]).toBe('balanced')
+    expect(ZULAMAN_MANUAL_BASELINES["Zul'Aman-5"]).toBe('hard')
+    expect(ZULAMAN_MANUAL_BASELINES["Zul'Aman-6"]).toBe('expert')
+    expect(getManualDifficultyBaseline("Zul'Aman-1")).toBe('hard')
+    expect(getManualDifficultyBaseline("Zul'Aman-6")).toBe('expert')
   })
 
   it('renders best-build summaries without weak-build wording', () => {

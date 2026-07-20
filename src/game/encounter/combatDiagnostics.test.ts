@@ -8,9 +8,9 @@ function createStats(): EncounterStats {
     tankDamageTaken: [
       {
         id: 'tank-heavy',
-        sourceName: '测试敌人',
-        effectName: '重击',
-        category: '敌人技能',
+        sourceName: 'Test Enemy',
+        effectName: 'Heavy Hit',
+        category: 'Enemy Skill',
         total: 70,
         count: 2,
         average: 35,
@@ -18,21 +18,22 @@ function createStats(): EncounterStats {
       },
       {
         id: 'tank-small',
-        sourceName: '测试敌人',
-        effectName: '擦伤',
-        category: '敌人技能',
+        sourceName: 'Test Enemy',
+        effectName: 'Scratch',
+        category: 'Enemy Skill',
         total: 30,
         count: 3,
         average: 10,
         share: 0.3,
       },
     ],
+    partyDamageTaken: [],
     pressureGained: [
       {
         id: 'pressure-heavy',
-        sourceName: '测试敌人',
-        effectName: '恐吓',
-        category: '压力',
+        sourceName: 'Test Enemy',
+        effectName: 'Fear',
+        category: 'Pressure',
         total: 60,
         count: 3,
         average: 20,
@@ -40,9 +41,9 @@ function createStats(): EncounterStats {
       },
       {
         id: 'pressure-small',
-        sourceName: '关卡规则',
-        effectName: '推进',
-        category: '关卡规则',
+        sourceName: 'Stage Rule',
+        effectName: 'Push',
+        category: 'Stage Rule',
         total: 20,
         count: 2,
         average: 10,
@@ -52,8 +53,8 @@ function createStats(): EncounterStats {
     castHandling: [
       {
         id: 'danger-cast',
-        enemyName: '测试敌人',
-        skillName: '毁灭读条',
+        enemyName: 'Test Enemy',
+        skillName: 'Danger Cast',
         dangerLevel: 'high',
         interruptedCount: 0,
         controlledCount: 0,
@@ -64,12 +65,39 @@ function createStats(): EncounterStats {
       },
     ],
     damageDealt: [],
+    playerHealingAndAbsorb: [
+      {
+        id: 'player-heal',
+        sourceName: 'Player',
+        effectName: 'Rally',
+        category: 'Player Healing',
+        kind: 'healing',
+        total: 40,
+        rawTotal: 100,
+        overhealTotal: 60,
+        count: 2,
+        average: 20,
+        share: 40 / 70,
+      },
+      {
+        id: 'ignore-pain',
+        sourceName: 'Player',
+        effectName: 'Ignore Pain',
+        category: 'Player Absorb',
+        kind: 'absorb',
+        total: 30,
+        count: 1,
+        average: 30,
+        share: 30 / 70,
+      },
+    ],
+    partyHealingAndAbsorb: [],
     healingAndAbsorb: [
       {
         id: 'player-heal',
-        sourceName: '玩家',
-        effectName: '集结呐喊',
-        category: '玩家技能治疗',
+        sourceName: 'Player',
+        effectName: 'Rally',
+        category: 'Player Healing',
         kind: 'healing',
         total: 40,
         rawTotal: 100,
@@ -80,36 +108,37 @@ function createStats(): EncounterStats {
       },
       {
         id: 'ignore-pain',
-        sourceName: '玩家',
-        effectName: '无视苦痛',
-        category: '玩家技能吸收',
+        sourceName: 'Player',
+        effectName: 'Ignore Pain',
+        category: 'Player Absorb',
         kind: 'absorb',
         total: 30,
         count: 1,
         average: 30,
         share: 0.3,
       },
+    ],
+    enemyHealingAndAbsorb: [
       {
         id: 'enemy-heal',
-        sourceName: '测试治疗者',
-        effectName: '恢复',
-        category: '敌人治疗',
+        sourceName: 'Test Healer',
+        effectName: 'Restore',
+        category: 'Enemy Healing',
         kind: 'healing',
         total: 30,
         rawTotal: 30,
         overhealTotal: 0,
         count: 1,
         average: 30,
-        share: 0.3,
+        share: 1,
       },
     ],
-    enemyHealingAndAbsorb: [],
     absorbConsumed: [
       {
         id: 'ignore-pain-consumed',
-        sourceName: '玩家',
-        effectName: '无视苦痛',
-        category: '玩家技能吸收',
+        sourceName: 'Player',
+        effectName: 'Ignore Pain',
+        category: 'Player Absorb',
         total: 6,
         count: 1,
         average: 6,
@@ -123,8 +152,8 @@ describe('combat diagnostics', () => {
   it('builds internal summary totals and diagnostic signals from encounter stats', () => {
     const diagnostics = buildCombatDiagnostics(createStats())
 
-    expect(diagnostics.topTankDamageSource?.effectName).toBe('重击')
-    expect(diagnostics.topPressureSource?.effectName).toBe('恐吓')
+    expect(diagnostics.topTankDamageSource?.effectName).toBe('Heavy Hit')
+    expect(diagnostics.topPressureSource?.effectName).toBe('Fear')
     expect(diagnostics.totals).toMatchObject({
       tankDamageTaken: 100,
       pressureGained: 80,

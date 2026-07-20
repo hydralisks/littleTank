@@ -2,11 +2,21 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import XLSX from 'xlsx'
-import { applyEncounterWorkbookOverrides } from '../src/game/data/encounterTemplates.ts'
-import { applyEnemyWorkbookOverrides } from '../src/game/data/enemyCatalog.ts'
+import {
+  appendEncounterWorkbookOverrides,
+  applyEncounterWorkbookOverrides,
+  createEncounterTemplate,
+} from '../src/game/data/encounterTemplates.ts'
+import {
+  applyEnemyWorkbookOverrides,
+  getEnemySkillDefinition,
+  getEnemyStatusDefinition,
+} from '../src/game/data/enemyCatalog.ts'
 import {
   applyStageWorkbookOverrides,
+  getPassiveTalentUnlockTierForStage,
   getStageById,
+  getUnlockedActiveSkillIdsForStage,
 } from '../src/game/data/stageTemplates.ts'
 import {
   parseEncounterWorkbook,
@@ -14,7 +24,13 @@ import {
   parsePlayerBuildWorkbook,
   parseStageWorkbook,
 } from '../src/game/data/workbookLoader.ts'
-import { applyPlayerBuildWorkbookOverrides } from '../src/game/data/playerBuildCatalog.ts'
+import {
+  SKILL_HOTKEYS,
+  applyPlayerBuildWorkbookOverrides,
+  getActiveSkillCatalog,
+  getPassiveTalentCatalog,
+  normalizePersistedBuildForRule,
+} from '../src/game/data/playerBuildCatalog.ts'
 import {
   getManualDifficultyBaseline,
   RINGING_DEEPS_MANUAL_BASELINES,
@@ -24,14 +40,109 @@ import {
   runTwoPhaseStageBalanceAnalysis,
   selectLearningBuildCandidatesFromFixedAnalysis,
 } from '../src/game/balance/balanceSimulator.ts'
+import {
+  buildDataEstimateReport,
+  renderDataEstimateMarkdown,
+} from '../src/game/balance/dataEstimateReport.ts'
+import {
+  buildMonsterCodexEstimateReport,
+  renderMonsterCodexEstimateMarkdown,
+} from '../src/game/balance/monsterCodexEstimateReport.ts'
+import {
+  generateStrategyTipBuildCandidates,
+  getBuildSignature,
+} from '../src/game/balance/balanceBuildGenerator.ts'
+import {
+  buildManualPlaytestCandidateForStage,
+  getManualPlaytestEntryForStage,
+  parseManualPlaytestWorkbook,
+} from '../src/game/balance/manualPlaytestBuilds.ts'
 import { scoreStageStaticDifficulty } from '../src/game/balance/staticStageScoring.ts'
 import { runLearningStageBalanceAnalysis } from '../src/game/balance/learningBalanceEvaluator.ts'
 import { createBalanceDesignRecommendation } from '../src/game/balance/balanceRecommendation.ts'
+import {
+  renderBalanceReportDiffMarkdown,
+  summarizeBalanceReportDiff,
+} from '../src/game/balance/balanceReportDiff.ts'
+import { stripCombatLogTraceFromBalanceReport } from '../src/game/balance/balanceReportSanitizer.ts'
+import {
+  buildCombatTimeline,
+  renderCombatTimelineMarkdown,
+} from '../src/game/encounter/combatTimeline.ts'
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const designerDataDir = path.join(projectRoot, 'public', 'designer-data')
+const manualPlaytestBuildsPath = path.join(designerDataDir, 'manual_playtest_builds.xlsx')
 const outputDir = path.join(projectRoot, 'reports', 'balance')
+const storyOutputDir = path.join(outputDir, 'story')
+const challengeOutputDir = path.join(outputDir, 'challenge')
+const dataEstimateOutputDir = path.join(projectRoot, 'reports', 'data_estimate')
+const dataEstimateStoryOutputDir = path.join(dataEstimateOutputDir, 'story')
+const dataEstimateChallengeOutputDir = path.join(dataEstimateOutputDir, 'challenge')
 const cliOptions = parseCliOptions(process.argv.slice(2))
+let manualPlaytestEntries = []
+const CHINESE_REPORT_FILE_NAMES = {
+  'chapter-one': {
+    title: '第一章自动评分',
+    markdown: '第一章自动评分.md',
+    json: '第一章自动评分.json',
+    diffMarkdown: '第一章自动评分-变更对比.md',
+  },
+  westfall: {
+    title: '第二章自动评分',
+    markdown: '第二章自动评分.md',
+    json: '第二章自动评分.json',
+    diffMarkdown: '第二章自动评分-变更对比.md',
+  },
+  "zul'aman": {
+    title: '第三章自动评分',
+    markdown: '第三章自动评分.md',
+    json: '第三章自动评分.json',
+    diffMarkdown: '第三章自动评分-变更对比.md',
+  },
+  challenge: {
+    title: '挑战模式自动评分',
+    markdown: '第1~3关自动评分.md',
+    json: '第1~3关自动评分.json',
+    diffMarkdown: '第1~3关自动评分-变更对比.md',
+  },
+  'custom-stages': {
+    title: '自定义关卡自动评分',
+    markdown: '自定义关卡自动评分.md',
+    json: '自定义关卡自动评分.json',
+    diffMarkdown: '自定义关卡自动评分-变更对比.md',
+  },
+}
+const CHALLENGE_REPORT_GROUP_SIZE = 3
+const DATA_ESTIMATE_STORY_GROUPS = [
+  {
+    fileName: '第一章数值估算',
+    outputDir: dataEstimateStoryOutputDir,
+    stageIds: ['RingingDeeps-1', 'RingingDeeps-2', 'RingingDeeps-3', 'RingingDeeps-4', 'RingingDeeps-5', 'RingingDeeps-6'],
+  },
+  {
+    fileName: '第二章数值估算',
+    outputDir: dataEstimateStoryOutputDir,
+    stageIds: ['WestFall-1', 'WestFall-2', 'WestFall-3', 'WestFall-4', 'WestFall-5', 'WestFall-6'],
+  },
+  {
+    fileName: '第三章数值估算',
+    outputDir: dataEstimateStoryOutputDir,
+    stageIds: ["Zul'Aman-1", "Zul'Aman-2", "Zul'Aman-3", "Zul'Aman-4", "Zul'Aman-5", "Zul'Aman-6"],
+  },
+]
+const DATA_ESTIMATE_CHALLENGE_GROUPS = [
+  {
+    fileName: '挑战模式1~3关数值估算',
+    outputDir: dataEstimateChallengeOutputDir,
+    stageIds: ['Challenge-1', 'Challenge-2', 'Challenge-3'],
+  },
+  {
+    fileName: '挑战模式4~6关数值估算',
+    outputDir: dataEstimateChallengeOutputDir,
+    stageIds: ['Challenge-4', 'Challenge-5', 'Challenge-6'],
+  },
+]
 const FULL_SAMPLE_CONFIG = {
   fixedPhaseOneAttempts: 20,
   fixedPhaseOneMaxActiveBuilds: 18,
@@ -53,6 +164,17 @@ const QUICK_SAMPLE_CONFIG = {
   learningFinalBuildCount: 2,
   learningFinalStrategyCount: 1,
   learningAttempts: 12,
+}
+const NORMAL_SAMPLE_CONFIG = {
+  fixedPhaseOneAttempts: 8,
+  fixedPhaseOneMaxActiveBuilds: 12,
+  fixedPhaseOneMaxPassiveVariants: 3,
+  fixedFinalBuildCount: 4,
+  fixedAttempts: 40,
+  learningPhaseOneAttempts: 4,
+  learningFinalBuildCount: 3,
+  learningFinalStrategyCount: 2,
+  learningAttempts: 40,
 }
 
 const RAW_BALANCE_PROFILES = [
@@ -353,13 +475,188 @@ function readWorkbook(fileName) {
   return XLSX.readFile(path.join(designerDataDir, fileName))
 }
 
+function loadManualPlaytestEntries() {
+  if (!fs.existsSync(manualPlaytestBuildsPath)) {
+    return []
+  }
+
+  try {
+    const entries = parseManualPlaytestWorkbook(XLSX.readFile(manualPlaytestBuildsPath))
+    console.log(`[balance] manual playtest builds loaded: ${entries.length}`)
+    return entries
+  } catch (error) {
+    console.warn(`[balance] unable to read manual playtest builds: ${error.message}`)
+    return []
+  }
+}
+
+function readSheetRows(workbook, sheetName) {
+  const sheet = workbook.Sheets[sheetName]
+  if (!sheet) {
+    return []
+  }
+
+  return XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false })
+}
+
+function readBoolean(value) {
+  const text = String(value ?? '').trim().toLowerCase()
+  if (text === '') {
+    return true
+  }
+
+  return ['true', '1', 'yes', 'y'].includes(text)
+}
+
+function parseCsv(value) {
+  return String(value ?? '')
+    .split(/[,，]/)
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+}
+
+function normalizeLookupText(value) {
+  return String(value ?? '').trim().toLowerCase().replace(/\s+/g, '')
+}
+
+function createActiveSkillLookup() {
+  const lookup = new Map()
+  for (const skill of getActiveSkillCatalog()) {
+    for (const key of [skill.id, skill.name, skill.shortName]) {
+      const normalizedKey = normalizeLookupText(key)
+      if (normalizedKey) {
+        lookup.set(normalizedKey, skill.id)
+      }
+    }
+  }
+  return lookup
+}
+
+function createPassiveTalentLookup() {
+  const lookup = new Map()
+  for (const talent of getPassiveTalentCatalog()) {
+    for (const key of [talent.id, talent.name]) {
+      const normalizedKey = normalizeLookupText(key)
+      if (normalizedKey) {
+        lookup.set(normalizedKey, talent.id)
+      }
+    }
+  }
+  return lookup
+}
+
+function resolveRecommendedIds(value, lookup) {
+  return parseCsv(value)
+    .map((entry) => lookup.get(normalizeLookupText(entry)))
+    .filter(Boolean)
+}
+
+function buildChallengeRecommendedBuildCandidate(row, stage) {
+  const activeSkillIds = resolveRecommendedIds(row.recommendedActiveSkillNamesCsv, createActiveSkillLookup())
+  const passiveTalentIds = resolveRecommendedIds(row.recommendedPassiveTalentNamesCsv, createPassiveTalentLookup())
+  if (activeSkillIds.length === 0 && passiveTalentIds.length === 0) {
+    return null
+  }
+
+  const loadout = Object.fromEntries(SKILL_HOTKEYS.map((hotkey) => [hotkey, null]))
+  for (let index = 0; index < Math.min(activeSkillIds.length, SKILL_HOTKEYS.length); index += 1) {
+    loadout[SKILL_HOTKEYS[index]] = activeSkillIds[index]
+  }
+
+  const normalized = normalizePersistedBuildForRule(
+    { loadout, passiveTalentIds },
+    row.buildRuleId ? String(row.buildRuleId) : 'standard_5slot',
+    getPassiveTalentUnlockTierForStage(stage),
+    getUnlockedActiveSkillIdsForStage(stage),
+    [],
+  ).build
+
+  return {
+    id: 'challenge_recommended',
+    build: normalized,
+  }
+}
+
+function buildChallengeStageWorkbookOverrides(challengeStageWorkbook) {
+  const parsedStageWorkbook = parseStageWorkbook(challengeStageWorkbook)
+  const challengeRows = readSheetRows(challengeStageWorkbook, '关卡')
+    .filter((row) => row.stageId && readBoolean(row.enabled))
+
+  return {
+    ...parsedStageWorkbook,
+    stageOverrides: challengeRows.map((row, index) => ({
+      ...(parsedStageWorkbook.stageOverrides.find((override) => override.stageId === String(row.stageId)) ?? {}),
+      stageId: String(row.stageId),
+      areaId: 'Challenge',
+      order: Number(row.order) || index + 1,
+    })),
+    updateCampaignOrder: false,
+  }
+}
+
+function readChallengeStageEntries(challengeStageWorkbook) {
+  return readSheetRows(challengeStageWorkbook, '关卡')
+    .filter((row) => row.stageId && readBoolean(row.enabled))
+    .map((row, index) => ({
+      index: index + 1,
+      stageId: String(row.stageId),
+      title: String(row.title || row.stageId),
+      manualLabel: String(row.recommendedDifficulty || 'unrated'),
+      sourceStageIds: parseCsv(row.sourceStageIdsCsv),
+      buildRuleId: String(row.buildRuleId || ''),
+      recommendedActiveSkillNamesCsv: String(row.recommendedActiveSkillNamesCsv || ''),
+      recommendedPassiveTalentNamesCsv: String(row.recommendedPassiveTalentNamesCsv || ''),
+    }))
+}
+
+function filterRequestedChallengeEntries(entries) {
+  if (cliOptions.stages.length === 0) {
+    return entries
+  }
+
+  const requestedStageIds = new Set(cliOptions.stages)
+  return entries.filter((entry) => requestedStageIds.has(entry.stageId))
+}
+
 function loadDesignerDataIntoCatalogs() {
   const stageWorkbook = parseStageWorkbook(readWorkbook('stage_content.xlsx'))
   applyStageWorkbookOverrides(stageWorkbook)
   applyEncounterWorkbookOverrides(parseEncounterWorkbook(readWorkbook('encounter_balance.xlsx')))
   applyEnemyWorkbookOverrides(parseEnemyWorkbook(readWorkbook('enemy_data.xlsx')))
   applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(readWorkbook('player_build.xlsx')))
-  return stageWorkbook
+  manualPlaytestEntries = loadManualPlaytestEntries()
+  const challengeStageContentWorkbook = readWorkbook('challenge_stage_content.xlsx')
+  const challengeEntries = readChallengeStageEntries(challengeStageContentWorkbook)
+  if (!cliOptions.challenge) {
+    return {
+      ...stageWorkbook,
+      allChallengeEntries: challengeEntries,
+    }
+  }
+
+  applyChallengeDesignerDataIntoCatalogs()
+
+  return {
+    ...buildChallengeStageWorkbookOverrides(challengeStageContentWorkbook),
+    challengeEntries: filterRequestedChallengeEntries(challengeEntries),
+    allChallengeEntries: challengeEntries,
+  }
+}
+
+function applyChallengeDesignerDataIntoCatalogs() {
+  const challengeStageContentWorkbook = readWorkbook('challenge_stage_content.xlsx')
+  const challengeEncounterWorkbook = readWorkbook('challenge_encounter_balance.xlsx')
+  const challengeStageWorkbook = buildChallengeStageWorkbookOverrides(challengeStageContentWorkbook)
+  applyStageWorkbookOverrides(challengeStageWorkbook)
+  appendEncounterWorkbookOverrides(
+    parseEncounterWorkbook(challengeEncounterWorkbook),
+    { stageIdPrefix: 'Challenge-' },
+  )
+}
+
+function applyStoryDesignerDataIntoCatalogs() {
+  applyStageWorkbookOverrides(parseStageWorkbook(readWorkbook('stage_content.xlsx')))
+  applyEncounterWorkbookOverrides(parseEncounterWorkbook(readWorkbook('encounter_balance.xlsx')))
 }
 
 function parseCliOptions(args) {
@@ -367,17 +664,37 @@ function parseCliOptions(args) {
     area: null,
     stages: [],
     sample: 'full',
+    budget: 'full',
+    trace: false,
+    challenge: false,
   }
 
   for (const arg of args) {
     if (arg.startsWith('--area=')) {
       options.area = arg.slice('--area='.length).trim()
+    } else if (arg.startsWith('--stage=')) {
+      options.stages = [arg.slice('--stage='.length).trim()].filter(Boolean)
     } else if (arg.startsWith('--stages=')) {
       options.stages = arg.slice('--stages='.length).split(',').map((stageId) => stageId.trim()).filter(Boolean)
+    } else if (arg === '--quick') {
+      options.sample = 'quick'
+      options.budget = 'quick'
+    } else if (arg === '--challenge') {
+      options.challenge = true
+      options.area = null
+    } else if (arg === '--trace') {
+      options.trace = true
+    } else if (arg.startsWith('--budget=')) {
+      const budget = arg.slice('--budget='.length).trim()
+      if (budget === 'quick' || budget === 'normal' || budget === 'full') {
+        options.sample = budget
+        options.budget = budget
+      }
     } else if (arg.startsWith('--sample=')) {
       const sample = arg.slice('--sample='.length).trim()
-      if (sample === 'quick' || sample === 'full') {
+      if (sample === 'quick' || sample === 'normal' || sample === 'full') {
         options.sample = sample
+        options.budget = sample
       }
     }
   }
@@ -386,10 +703,21 @@ function parseCliOptions(args) {
 }
 
 function getSampleConfig() {
-  return cliOptions.sample === 'quick' ? QUICK_SAMPLE_CONFIG : FULL_SAMPLE_CONFIG
+  if (cliOptions.sample === 'quick') {
+    return QUICK_SAMPLE_CONFIG
+  }
+
+  if (cliOptions.sample === 'normal') {
+    return NORMAL_SAMPLE_CONFIG
+  }
+
+  return FULL_SAMPLE_CONFIG
 }
 
 function getReportSlug() {
+  if (cliOptions.challenge) {
+    return 'challenge'
+  }
   if (cliOptions.area) {
     return cliOptions.area.toLowerCase()
   }
@@ -400,6 +728,15 @@ function getReportSlug() {
 }
 
 function getReportTitle() {
+  if (cliOptions.challenge) {
+    return '挑战模式自动评测'
+  }
+
+  const reportSlug = getReportSlug()
+  if (CHINESE_REPORT_FILE_NAMES[reportSlug]?.title) {
+    return CHINESE_REPORT_FILE_NAMES[reportSlug].title
+  }
+
   if (cliOptions.area) {
     return `${cliOptions.area} 自动评分`
   }
@@ -409,19 +746,386 @@ function getReportTitle() {
   return '第一章自动评分'
 }
 
-function getRootChapterReportFileName(reportSlug) {
+function getChineseReportBaseName(reportSlug) {
+  if (reportSlug === 'challenge') {
+    return '挑战模式自动评测'
+  }
   if (reportSlug === 'chapter-one') {
-    return '第一章自动评分.md'
+    return '第一章自动评分'
   }
   if (reportSlug === 'westfall') {
-    return '第二章自动评分.md'
+    return '第二章自动评分'
   }
+  if (reportSlug === "zul'aman") {
+    return '第三章自动评分'
+  }
+  if (reportSlug === 'custom-stages') {
+    return '自定义关卡自动评分'
+  }
+
+  return `${getReportTitle()}`
+}
+
+function getReportOutputPaths(reportSlug) {
+  const targetOutputDir = cliOptions.challenge ? challengeOutputDir : storyOutputDir
+  const fileNames = CHINESE_REPORT_FILE_NAMES[reportSlug] ?? {
+    markdown: `${getChineseReportBaseName(reportSlug)}.md`,
+    json: `${getChineseReportBaseName(reportSlug)}.json`,
+    diffMarkdown: `${getChineseReportBaseName(reportSlug)}-变更对比.md`,
+  }
+
+  return {
+    outputDir: targetOutputDir,
+    json: path.join(targetOutputDir, fileNames.json),
+    markdown: path.join(targetOutputDir, fileNames.markdown),
+    diffMarkdown: path.join(targetOutputDir, fileNames.diffMarkdown),
+    legacyJson: path.join(targetOutputDir, `${reportSlug}-auto-scoring.json`),
+  }
+}
+
+function getLegacyAutoScoringMarkdownPath(reportSlug) {
+  if (reportSlug === 'chapter-one' || reportSlug === 'westfall' || reportSlug === "zul'aman") {
+    return null
+  }
+
+  return path.join(storyOutputDir, `${reportSlug}-auto-scoring.md`)
+}
+
+function getLatestReportAreaLabel() {
+  if (cliOptions.challenge) {
+    return '挑战模式'
+  }
+  if (cliOptions.area) {
+    return cliOptions.area
+  }
+  if (cliOptions.stages.length > 0) {
+    return '自定义关卡'
+  }
+
+  return 'RingingDeeps'
+}
+
+function formatReportPathForConsole(filePath) {
+  return path.relative(projectRoot, filePath)
+}
+
+function writeReportArtifacts(report, serializableReport, reportSlug, previousReport, outputPaths) {
+  const chapterMarkdown = renderChapterAutoScoringMarkdown(report)
+
+  fs.writeFileSync(path.join(outputPaths.outputDir, 'latest.json'), `${JSON.stringify(serializableReport, null, 2)}\n`)
+  fs.writeFileSync(path.join(outputPaths.outputDir, 'latest.md'), renderBalanceReportMarkdown(report))
+  fs.writeFileSync(outputPaths.json, `${JSON.stringify(serializableReport, null, 2)}\n`)
+  fs.writeFileSync(outputPaths.markdown, chapterMarkdown)
+
+  const legacyMarkdownPath = getLegacyAutoScoringMarkdownPath(reportSlug)
+  if (legacyMarkdownPath) {
+    fs.writeFileSync(legacyMarkdownPath, chapterMarkdown)
+  }
+
+  if (previousReport) {
+    fs.writeFileSync(
+      outputPaths.diffMarkdown,
+      renderBalanceReportDiffMarkdown(summarizeBalanceReportDiff(previousReport, serializableReport)),
+    )
+  }
+
+  return {
+    latestMarkdownPath: path.join(outputPaths.outputDir, 'latest.md'),
+    autoScoringMarkdownPath: outputPaths.markdown,
+    diffMarkdownPath: previousReport ? outputPaths.diffMarkdown : null,
+  }
+}
+
+function writeChallengeReportArtifacts(report) {
+  if (!cliOptions.challenge) {
+    return []
+  }
+
+  const writtenPaths = []
+
+  for (let startIndex = CHALLENGE_REPORT_GROUP_SIZE; startIndex < report.stages.length; startIndex += CHALLENGE_REPORT_GROUP_SIZE) {
+    const groupedStages = report.stages.slice(startIndex, startIndex + CHALLENGE_REPORT_GROUP_SIZE)
+    const firstStageNumber = startIndex + 1
+    const lastStageNumber = startIndex + groupedStages.length
+    const groupedReport = {
+      ...report,
+      stages: groupedStages,
+    }
+    const serializableGroupedReport = stripCombatLogTraceFromBalanceReport(groupedReport)
+    const markdownFileName = `第${firstStageNumber}~${lastStageNumber}关自动评分.md`
+    const baseName = path.basename(markdownFileName, '.md')
+    const markdownPath = path.join(challengeOutputDir, markdownFileName)
+    const jsonPath = path.join(challengeOutputDir, `${baseName}.json`)
+
+    fs.writeFileSync(markdownPath, renderChapterAutoScoringMarkdown(groupedReport))
+    fs.writeFileSync(jsonPath, `${JSON.stringify(serializableGroupedReport, null, 2)}\n`)
+
+    writtenPaths.push(markdownPath)
+  }
+
+  return writtenPaths
+}
+
+function getDataEstimateBaseName(reportSlug) {
+  if (reportSlug === 'chapter-one') {
+    return '第一章基础数值统计'
+  }
+  if (reportSlug === 'westfall') {
+    return '第二章基础数值统计'
+  }
+  if (reportSlug === "zul'aman") {
+    return '第三章基础数值统计'
+  }
+  if (reportSlug === 'custom-stages') {
+    return '自定义关卡基础数值统计'
+  }
+
+  return `${getLatestReportAreaLabel()}基础数值统计`
+}
+
+function writeDataEstimateArtifacts(report, reportSlug) {
+  if (cliOptions.challenge) {
+    return null
+  }
+
+  const dataEstimateReport = buildDataEstimateReport({
+    generatedAt: report.generatedAt,
+    title: getDataEstimateBaseName(reportSlug),
+    stages: report.stages,
+  })
+  const baseName = getDataEstimateBaseName(reportSlug)
+  const markdownPath = path.join(dataEstimateStoryOutputDir, `${baseName}.md`)
+  const jsonPath = path.join(dataEstimateStoryOutputDir, `${baseName}.json`)
+
+  fs.writeFileSync(path.join(dataEstimateStoryOutputDir, 'latest.md'), renderDataEstimateMarkdown(dataEstimateReport))
+  fs.writeFileSync(path.join(dataEstimateStoryOutputDir, 'latest.json'), `${JSON.stringify(dataEstimateReport, null, 2)}\n`)
+  fs.writeFileSync(markdownPath, renderDataEstimateMarkdown(dataEstimateReport))
+  fs.writeFileSync(jsonPath, `${JSON.stringify(dataEstimateReport, null, 2)}\n`)
+
+  return markdownPath
+}
+
+function getChallengeStageNumber(stage, fallbackNumber) {
+  const match = String(stage.stageId).match(/(\d+)$/)
+  return match ? Number(match[1]) : fallbackNumber
+}
+
+function getChallengeDataEstimateGroupBounds(stages) {
+  const firstStageNumber = stages.reduce((min, stage, index) =>
+    Math.min(min, getChallengeStageNumber(stage, index + 1)),
+  Number.POSITIVE_INFINITY)
+  const normalizedFirstStageNumber = Number.isFinite(firstStageNumber) ? firstStageNumber : 1
+  const firstGroupStageNumber =
+    Math.floor((normalizedFirstStageNumber - 1) / CHALLENGE_REPORT_GROUP_SIZE) * CHALLENGE_REPORT_GROUP_SIZE + 1
+
+  return {
+    firstStageNumber: firstGroupStageNumber,
+    lastStageNumber: firstGroupStageNumber + CHALLENGE_REPORT_GROUP_SIZE - 1,
+  }
+}
+
+function writeChallengeDataEstimateArtifacts(report) {
+  if (!cliOptions.challenge) {
+    return []
+  }
+
+  const { firstStageNumber, lastStageNumber } = getChallengeDataEstimateGroupBounds(report.stages)
+  const title = `挑战模式第${firstStageNumber}~${lastStageNumber}关基础数值统计`
+  const dataEstimateReport = buildDataEstimateReport({
+    generatedAt: report.generatedAt,
+    title,
+    stages: report.stages,
+  })
+  const markdownPath = path.join(dataEstimateChallengeOutputDir, `${title}.md`)
+  const jsonPath = path.join(dataEstimateChallengeOutputDir, `${title}.json`)
+
+  fs.writeFileSync(path.join(dataEstimateChallengeOutputDir, 'latest.md'), renderDataEstimateMarkdown(dataEstimateReport))
+  fs.writeFileSync(path.join(dataEstimateChallengeOutputDir, 'latest.json'), `${JSON.stringify(dataEstimateReport, null, 2)}\n`)
+  fs.writeFileSync(markdownPath, renderDataEstimateMarkdown(dataEstimateReport))
+  fs.writeFileSync(jsonPath, `${JSON.stringify(dataEstimateReport, null, 2)}\n`)
+
+  return [markdownPath]
+}
+
+function getChallengeEntryByStageId(stageWorkbook, stageId) {
+  return (stageWorkbook.allChallengeEntries ?? []).find((entry) => entry.stageId === stageId) ?? null
+}
+
+function buildDataEstimateStageEntries(stageWorkbook, group) {
+  return group.stageIds.map((stageId) => {
+    const challengeEntry = stageId.startsWith('Challenge-')
+      ? getChallengeEntryByStageId(stageWorkbook, stageId)
+      : null
+    return [
+      stageId,
+      challengeEntry?.manualLabel ?? getManualDifficultyBaseline(stageId),
+      challengeEntry,
+    ]
+  })
+}
+
+function writeDataEstimateGroupArtifact(group, stages, generatedAt) {
+  const dataEstimateReport = buildDataEstimateReport({
+    generatedAt,
+    title: group.fileName,
+    stages,
+  })
+  const markdownPath = path.join(group.outputDir, `${group.fileName}.md`)
+  const jsonPath = path.join(group.outputDir, `${group.fileName}.json`)
+
+  fs.writeFileSync(markdownPath, renderDataEstimateMarkdown(dataEstimateReport))
+  fs.writeFileSync(jsonPath, `${JSON.stringify(dataEstimateReport, null, 2)}\n`)
+
+  return markdownPath
+}
+
+function collectMonsterStatusDefinitions(templates) {
+  const statusDefinitions = {}
+
+  for (const template of templates) {
+    for (const enemy of template.enemies) {
+      for (const skill of enemy.skills) {
+        for (const statusId of [...skill.appliedTargetStatusIds, ...skill.appliedSelfStatusIds]) {
+          if (statusDefinitions[statusId]) {
+            continue
+          }
+
+          const definition = getEnemyStatusDefinition(statusId)
+          if (definition) {
+            statusDefinitions[statusId] = {
+              statusId: definition.statusId,
+              statusName: definition.statusName,
+              durationMs: definition.durationMs,
+              effectLogicId: definition.effectLogicId,
+              kind: definition.kind,
+              ...(typeof definition.valueA === 'number' ? { valueA: definition.valueA } : {}),
+              ...(typeof definition.valueB === 'number' ? { valueB: definition.valueB } : {}),
+              ...(typeof definition.tickIntervalMs === 'number' ? { tickIntervalMs: definition.tickIntervalMs } : {}),
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return statusDefinitions
+}
+
+function buildMonsterCodexTemplateEntries(stageWorkbook) {
+  return DATA_ESTIMATE_STORY_GROUPS.flatMap((group) =>
+    group.stageIds.map((stageId) => {
+      const stage = getStageById(stageId)
+      const template = createEncounterTemplate(stage)
+      return {
+        stageId,
+        title: stage.title,
+        enemies: template.enemies.map((enemy) => ({
+          enemyId: enemy.definitionId,
+          name: enemy.name,
+          maxHp: enemy.maxHp,
+          threatLogic: enemy.threatLogic,
+          isSkull: enemy.isSkull,
+          skillCycle: enemy.skillCycle,
+          skills: enemy.skillIds
+            .map((skillId) => getEnemySkillDefinition(skillId))
+            .filter(Boolean)
+            .map((skill) => ({
+              skillId: skill.skillId,
+              skillName: skill.skillName,
+              targetRuleId: skill.targetRuleId,
+              castTimeMs: skill.castTimeMs,
+              channelingMs: skill.channelingMs,
+              recoveryMs: skill.recoveryMs,
+              damageType: skill.damageType,
+              playerDamage: skill.playerDamage,
+              partyDamageOnHit: skill.partyDamageOnHit,
+              partyDamageOnMiss: skill.partyDamageOnMiss,
+              pressureOnHit: skill.pressureOnHit,
+              pressureOnMiss: skill.pressureOnMiss,
+              appliedTargetStatusIds: skill.appliedTargetStatusIds,
+              appliedSelfStatusIds: skill.appliedSelfStatusIds,
+              castBreakRule: skill.castBreakRule,
+              dangerLevel: skill.dangerLevel,
+            })),
+        })),
+      }
+    }),
+  )
+}
+
+function writeMonsterCodexDataEstimateArtifact(stageWorkbook, generatedAt) {
+  applyStoryDesignerDataIntoCatalogs()
+  const templates = buildMonsterCodexTemplateEntries(stageWorkbook)
+  const report = buildMonsterCodexEstimateReport({
+    generatedAt,
+    title: '怪物图鉴数值估算',
+    templates,
+    statusDefinitions: collectMonsterStatusDefinitions(templates),
+  })
+  const markdownPath = path.join(dataEstimateStoryOutputDir, '怪物图鉴数值估算.md')
+  const jsonPath = path.join(dataEstimateStoryOutputDir, '怪物图鉴数值估算.json')
+
+  fs.writeFileSync(markdownPath, renderMonsterCodexEstimateMarkdown(report))
+  fs.writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`)
+
+  return markdownPath
+}
+
+function writeCompleteDataEstimateArtifacts(stageWorkbook, generatedAt, sampleConfig) {
+  const writtenPaths = []
+
+  applyStoryDesignerDataIntoCatalogs()
+  analyzedStageCache.clear()
+
+  for (const group of DATA_ESTIMATE_STORY_GROUPS) {
+    const stages = buildDataEstimateStageEntries(stageWorkbook, group)
+      .map(([stageId, manualLabel, stageEntry]) =>
+        analyzeStageEntry(stageId, manualLabel, stageEntry, sampleConfig),
+      )
+    writtenPaths.push(writeDataEstimateGroupArtifact(group, stages, generatedAt))
+  }
+
+  applyChallengeDesignerDataIntoCatalogs()
+  analyzedStageCache.clear()
+
+  for (const group of DATA_ESTIMATE_CHALLENGE_GROUPS) {
+    const stages = buildDataEstimateStageEntries(stageWorkbook, group)
+      .map(([stageId, manualLabel, stageEntry]) =>
+        analyzeStageEntry(stageId, manualLabel, stageEntry, sampleConfig),
+      )
+    writtenPaths.push(writeDataEstimateGroupArtifact(group, stages, generatedAt))
+  }
+
+  return writtenPaths
+}
+
+function readPreviousReport(reportPath, legacyReportPath) {
+  for (const candidatePath of [reportPath, legacyReportPath]) {
+    if (!candidatePath || !fs.existsSync(candidatePath)) {
+      continue
+    }
+
+    try {
+      return JSON.parse(fs.readFileSync(candidatePath, 'utf8'))
+    } catch (error) {
+      console.warn(`[balance] unable to read previous report diff source (${path.relative(projectRoot, candidatePath)}): ${error.message}`)
+    }
+  }
+
   return null
 }
 
 function getRequestedStageEntries(stageWorkbook) {
+  if (cliOptions.challenge) {
+    return (stageWorkbook.challengeEntries ?? []).map((entry) => [entry.stageId, entry.manualLabel, entry])
+  }
+
+  const getStoryManualLabel = (stageId) =>
+    getManualPlaytestEntryForStage(manualPlaytestEntries, stageId)?.manualDifficulty ??
+    getManualDifficultyBaseline(stageId)
+
   if (cliOptions.stages.length > 0) {
-    return cliOptions.stages.map((stageId) => [stageId, 'unrated'])
+    return cliOptions.stages.map((stageId) => [stageId, getStoryManualLabel(stageId)])
   }
 
   if (cliOptions.area) {
@@ -432,10 +1136,35 @@ function getRequestedStageEntries(stageWorkbook) {
         const rightOrder = right.order ?? 0
         return leftOrder - rightOrder || left.stageId.localeCompare(right.stageId)
       })
-      .map((stage) => [stage.stageId, getManualDifficultyBaseline(stage.stageId)])
+      .map((stage) => [stage.stageId, getStoryManualLabel(stage.stageId)])
   }
 
   return Object.entries(RINGING_DEEPS_MANUAL_BASELINES)
+    .map(([stageId, manualLabel]) => [
+      stageId,
+      getStoryManualLabel(stageId) ?? manualLabel,
+    ])
+}
+
+function prependUniqueBuildCandidates(...candidateGroups) {
+  const candidates = []
+  const seen = new Set()
+
+  for (const group of candidateGroups) {
+    for (const candidate of group ?? []) {
+      if (!candidate) {
+        continue
+      }
+      const signature = getBuildSignature(candidate.build)
+      if (seen.has(signature)) {
+        continue
+      }
+      seen.add(signature)
+      candidates.push(candidate)
+    }
+  }
+
+  return candidates
 }
 
 function manualRank(manualLabel) {
@@ -451,6 +1180,10 @@ function formatPercent(value) {
 }
 
 function recommendationFor(manualLabel, automatedLabel) {
+  if (manualLabel === 'unrated') {
+    return '暂无人工基线，仅展示自动评分结果；不根据人工目标输出削弱或增强建议。'
+  }
+
   if (
     manualLabel === 'near_impossible / impossible' &&
     (automatedLabel === 'near_impossible' || automatedLabel === 'impossible')
@@ -506,7 +1239,7 @@ function formatLearningPathCell(learning) {
     return '学习路径：`unknown`'
   }
 
-  return `学习路径：\`${path.label}\` (${path.score}，上调${path.adjustment}档)`
+  return `学习路径：\`${path.label}\`（${path.score}，作为独立维度参与综合取最大值）`
 }
 
 function formatHalfBestBuildCount(rating) {
@@ -536,6 +1269,24 @@ function formatDesignRecommendation(recommendation) {
     recommendation.summary,
     ...recommendation.suggestions,
   ].join('<br>')
+}
+
+function formatStageSummaryConclusion(stage) {
+  const labels = [
+    stage.staticScore.label,
+    stage.fixedAnalysis.rating.label,
+    stage.learningAnalysis.learningDifficultyRating.label,
+  ]
+  const matchingSignals = labels.filter((label) => label === stage.manualLabel).length
+  const conclusion = matchingSignals >= 2
+    ? '基本符合人工预期'
+    : '需要人工复核'
+
+  return `${conclusion}：人工 \`${stage.manualLabel}\`，静态 \`${stage.staticScore.label}\`，固定策略 AI \`${stage.fixedAnalysis.rating.label}\`，学习型 AI \`${stage.learningAnalysis.learningDifficultyRating.label}\`。`
+}
+
+function renderReportSummaryRows(report) {
+  return report.stages.map((stage) => `- \`${stage.stageId}\`：${formatStageSummaryConclusion(stage)}`)
 }
 
 function translateStrategyId(id) {
@@ -582,7 +1333,7 @@ function renderPassRateThresholdRows() {
     '| average 通过率 `>=25%` 或 skilled 通过率 `>=55%` | `hard` |',
     '| expert 通过率 `>=35%` 或 skilled 通过率 `>=20%` | `expert` |',
     '| 其他情况 | `near_impossible` |',
-    '| 任意空余 `>=4` 技能点的 build 达到最优 build 通过率的一半以上 | 难度下调一档 |',
+    '| 任意空余 `>=4` 技能点的 build 达到最优 build 通过率的一半以上 | 记录 build 宽容度；不再直接下调难度 |',
   ]
 }
 
@@ -597,7 +1348,7 @@ function renderLearningPassRateThresholdRows() {
     '| `15%-34%` | `expert` |',
     '| `5%-14%` | `near_impossible` |',
     '| `<5%` | `impossible` |',
-    '| 至少 3 个 build 达到 `max(65%, 最优通过率 * 80%)` | 难度下调一档 |',
+    '| 至少 3 个 build 达到 `max(65%, 最优通过率 * 80%)` | 记录学习型 build 宽容度；不再直接下调难度 |',
   ]
 }
 
@@ -644,6 +1395,87 @@ function formatPriorityInterruptTargets(staticScore) {
   )
 }
 
+function rankDifficultyLabel(label) {
+  return LABEL_RANK[label] ?? LABEL_RANK.invalid_data
+}
+
+function formatEnemyAdviceEntries(entries, formatter) {
+  if (!entries || entries.length === 0) {
+    return []
+  }
+
+  return entries.slice(0, 3).map(formatter)
+}
+
+function renderStageEnemyBalanceAdvice(stage) {
+  const staticRank = rankDifficultyLabel(stage.staticScore.label)
+  const fixedRank = rankDifficultyLabel(stage.fixedAnalysis.rating.label)
+  const learningRank = rankDifficultyLabel(stage.learningAnalysis.learningDifficultyRating.label)
+  const highestRank = Math.max(staticRank, fixedRank, learningRank)
+  const lowestRank = Math.min(staticRank, fixedRank, learningRank)
+  const advice = [
+    ...formatEnemyAdviceEntries(stage.staticScore.priorityKillTargets, (entry) =>
+      `优先复核 ${entry.enemyName}：静态击杀优先级 ${Math.round(entry.score)}，${entry.reason}`,
+    ),
+    ...formatEnemyAdviceEntries(stage.staticScore.priorityInterruptTargets, (entry) =>
+      `优先复核 ${entry.enemyName} 的 ${entry.skillName}：静态打断优先级 ${Math.round(entry.score)}，${entry.reason}`,
+    ),
+  ]
+
+  if (highestRank >= LABEL_RANK.expert) {
+    advice.push('如果人工测试也偏难，优先小幅下调上述敌人的生命、治疗/护盾收益或高危技能伤害，不建议先削弱全章节规则。')
+  } else if (lowestRank <= LABEL_RANK.easy && stage.manualLabel !== 'easy') {
+    advice.push('如果人工测试也偏易，优先小幅上调上述核心敌人的生命或关键技能压力，避免平均强化所有敌人。')
+  } else {
+    advice.push('自动信号暂未显示极端偏差，建议先用这些敌人作为人工复测观察点。')
+  }
+
+  return advice.join('<br>')
+}
+
+function selectCombatLogTrace(scenarios) {
+  return scenarios.find((scenario) => scenario.combatLogTrace && scenario.combatLogTrace.length > 0)?.combatLogTrace ?? []
+}
+
+function writeStageTimelineTrace(stageId, fixedAnalysis, learningAnalysis) {
+  if (!cliOptions.trace) {
+    return
+  }
+
+  const traceDir = path.join(cliOptions.challenge ? challengeOutputDir : storyOutputDir, 'traces')
+  fs.mkdirSync(traceDir, { recursive: true })
+  const fixedEvents = selectCombatLogTrace(fixedAnalysis.scenarios)
+  const learningEvents = selectCombatLogTrace(learningAnalysis.finalAnalysis?.scenarios ?? [])
+  const fixedTimeline = buildCombatTimeline(fixedEvents, { limit: 40, importantOnly: true })
+  const learningTimeline = buildCombatTimeline(learningEvents, { limit: 40, importantOnly: true })
+  const payload = {
+    stageId,
+    generatedAt: new Date().toISOString(),
+    fixed: fixedTimeline,
+    learning: learningTimeline,
+  }
+  const markdown = [
+    `# ${stageId} Combat Timeline Trace`,
+    '',
+    `summary: fixed=${fixedTimeline.summary.totalEvents} events (${fixedTimeline.filteredEventCount} filtered), learning=${learningTimeline.summary.totalEvents} events (${learningTimeline.filteredEventCount} filtered)`,
+    `fixedCounts: ${Object.entries(fixedTimeline.summary.countsByType).map(([type, count]) => `${type}=${count}`).join(', ') || 'none'}`,
+    `learningCounts: ${Object.entries(learningTimeline.summary.countsByType).map(([type, count]) => `${type}=${count}`).join(', ') || 'none'}`,
+    '',
+    '## Fixed AI',
+    '',
+    renderCombatTimelineMarkdown(fixedTimeline).replace(/^# Combat Timeline Trace\n\n/, '').trimEnd(),
+    '',
+    '## Learning AI',
+    '',
+    renderCombatTimelineMarkdown(learningTimeline).replace(/^# Combat Timeline Trace\n\n/, '').trimEnd(),
+    '',
+  ].join('\n')
+
+  fs.writeFileSync(path.join(traceDir, `${stageId}-latest-timeline.json`), `${JSON.stringify(payload, null, 2)}\n`)
+  fs.writeFileSync(path.join(traceDir, `${stageId}-latest-timeline.md`), markdown)
+  console.log(`[balance] ${stageId}: trace written to ${path.relative(projectRoot, path.join(traceDir, `${stageId}-latest-timeline.md`))}`)
+}
+
 function renderChapterAutoScoringMarkdown(report) {
   const lines = [
     `# ${getReportTitle()}`,
@@ -651,6 +1483,10 @@ function renderChapterAutoScoringMarkdown(report) {
     `生成时间：${report.generatedAt}`,
     '',
     '本文档由 `npm run analyze:balance` 只读生成。脚本只读取 `public/designer-data/*.xlsx`，不会修改策划表；数值调整仍应由策划在表中执行后再覆盖数据。',
+    '',
+    '## 总结',
+    '',
+    ...renderReportSummaryRows(report),
     '',
     '## 三层评分',
     '',
@@ -686,14 +1522,14 @@ function renderChapterAutoScoringMarkdown(report) {
     '',
     '学习路径评分衡量“学习型 AI 从探索到最终高通过率”的曲折程度。它不是玩家可见评价，用于避免极窄构筑或特解策略把关卡误判得过低。',
     '',
-    '| 学习路径分 | 标签 | 难度修正 | 含义 |',
+    '| 学习路径分 | 标签 | 维度难度 | 含义 |',
     '| ---: | --- | --- | --- |',
     '| `0-24` | `direct` | 不修正 | 默认构筑或常规策略已经能覆盖主要通关路径。 |',
     '| `25-49` | `learned` | 不修正 | 需要学习打法，但不应单独改变难度标签。 |',
-    '| `50-74` | `specialized` | 上调 1 档 | 成功明显依赖特定构筑、战术或较窄探索路径。 |',
-    '| `75+` | `hidden_solution` | 上调 2 档 | 高通过率更像隐藏解法或极窄被动堆叠，应防止难度被学习型 AI 低估。 |',
+    '| `50-74` | `specialized` | `hard` | 成功明显依赖特定构筑、战术或较窄探索路径，作为独立维度参与综合取最大值。 |',
+    '| `75+` | `hidden_solution` | `hard` | 高通过率更像隐藏解法或极窄被动堆叠，应防止难度被学习型 AI 低估，作为独立维度参与综合取最大值。 |',
     '',
-    `## ${cliOptions.area ?? 'RingingDeeps'} 总表`,
+    `## ${getLatestReportAreaLabel()} 总表`,
     '',
     '| 关卡 | 人工结论 | 静态评分 | 固定策略 AI | 固定策略半最优 build | 学习型 AI | 学习型半最优 build | 学习型选择结果 |',
     '| --- | --- | --- | --- | ---: | --- | ---: | --- |',
@@ -751,136 +1587,224 @@ function renderChapterAutoScoringMarkdown(report) {
       const recommendation = stage.designRecommendation
       return `| \`${stage.stageId}\` | ${formatIssueTypes(recommendation.issueTypes)} | ${formatDesignRecommendation(recommendation)} |`
     }),
+    '',
+    '## 每关敌人数值建议',
+    '',
+    '这一部分按关卡列出最值得优先复核的敌人与技能。它只给出调数方向，不直接替代人工测试结论。',
+    '',
+    '| 关卡 | 敌人建议 |',
+    '| --- | --- |',
+    ...report.stages.map((stage) => `| \`${stage.stageId}\` | ${renderStageEnemyBalanceAdvice(stage)} |`),
   )
 
   return `${lines.join('\n').trimEnd()}\n`
+}
+
+const analyzedStageCache = new Map()
+
+function getStageEntryKey(stageId, manualLabel, stageEntry) {
+  return `${stageId}:${manualLabel}:${stageEntry ? 'challenge' : 'story'}`
+}
+
+function analyzeStageEntry(stageId, manualLabel, stageEntry, sampleConfig) {
+  const cacheKey = getStageEntryKey(stageId, manualLabel, stageEntry)
+  const cached = analyzedStageCache.get(cacheKey)
+  if (cached) {
+    return cached
+  }
+
+  const stageStartMs = Date.now()
+  console.log(`[balance] ${stageId}: start`)
+  const stage = getStageById(stageId)
+  if (!stage) {
+    throw new Error(`Missing stage after designer data load: ${stageId}`)
+  }
+
+  console.log(`[balance] ${stageId}: fixed AI start`)
+  const manualPlaytestBuildCandidate = !stageEntry
+    ? buildManualPlaytestCandidateForStage(manualPlaytestEntries, stage)
+    : null
+  const analysis = runTwoPhaseStageBalanceAnalysis({
+    stage,
+    profiles: BALANCE_PROFILES,
+    extraBuildCandidates: manualPlaytestBuildCandidate ? [manualPlaytestBuildCandidate] : [],
+    phaseOneAttemptsPerScenario: sampleConfig.fixedPhaseOneAttempts,
+    phaseOneMaxActiveBuilds: sampleConfig.fixedPhaseOneMaxActiveBuilds,
+    phaseOneMaxPassiveVariants: sampleConfig.fixedPhaseOneMaxPassiveVariants,
+    finalBuildCount: sampleConfig.fixedFinalBuildCount,
+    attemptsPerScenario: sampleConfig.fixedAttempts,
+    maxDurationMs: 120_000,
+    collectTrace: cliOptions.trace,
+    collectDiagnostics: true,
+  })
+  console.log(
+    `[balance] ${stageId}: fixed AI done (${Math.round((Date.now() - stageStartMs) / 1000)}s, phaseOneBuilds=${analysis.phaseOneBuildCount ?? 0}, finalBuilds=${analysis.finalBuildCount ?? 0})`,
+  )
+
+  console.log(`[balance] ${stageId}: static score start`)
+  const staticScore = scoreStageStaticDifficulty(stage)
+  console.log(`[balance] ${stageId}: static score done (${staticScore.label}, score=${staticScore.score})`)
+
+  const challengeRecommendedBuildCandidate = stageEntry
+    ? buildChallengeRecommendedBuildCandidate(stageEntry, stage)
+    : null
+  const generatedBuildCandidates = selectLearningBuildCandidatesFromFixedAnalysis(
+    analysis.scenarios,
+    analysis.analyzedBuilds ?? [],
+    {
+      minBuildCount: 5,
+      maxBuildCount: 10,
+      gapThreshold: 0.07,
+    },
+  )
+  const fixedBuildCandidates = generatedBuildCandidates.length > 0
+    ? generatedBuildCandidates
+    : analysis.bestBuildsByProfile.map((summary) => ({
+      id: summary.buildId,
+      build: {
+        loadout: summary.loadout,
+        passiveTalentIds: summary.passiveTalentIds,
+      },
+    }))
+  const strategyTipBuildCandidates = generateStrategyTipBuildCandidates(stage, {
+    maxCandidates: cliOptions.quick ? 6 : 4,
+  })
+  const learningBuildCandidates = prependUniqueBuildCandidates(
+    manualPlaytestBuildCandidate ? [manualPlaytestBuildCandidate] : [],
+    challengeRecommendedBuildCandidate ? [challengeRecommendedBuildCandidate] : [],
+    strategyTipBuildCandidates,
+    fixedBuildCandidates,
+  )
+
+  console.log(
+    `[balance] ${stageId}: learning AI start (profiles=${LEARNING_BALANCE_PROFILES.length}, candidateBuilds=${learningBuildCandidates.length})`,
+  )
+  const learningAnalysis = runLearningStageBalanceAnalysis({
+    stage,
+    profiles: LEARNING_BALANCE_PROFILES,
+    buildCandidates: learningBuildCandidates,
+    castStrategies: LEARNING_CAST_STRATEGIES,
+    tacticalStrategies: LEARNING_TACTICAL_STRATEGIES,
+    phaseOneAttemptsPerScenario: sampleConfig.learningPhaseOneAttempts,
+    finalBuildCount: sampleConfig.learningFinalBuildCount,
+    finalStrategyCount: sampleConfig.learningFinalStrategyCount,
+    attemptsPerScenario: sampleConfig.learningAttempts,
+    maxDurationMs: 120_000,
+    collectTrace: cliOptions.trace,
+    collectDiagnostics: true,
+  })
+  console.log(
+    `[balance] ${stageId}: learning AI done (${Math.round((Date.now() - stageStartMs) / 1000)}s, selectedBuilds=${learningAnalysis.selectedBuildIds.length})`,
+  )
+  const designRecommendation = createBalanceDesignRecommendation({
+    stageId,
+    manualLabel,
+    staticLabel: staticScore.label,
+    fixedLabel: analysis.rating.label,
+    learningLabel: learningAnalysis.learningDifficultyRating.label,
+    staticMetrics: staticScore.metrics,
+    fixedBestPassRate: analysis.rating.overallBestPassRate,
+    learningBestPassRate: learningAnalysis.learningDifficultyRating.bestPassRate,
+    learningEffortScore: learningAnalysis.learningEffort.score,
+    learningExecutionLoadScore: learningAnalysis.learningExecutionLoad.score,
+    halfBestBuildCount: analysis.rating.halfBestBuildCount,
+  })
+  writeStageTimelineTrace(stageId, analysis, learningAnalysis)
+  console.log(`[balance] ${stageId}: done (${Math.round((Date.now() - stageStartMs) / 1000)}s)`)
+
+  const result = {
+    stageId,
+    title: stage.title,
+    strategyTips: stage.strategyTips ?? '',
+    manualLabel,
+    staticScore,
+    fixedAnalysis: analysis,
+    learningAnalysis,
+    designRecommendation,
+    automatedLabel: analysis.rating.label,
+    scoringMode: analysis.scoringMode,
+    buildSearchMode: analysis.buildSearchMode,
+    phaseOneBuildCount: analysis.phaseOneBuildCount ?? 0,
+    finalBuildCount: analysis.finalBuildCount ?? analysis.bestBuildsByProfile.length,
+    testedBuildCount: analysis.finalBuildCount ?? analysis.bestBuildsByProfile.length,
+    bestBuildsByProfile: analysis.bestBuildsByProfile,
+    ratingReasons: analysis.rating.reasons,
+    scenarios: analysis.scenarios,
+    recommendation: recommendationFor(manualLabel, analysis.rating.label),
+  }
+
+  analyzedStageCache.set(cacheKey, result)
+  return result
 }
 
 function buildReport() {
   const stageWorkbook = loadDesignerDataIntoCatalogs()
   const stageEntries = getRequestedStageEntries(stageWorkbook)
   const sampleConfig = getSampleConfig()
+  console.log(`[balance] sample budget: ${cliOptions.budget}`)
 
-  const stages = stageEntries.map(([stageId, manualLabel]) => {
-    const stageStartMs = Date.now()
-    console.log(`[balance] ${stageId}: start`)
-    const stage = getStageById(stageId)
-    if (!stage) {
-      throw new Error(`Missing stage after designer data load: ${stageId}`)
-    }
-
-    console.log(`[balance] ${stageId}: fixed AI start`)
-    const analysis = runTwoPhaseStageBalanceAnalysis({
-      stage,
-      profiles: BALANCE_PROFILES,
-      phaseOneAttemptsPerScenario: sampleConfig.fixedPhaseOneAttempts,
-      phaseOneMaxActiveBuilds: sampleConfig.fixedPhaseOneMaxActiveBuilds,
-      phaseOneMaxPassiveVariants: sampleConfig.fixedPhaseOneMaxPassiveVariants,
-      finalBuildCount: sampleConfig.fixedFinalBuildCount,
-      attemptsPerScenario: sampleConfig.fixedAttempts,
-      maxDurationMs: 120_000,
-      collectDiagnostics: true,
-    })
-    console.log(
-      `[balance] ${stageId}: fixed AI done (${Math.round((Date.now() - stageStartMs) / 1000)}s, phaseOneBuilds=${analysis.phaseOneBuildCount ?? 0}, finalBuilds=${analysis.finalBuildCount ?? 0})`,
-    )
-
-    console.log(`[balance] ${stageId}: static score start`)
-    const staticScore = scoreStageStaticDifficulty(stage)
-    console.log(`[balance] ${stageId}: static score done (${staticScore.label}, score=${staticScore.score})`)
-
-    const generatedBuildCandidates = selectLearningBuildCandidatesFromFixedAnalysis(
-      analysis.scenarios,
-      analysis.analyzedBuilds ?? [],
-      {
-        minBuildCount: 5,
-        maxBuildCount: 10,
-        gapThreshold: 0.07,
-      },
-    )
-    const learningBuildCandidates = generatedBuildCandidates.length > 0
-      ? generatedBuildCandidates
-      : analysis.bestBuildsByProfile.map((summary) => ({
-        id: summary.buildId,
-        build: {
-          loadout: summary.loadout,
-          passiveTalentIds: summary.passiveTalentIds,
-        },
-      }))
-
-    console.log(
-      `[balance] ${stageId}: learning AI start (profiles=${LEARNING_BALANCE_PROFILES.length}, candidateBuilds=${learningBuildCandidates.length})`,
-    )
-    const learningAnalysis = runLearningStageBalanceAnalysis({
-      stage,
-      profiles: LEARNING_BALANCE_PROFILES,
-      buildCandidates: learningBuildCandidates,
-      castStrategies: LEARNING_CAST_STRATEGIES,
-      tacticalStrategies: LEARNING_TACTICAL_STRATEGIES,
-      phaseOneAttemptsPerScenario: sampleConfig.learningPhaseOneAttempts,
-      finalBuildCount: sampleConfig.learningFinalBuildCount,
-      finalStrategyCount: sampleConfig.learningFinalStrategyCount,
-      attemptsPerScenario: sampleConfig.learningAttempts,
-      maxDurationMs: 120_000,
-      collectDiagnostics: true,
-    })
-    console.log(
-      `[balance] ${stageId}: learning AI done (${Math.round((Date.now() - stageStartMs) / 1000)}s, selectedBuilds=${learningAnalysis.selectedBuildIds.length})`,
-    )
-    const designRecommendation = createBalanceDesignRecommendation({
-      stageId,
-      manualLabel,
-      staticLabel: staticScore.label,
-      fixedLabel: analysis.rating.label,
-      learningLabel: learningAnalysis.learningDifficultyRating.label,
-      staticMetrics: staticScore.metrics,
-      fixedBestPassRate: analysis.rating.overallBestPassRate,
-      learningBestPassRate: learningAnalysis.learningDifficultyRating.bestPassRate,
-      learningEffortScore: learningAnalysis.learningEffort.score,
-      learningExecutionLoadScore: learningAnalysis.learningExecutionLoad.score,
-      halfBestBuildCount: analysis.rating.halfBestBuildCount,
-    })
-    console.log(`[balance] ${stageId}: done (${Math.round((Date.now() - stageStartMs) / 1000)}s)`)
-
-    return {
-      stageId,
-      title: stage.title,
-      strategyTips: stage.strategyTips ?? '',
-      manualLabel,
-      staticScore,
-      fixedAnalysis: analysis,
-      learningAnalysis,
-      designRecommendation,
-      automatedLabel: analysis.rating.label,
-      scoringMode: analysis.scoringMode,
-      buildSearchMode: analysis.buildSearchMode,
-      phaseOneBuildCount: analysis.phaseOneBuildCount ?? 0,
-      finalBuildCount: analysis.finalBuildCount ?? analysis.bestBuildsByProfile.length,
-      testedBuildCount: analysis.finalBuildCount ?? analysis.bestBuildsByProfile.length,
-      bestBuildsByProfile: analysis.bestBuildsByProfile,
-      ratingReasons: analysis.rating.reasons,
-      scenarios: analysis.scenarios,
-      recommendation: recommendationFor(manualLabel, analysis.rating.label),
-    }
-  })
+  const stages = stageEntries.map(([stageId, manualLabel, stageEntry]) =>
+    analyzeStageEntry(stageId, manualLabel, stageEntry, sampleConfig),
+  )
 
   return {
     generatedAt: new Date().toISOString(),
+    stageWorkbook,
+    sampleConfig,
     stages,
   }
 }
 
 const report = buildReport()
+const { stageWorkbook: reportStageWorkbook, sampleConfig: reportSampleConfig, ...artifactReport } = report
+const serializableReport = stripCombatLogTraceFromBalanceReport(artifactReport)
 fs.mkdirSync(outputDir, { recursive: true })
+fs.mkdirSync(storyOutputDir, { recursive: true })
+fs.mkdirSync(challengeOutputDir, { recursive: true })
+fs.mkdirSync(dataEstimateOutputDir, { recursive: true })
+fs.mkdirSync(dataEstimateStoryOutputDir, { recursive: true })
+fs.mkdirSync(dataEstimateChallengeOutputDir, { recursive: true })
 const reportSlug = getReportSlug()
-fs.writeFileSync(path.join(outputDir, 'latest.json'), `${JSON.stringify(report, null, 2)}\n`)
-fs.writeFileSync(path.join(outputDir, 'latest.md'), renderBalanceReportMarkdown(report))
-fs.writeFileSync(path.join(outputDir, `${reportSlug}-auto-scoring.json`), `${JSON.stringify(report, null, 2)}\n`)
-fs.writeFileSync(path.join(outputDir, `${reportSlug}-auto-scoring.md`), renderChapterAutoScoringMarkdown(report))
-const rootChapterReportFileName = getRootChapterReportFileName(reportSlug)
-if (rootChapterReportFileName) {
-  fs.writeFileSync(path.join(projectRoot, rootChapterReportFileName), renderChapterAutoScoringMarkdown(report))
-}
+const outputPaths = getReportOutputPaths(reportSlug)
+const previousReport = readPreviousReport(outputPaths.json, outputPaths.legacyJson)
+const writtenPaths = writeReportArtifacts(artifactReport, serializableReport, reportSlug, previousReport, outputPaths)
+const challengeReportPaths = writeChallengeReportArtifacts(artifactReport)
+const dataEstimateReportPath = writeDataEstimateArtifacts(artifactReport, reportSlug)
+const challengeDataEstimateReportPaths = writeChallengeDataEstimateArtifacts(artifactReport)
+const shouldWriteCompleteDataEstimateArtifacts = cliOptions.stages.length === 0 && !cliOptions.area
+const completeDataEstimateReportPaths = shouldWriteCompleteDataEstimateArtifacts
+  ? writeCompleteDataEstimateArtifacts(
+      reportStageWorkbook,
+      artifactReport.generatedAt,
+      reportSampleConfig,
+    )
+  : []
+const monsterCodexDataEstimateReportPath = shouldWriteCompleteDataEstimateArtifacts
+  ? writeMonsterCodexDataEstimateArtifact(
+      reportStageWorkbook,
+      artifactReport.generatedAt,
+    )
+  : null
 
-console.log(`Balance report written to ${path.relative(projectRoot, path.join(outputDir, 'latest.md'))}`)
-console.log(`Auto scoring written to ${path.relative(projectRoot, path.join(outputDir, `${reportSlug}-auto-scoring.md`))}`)
+console.log(`Balance report written to ${formatReportPathForConsole(writtenPaths.latestMarkdownPath)}`)
+console.log(`Auto scoring written to ${formatReportPathForConsole(writtenPaths.autoScoringMarkdownPath)}`)
+if (dataEstimateReportPath) {
+  console.log(`Data estimate written to ${formatReportPathForConsole(dataEstimateReportPath)}`)
+}
+for (const challengeReportPath of challengeReportPaths) {
+  console.log(`Challenge auto scoring written to ${formatReportPathForConsole(challengeReportPath)}`)
+}
+for (const challengeDataEstimateReportPath of challengeDataEstimateReportPaths) {
+  console.log(`Challenge data estimate written to ${formatReportPathForConsole(challengeDataEstimateReportPath)}`)
+}
+for (const completeDataEstimateReportPath of completeDataEstimateReportPaths) {
+  console.log(`Complete data estimate written to ${formatReportPathForConsole(completeDataEstimateReportPath)}`)
+}
+if (monsterCodexDataEstimateReportPath) {
+  console.log(`Monster codex data estimate written to ${formatReportPathForConsole(monsterCodexDataEstimateReportPath)}`)
+}
+if (writtenPaths.diffMarkdownPath) {
+  console.log(`Auto scoring diff written to ${formatReportPathForConsole(writtenPaths.diffMarkdownPath)}`)
+} else {
+  console.log('Auto scoring diff skipped: no previous report for this slug.')
+}

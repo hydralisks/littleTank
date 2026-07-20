@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="hunter marked">
+  <defs><linearGradient id="bg" x1="8" y1="8" x2="56" y2="56"><stop stop-color="hsl(92 62% 20%)"/><stop offset="1" stop-color="hsl(24 84% 34%)"/></linearGradient></defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+  <circle cx="32" cy="32" r="19" fill="none" stroke="hsl(48 100% 68%)" stroke-width="5"/>
+  <circle cx="32" cy="32" r="7" fill="hsl(0 90% 58%)" stroke="rgba(8,12,24,.92)" stroke-width="4"/>
+  <path fill="none" stroke="hsl(48 100% 68%)" stroke-width="4" stroke-linecap="round" d="M32 8v13M32 43v13M8 32h13M43 32h13"/>
+</svg>

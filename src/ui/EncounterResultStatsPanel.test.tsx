@@ -19,6 +19,7 @@ const emptyStats: EncounterStats = {
       share: 1,
     },
   ],
+  partyDamageTaken: [],
   pressureGained: [],
   castHandling: [
     {
@@ -58,6 +59,8 @@ const emptyStats: EncounterStats = {
       share: 1,
     },
   ],
+  playerHealingAndAbsorb: [],
+  partyHealingAndAbsorb: [],
   healingAndAbsorb: [],
   enemyHealingAndAbsorb: [
     {

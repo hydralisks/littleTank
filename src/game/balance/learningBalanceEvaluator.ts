@@ -70,6 +70,7 @@ export interface RunLearningStageBalanceAnalysisOptions {
   finalStrategyCount?: number
   tickMs?: number
   initialStateMutator?: (state: EncounterState) => EncounterState
+  collectTrace?: boolean
   collectDiagnostics?: boolean
 }
 
@@ -319,6 +320,7 @@ export function runLearningStageBalanceAnalysis(
     maxDurationMs: options.maxDurationMs,
     tickMs: options.tickMs,
     initialStateMutator: options.initialStateMutator,
+    collectTrace: options.collectTrace,
     collectDiagnostics: options.collectDiagnostics,
   })
   const finalLearningScenarios = finalAnalysis.scenarios.map((scenario: TraceableBalanceScenarioResult) => {
@@ -367,6 +369,7 @@ export function runLearningStageBalanceAnalysis(
   const learningDifficultyRating = classifyLearningDifficulty(finalLearningScenarios, {
     executionLoad: learningExecutionLoad,
     learningPath,
+    learningEffort,
   })
 
   return {

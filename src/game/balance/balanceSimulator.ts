@@ -11,6 +11,7 @@ import {
   tickEncounter,
 } from '../encounter/encounterFactory'
 import type {
+  CombatLogEvent,
   EncounterState,
   EnemyState,
   PersistedBuildState,
@@ -23,7 +24,7 @@ import {
   type BalanceScenarioResult,
   type DifficultyRating,
 } from './difficultyScoring'
-import { generateStageBalanceBuilds } from './balanceBuildGenerator'
+import { generateStageBalanceBuilds, getBuildSignature } from './balanceBuildGenerator'
 import {
   estimateEnemyCycleThreat,
   estimateEnemySkillImpact,
@@ -93,8 +94,20 @@ export interface BalanceAttemptTrace {
   events: BalanceTraceEvent[]
 }
 
+export interface BalanceScenarioDataEstimate {
+  attempts: number
+  averageDurationSec: number
+  playerResourcePerSec: number
+  tankDamageTakenPerSec: number
+  healingAndAbsorbPerSec: number
+  playerSideDamagePerSec: number
+  partyPressurePerSec: number
+}
+
 export interface TraceableBalanceScenarioResult extends BalanceScenarioResult {
   trace?: BalanceAttemptTrace
+  combatLogTrace?: CombatLogEvent[]
+  dataEstimate?: BalanceScenarioDataEstimate
   diagnosticSummary?: DiagnosticScenarioSummary
 }
 
@@ -131,6 +144,7 @@ export interface RunStageBalanceAnalysisOptions {
   maxDurationMs: number
   tickMs?: number
   initialStateMutator?: (state: EncounterState) => EncounterState
+  collectTrace?: boolean
   collectDiagnostics?: boolean
 }
 
@@ -139,6 +153,7 @@ export interface RunTwoPhaseStageBalanceAnalysisOptions extends Omit<RunStageBal
   phaseOneMaxActiveBuilds?: number
   phaseOneMaxPassiveVariants?: number
   finalBuildCount?: number
+  extraBuildCandidates?: BalanceBuildVariant[]
 }
 
 export interface BalanceDecisionPriorityOptions {
@@ -175,8 +190,103 @@ interface BalanceAutomationMemory {
   lockedTargetTickAtMs: number
 }
 
+interface BalanceDataEstimateTotals {
+  attempts: number
+  totalDurationSec: number
+  totalResourceGain: number
+  totalTankDamageTaken: number
+  totalHealingAndAbsorb: number
+  totalPlayerSideDamage: number
+  totalPartyPressure: number
+}
+
+interface BalanceResourceGainCursor {
+  lastStateTimeMs: number
+  countedEventKeys: Set<string>
+}
+
 function clamp01(value: number) {
   return Math.min(1, Math.max(0, value))
+}
+
+function sumStatRows(rows: readonly { total: number }[]) {
+  return rows.reduce((sum, row) => sum + row.total, 0)
+}
+
+function createResourceGainCursor(state: EncounterState): BalanceResourceGainCursor {
+  return {
+    lastStateTimeMs: state.timeMs,
+    countedEventKeys: new Set(),
+  }
+}
+
+function estimatePositiveResourceGain(
+  previousState: EncounterState,
+  nextState: EncounterState,
+  cursor: BalanceResourceGainCursor,
+) {
+  const eventGain = nextState.runtime.lastProcessedEvents.reduce((sum, event) => {
+    if (
+      event.type !== 'player/resource-changed' ||
+      event.amount <= 0 ||
+      event.occurredAtMs < cursor.lastStateTimeMs
+    ) {
+      return sum
+    }
+    const eventKey = `${event.occurredAtMs}:${event.type}:${event.amount}:${event.reason}:${event.sourceSkillId ?? ''}`
+    if (cursor.countedEventKeys.has(eventKey)) {
+      return sum
+    }
+    cursor.countedEventKeys.add(eventKey)
+    return sum + event.amount
+  }, 0)
+  const netResourceGain = Math.max(0, nextState.player.resource - previousState.player.resource)
+
+  cursor.lastStateTimeMs = nextState.timeMs
+  return Math.max(eventGain, netResourceGain)
+}
+
+function createDataEstimateTotals(): BalanceDataEstimateTotals {
+  return {
+    attempts: 0,
+    totalDurationSec: 0,
+    totalResourceGain: 0,
+    totalTankDamageTaken: 0,
+    totalHealingAndAbsorb: 0,
+    totalPlayerSideDamage: 0,
+    totalPartyPressure: 0,
+  }
+}
+
+function addDataEstimateSample(
+  totals: BalanceDataEstimateTotals,
+  state: EncounterState,
+  resourceGain: number,
+) {
+  const stats = buildEncounterStats(state)
+  const durationSec = Math.max(0.001, stats.durationMs / 1000)
+
+  totals.attempts += 1
+  totals.totalDurationSec += durationSec
+  totals.totalResourceGain += resourceGain
+  totals.totalTankDamageTaken += sumStatRows(stats.tankDamageTaken)
+  totals.totalHealingAndAbsorb += sumStatRows(stats.healingAndAbsorb)
+  totals.totalPlayerSideDamage += sumStatRows(stats.damageDealt)
+  totals.totalPartyPressure += sumStatRows(stats.pressureGained)
+}
+
+function finalizeDataEstimate(totals: BalanceDataEstimateTotals): BalanceScenarioDataEstimate {
+  const durationSec = Math.max(0.001, totals.totalDurationSec)
+
+  return {
+    attempts: totals.attempts,
+    averageDurationSec: totals.attempts > 0 ? totals.totalDurationSec / totals.attempts : 0,
+    playerResourcePerSec: totals.totalResourceGain / durationSec,
+    tankDamageTakenPerSec: totals.totalTankDamageTaken / durationSec,
+    healingAndAbsorbPerSec: totals.totalHealingAndAbsorb / durationSec,
+    playerSideDamagePerSec: totals.totalPlayerSideDamage / durationSec,
+    partyPressurePerSec: totals.totalPartyPressure / durationSec,
+  }
 }
 
 function createBalanceAutomationMemory(): BalanceAutomationMemory {
@@ -1152,7 +1262,9 @@ export function runBalanceScenario(options: RunBalanceScenarioOptions): Traceabl
   let victories = 0
   const tickMs = options.tickMs ?? DEFAULT_TICK_MS
   let trace: BalanceAttemptTrace | undefined
+  let combatLogTrace: CombatLogEvent[] | undefined
   const diagnosticSamples: DiagnosticAttemptSample[] = []
+  const dataEstimateTotals = createDataEstimateTotals()
 
   for (let attemptIndex = 0; attemptIndex < attempts; attemptIndex += 1) {
     const random = createSeededRandom(`${options.stage.id}:${options.buildId}:${options.profile.id}:${attemptIndex}`)
@@ -1161,20 +1273,28 @@ export function runBalanceScenario(options: RunBalanceScenarioOptions): Traceabl
     let state = createInitialEncounterState(options.stage, options.build)
     state = options.initialStateMutator ? options.initialStateMutator(state) : state
     const memory = createBalanceAutomationMemory()
+    const resourceGainCursor = createResourceGainCursor(state)
+    let attemptResourceGain = 0
 
     let decisionElapsedMs = options.profile.decisionIntervalMs
     while (!state.result && state.timeMs < options.maxDurationMs) {
+      let previousState = state
       state = executePlannedCastReaction(state, options.profile, random, memory, traceEvents)
+      attemptResourceGain += estimatePositiveResourceGain(previousState, state, resourceGainCursor)
       if (state.result) {
         break
       }
 
       if (decisionElapsedMs >= options.profile.decisionIntervalMs) {
+        previousState = state
         state = runAutomatedDecision(state, options.profile, random, memory, traceEvents)
+        attemptResourceGain += estimatePositiveResourceGain(previousState, state, resourceGainCursor)
         decisionElapsedMs = 0
       }
 
+      previousState = state
       state = tickEncounter(state, tickMs)
+      attemptResourceGain += estimatePositiveResourceGain(previousState, state, resourceGainCursor)
       decisionElapsedMs += tickMs
     }
 
@@ -1189,6 +1309,7 @@ export function runBalanceScenario(options: RunBalanceScenarioOptions): Traceabl
         message: state.result ? `${state.result.outcome}: ${state.result.reason}` : 'timeout',
       })
       trace = { attemptIndex, events: traceEvents }
+      combatLogTrace = state.runtime.combatLog
     }
 
     if (options.collectDiagnostics) {
@@ -1198,6 +1319,8 @@ export function runBalanceScenario(options: RunBalanceScenarioOptions): Traceabl
         diagnostics: buildCombatDiagnostics(buildEncounterStats(state)),
       })
     }
+
+    addDataEstimateSample(dataEstimateTotals, state, attemptResourceGain)
   }
 
   return {
@@ -1208,7 +1331,9 @@ export function runBalanceScenario(options: RunBalanceScenarioOptions): Traceabl
     attempts,
     victories,
     passRate: attempts > 0 ? victories / attempts : 0,
+    dataEstimate: finalizeDataEstimate(dataEstimateTotals),
     ...(trace ? { trace } : {}),
+    ...(combatLogTrace ? { combatLogTrace } : {}),
     ...(options.collectDiagnostics
       ? { diagnosticSummary: createDiagnosticScenarioSummary(diagnosticSamples) }
       : {}),
@@ -1276,6 +1401,7 @@ export function runStageBalanceAnalysis(options: RunStageBalanceAnalysisOptions)
         maxDurationMs: options.maxDurationMs,
         tickMs: options.tickMs,
         initialStateMutator: options.initialStateMutator,
+        collectTrace: options.collectTrace,
         collectDiagnostics: options.collectDiagnostics,
       }),
     ),
@@ -1450,13 +1576,41 @@ export function selectLearningBuildCandidatesFromFixedAnalysis(
     })
 }
 
+function prependUniqueBuildVariants(
+  preferredBuilds: readonly BalanceBuildVariant[] | undefined,
+  generatedBuilds: readonly BalanceBuildVariant[],
+) {
+  const builds: BalanceBuildVariant[] = []
+  const seen = new Set<string>()
+  const pushBuild = (build: BalanceBuildVariant) => {
+    const signature = getBuildSignature(build.build)
+    if (seen.has(signature)) {
+      return
+    }
+    seen.add(signature)
+    builds.push(build)
+  }
+
+  for (const build of preferredBuilds ?? []) {
+    pushBuild(build)
+  }
+  for (const build of generatedBuilds) {
+    pushBuild(build)
+  }
+
+  return builds
+}
+
 export function runTwoPhaseStageBalanceAnalysis(
   options: RunTwoPhaseStageBalanceAnalysisOptions,
 ): StageBalanceAnalysis {
-  const phaseOneBuilds = generateStageBalanceBuilds(options.stage, {
-    maxActiveBuilds: options.phaseOneMaxActiveBuilds ?? 18,
-    maxPassiveVariants: options.phaseOneMaxPassiveVariants ?? 3,
-  })
+  const phaseOneBuilds = prependUniqueBuildVariants(
+    options.extraBuildCandidates,
+    generateStageBalanceBuilds(options.stage, {
+      maxActiveBuilds: options.phaseOneMaxActiveBuilds ?? 18,
+      maxPassiveVariants: options.phaseOneMaxPassiveVariants ?? 3,
+    }),
+  )
   const finalBuildCount = Math.max(1, Math.floor(options.finalBuildCount ?? 6))
   const phaseOneAnalysis = runStageBalanceAnalysis({
     stage: options.stage,
@@ -1480,6 +1634,7 @@ export function runTwoPhaseStageBalanceAnalysis(
     maxDurationMs: options.maxDurationMs,
     tickMs: options.tickMs,
     initialStateMutator: options.initialStateMutator,
+    collectTrace: options.collectTrace,
     collectDiagnostics: options.collectDiagnostics,
   })
 

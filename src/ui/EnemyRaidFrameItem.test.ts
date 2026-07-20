@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { getEnemyCastFillPercent, isHighDangerCastVisual } from './enemyRaidFrameVisuals'
 import type { EnemyState } from '../game/encounter/encounterTypes'
 import { EnemyRaidFrameList } from './EnemyRaidFrameList'
+import { EnemyRaidFrameItem } from './EnemyRaidFrameItem'
 
 function enemyWithCast(
   dangerLevel: 'low' | 'medium' | 'high',
@@ -93,5 +94,22 @@ describe('EnemyRaidFrameItem danger visuals', () => {
     expect(markup).toContain('data-grid-slot="1-1"')
     expect(markup.indexOf('data-grid-slot="1-1"')).toBeLessThan(markup.indexOf('data-enemy-id="top-right"'))
     expect(markup.indexOf('data-enemy-id="top-right"')).toBeLessThan(markup.indexOf('data-enemy-id="bottom-left"'))
+  })
+
+  it('rounds enemy hp text to at most one decimal place', () => {
+    const enemy = {
+      ...enemyWithCast('low', 'tank'),
+      hp: 12.34,
+      maxHp: 45.04,
+    }
+
+    const markup = renderToStaticMarkup(createElement(EnemyRaidFrameItem, {
+      enemy,
+      isSelected: false,
+      onSelect: () => undefined,
+    }))
+
+    expect(markup).toContain('12.3/45')
+    expect(markup).not.toContain('12.34/45.04')
   })
 })

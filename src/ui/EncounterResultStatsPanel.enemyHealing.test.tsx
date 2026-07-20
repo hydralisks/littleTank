@@ -8,9 +8,36 @@ import type { EncounterStats } from '../game/encounter/combatStats'
 const stats: EncounterStats = {
   durationMs: 5000,
   tankDamageTaken: [],
+  partyDamageTaken: [],
   pressureGained: [],
   castHandling: [],
   damageDealt: [],
+  playerHealingAndAbsorb: [
+    {
+      id: 'player-heal',
+      sourceName: 'Player',
+      effectName: 'Player Heal',
+      category: 'Player Healing',
+      kind: 'healing',
+      total: 20,
+      count: 1,
+      average: 20,
+      share: 1,
+    },
+  ],
+  partyHealingAndAbsorb: [
+    {
+      id: 'party-heal',
+      sourceName: 'Party',
+      effectName: 'Party Heal',
+      category: 'Party Healing',
+      kind: 'healing',
+      total: 40,
+      count: 1,
+      average: 40,
+      share: 1,
+    },
+  ],
   healingAndAbsorb: [
     {
       id: 'player-heal',
@@ -77,10 +104,27 @@ describe('EncounterResultStatsPanel enemy healing page', () => {
       })
 
       const tabs = [...container.querySelectorAll('.result-stats-tabs button')] as HTMLButtonElement[]
-      expect(tabs).toHaveLength(6)
+      expect(tabs.map((tab) => tab.textContent)).toEqual([
+        '坦克承伤',
+        '队伍承伤',
+        '压力来源',
+        '打断情况',
+        '造成伤害',
+        '玩家治疗/吸收',
+        '队伍治疗/吸收',
+        '敌方治疗/吸收',
+      ])
 
       await act(async () => {
-        tabs[5].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+        tabs[6].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+      })
+
+      expect(container.textContent).toContain('Party Heal')
+      expect(container.textContent).not.toContain('Player Heal')
+      expect(container.textContent).not.toContain('Enemy Heal')
+
+      await act(async () => {
+        tabs[7].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
       })
 
       expect(container.textContent).toContain('Enemy Heal')

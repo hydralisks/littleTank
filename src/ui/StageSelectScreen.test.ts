@@ -4,7 +4,12 @@ import { createRoot, type Root } from 'react-dom/client'
 import { JSDOM } from 'jsdom'
 import { createElement } from 'react'
 import * as XLSX from 'xlsx'
-import { applyStageWorkbookOverrides, getStageById } from '../game/data/stageTemplates'
+import {
+  applyStageWorkbookOverrides,
+  campaignStageOrder,
+  getStageById,
+  stageOrder,
+} from '../game/data/stageTemplates'
 import {
   applyPlayerBuildWorkbookOverrides,
   getDefaultPersistedBuildForRule,
@@ -188,7 +193,7 @@ describe('StageSelectScreen map layout', () => {
         mapAction?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
       })
 
-      expect(onStartStage).toHaveBeenCalledWith('harbor-2')
+      expect(onStartStage).toHaveBeenCalledWith('harbor-2', 'campaign')
     } finally {
       if (root) {
         await act(async () => {
@@ -339,6 +344,239 @@ describe('StageSelectScreen map layout', () => {
       setGlobalProperty('window', previousWindow)
       setGlobalProperty('document', previousDocument)
       setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', previousIsActEnvironment)
+    }
+  })
+
+  it('starts challenge stages with challenge mode and no source labels or filters', async () => {
+    applyStageWorkbookOverrides({
+      areaOverrides: [
+        { areaId: 'harbor', title: 'Harbor' },
+        { areaId: 'challenge', title: 'Challenge' },
+      ],
+      stageOverrides: [
+        { stageId: 'harbor-1', areaId: 'harbor', order: 1 },
+        { stageId: 'harbor-6', areaId: 'harbor', order: 6 },
+        { stageId: 'Challenge-1', areaId: 'challenge', order: 1, title: 'Challenge Test' },
+      ],
+      legendOverrides: [],
+    })
+    const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
+      url: 'http://localhost/',
+    })
+    const previousWindow = globalThis.window
+    const previousDocument = globalThis.document
+    const previousIsActEnvironment = (globalThis as ReactActGlobal).IS_REACT_ACT_ENVIRONMENT
+    setGlobalProperty('window', dom.window)
+    setGlobalProperty('document', dom.window.document)
+    setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', true)
+    const onStartStage = vi.fn()
+    let root: Root | null = null
+
+    try {
+      const container = dom.window.document.getElementById('root')
+      if (!container) {
+        throw new Error('Missing root container')
+      }
+      root = createRoot(container)
+      await act(async () => {
+        root!.render(createElement(StageSelectScreen, {
+          defaultSelectedStageId: 'harbor-1',
+          highestClearedStageIndex: 5,
+          maxUnlockedStageIndex: 6,
+          partyStageId: 'harbor-6',
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot'),
+          onStartStage,
+        }))
+      })
+
+      const modeButtons = [...container.querySelectorAll('.stage-mode-switch__button')] as HTMLElement[]
+      expect(modeButtons).toHaveLength(2)
+      expect(container.querySelector('.stage-map')).not.toBeNull()
+
+      await act(async () => {
+        modeButtons[1]?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+      })
+
+      expect(container.querySelector('.stage-map')).toBeNull()
+      expect(container.querySelector('.challenge-board')).not.toBeNull()
+      expect(container.querySelectorAll('.challenge-card')).toHaveLength(1)
+      expect(container.querySelector('.challenge-card')?.textContent).toContain('Challenge Test')
+      expect(container.querySelector('.challenge-filter')).toBeNull()
+      expect(container.querySelector('.stage-brief > .stage-brief__challenge-action')).toBeNull()
+      expect(container.querySelector('.stage-brief__action-stack')).not.toBeNull()
+      expect(container.querySelector('.stage-brief')?.textContent).not.toContain('治疗与吹箭手混编')
+      expect(container.querySelector('.stage-brief')?.textContent).not.toContain('使用入门关的构筑规则')
+
+      await act(async () => {
+        const enterChallenge = container.querySelector('.challenge-board > .stage-map__enter-action') as HTMLElement | null
+        enterChallenge?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+      })
+
+      expect(onStartStage).toHaveBeenCalledWith('Challenge-1', 'challenge')
+    } finally {
+      if (root) {
+        await act(async () => {
+          root!.unmount()
+        })
+      }
+      setGlobalProperty('window', previousWindow)
+      setGlobalProperty('document', previousDocument)
+      setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', previousIsActEnvironment)
+      dom.window.close()
+    }
+  })
+
+  it('keeps campaign stages when challenge stage overrides are applied after story data', () => {
+    applyStageWorkbookOverrides({
+      areaOverrides: [
+        { areaId: 'RingingDeeps', title: 'Ringing Deeps' },
+        { areaId: 'WestFall', title: 'Westfall' },
+      ],
+      stageOverrides: [
+        { stageId: 'RingingDeeps-1', areaId: 'RingingDeeps', order: 1 },
+        { stageId: 'WestFall-1', areaId: 'WestFall', order: 1 },
+      ],
+      legendOverrides: [],
+    })
+
+    applyStageWorkbookOverrides({
+      areaOverrides: [
+        { areaId: 'Challenge', title: 'Challenge' },
+      ],
+      stageOverrides: [
+        { stageId: 'Challenge-1', areaId: 'Challenge', order: 1 },
+      ],
+      legendOverrides: [],
+    })
+
+    expect(stageOrder).toContain('RingingDeeps-1')
+    expect(stageOrder).toContain('WestFall-1')
+    expect(stageOrder).toContain('Challenge-1')
+    expect(getStageById('RingingDeeps-1')?.areaId).toBe('RingingDeeps')
+    expect(getStageById('Challenge-1')?.areaId).toBe('Challenge')
+  })
+
+  it('renders campaign map from stage_content order only after challenge stages are registered', async () => {
+    applyStageWorkbookOverrides({
+      areaOverrides: [
+        { areaId: 'RingingDeeps', title: 'Ringing Deeps', shortTitle: 'RD', mapLabel: 'RD', accent: '#abcdef' },
+        { areaId: 'WestFall', title: 'Westfall', shortTitle: 'WF', mapLabel: 'WF', accent: '#fedcba' },
+        { areaId: "Zul'Aman", title: "Zul'Aman", shortTitle: 'ZA', mapLabel: 'ZA', accent: '#123456' },
+      ],
+      stageOverrides: [
+        { stageId: 'RingingDeeps-1', areaId: 'RingingDeeps', order: 1, title: 'RD 1' },
+        { stageId: 'WestFall-1', areaId: 'WestFall', order: 1, title: 'WF 1' },
+        { stageId: "Zul'Aman-1", areaId: "Zul'Aman", order: 1, title: 'ZA 1' },
+      ],
+      legendOverrides: [],
+    })
+    applyStageWorkbookOverrides({
+      areaOverrides: [
+        { areaId: 'Challenge', title: 'Challenge', shortTitle: 'CH', mapLabel: 'CH', accent: '#8bd3a7' },
+      ],
+      stageOverrides: [
+        { stageId: 'Challenge-1', areaId: 'Challenge', order: 1, title: 'Challenge Test' },
+      ],
+      legendOverrides: [],
+    })
+
+    expect(campaignStageOrder).toEqual(['RingingDeeps-1', 'WestFall-1', "Zul'Aman-1"])
+
+    const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
+      url: 'http://localhost/',
+    })
+    const previousWindow = globalThis.window
+    const previousDocument = globalThis.document
+    const previousIsActEnvironment = (globalThis as ReactActGlobal).IS_REACT_ACT_ENVIRONMENT
+    setGlobalProperty('window', dom.window)
+    setGlobalProperty('document', dom.window.document)
+    setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', true)
+    let root: Root | null = null
+
+    try {
+      const container = dom.window.document.getElementById('root')
+      if (!container) {
+        throw new Error('Missing root container')
+      }
+      root = createRoot(container)
+      await act(async () => {
+        root!.render(createElement(StageSelectScreen, {
+          defaultSelectedStageId: 'RingingDeeps-1',
+          highestClearedStageIndex: 0,
+          maxUnlockedStageIndex: 2,
+          partyStageId: 'RingingDeeps-1',
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot'),
+          onStartStage: vi.fn(),
+        }))
+      })
+
+      const nodeText = [...container.querySelectorAll('.stage-node')]
+        .map((node) => node.textContent ?? '')
+        .join('\n')
+      expect(container.querySelectorAll('.stage-node')).toHaveLength(3)
+      expect(nodeText).toContain('RD-1')
+      expect(nodeText).toContain('WF-1')
+      expect(nodeText).toContain('ZA-1')
+      expect(nodeText).not.toContain('CH-1')
+      expect(nodeText).not.toContain('Challenge Test')
+      expect(nodeText).not.toContain('山门折道')
+    } finally {
+      if (root) {
+        await act(async () => {
+          root!.unmount()
+        })
+      }
+      setGlobalProperty('window', previousWindow)
+      setGlobalProperty('document', previousDocument)
+      setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', previousIsActEnvironment)
+      dom.window.close()
+    }
+  })
+
+  it('can open directly in challenge mode after returning from a challenge encounter', async () => {
+    const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
+      url: 'http://localhost/',
+    })
+    const previousWindow = globalThis.window
+    const previousDocument = globalThis.document
+    const previousIsActEnvironment = (globalThis as ReactActGlobal).IS_REACT_ACT_ENVIRONMENT
+    setGlobalProperty('window', dom.window)
+    setGlobalProperty('document', dom.window.document)
+    setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', true)
+    let root: Root | null = null
+
+    try {
+      const container = dom.window.document.getElementById('root')
+      if (!container) {
+        throw new Error('Missing root container')
+      }
+      root = createRoot(container)
+      await act(async () => {
+        root!.render(createElement(StageSelectScreen, {
+          defaultMode: 'challenge',
+          defaultSelectedStageId: 'harbor-1',
+          highestClearedStageIndex: 5,
+          maxUnlockedStageIndex: 6,
+          partyStageId: 'harbor-6',
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot'),
+          onStartStage: () => undefined,
+        }))
+      })
+
+      const modeButtons = [...container.querySelectorAll('.stage-mode-switch__button')] as HTMLElement[]
+      expect(container.querySelector('.stage-map')).toBeNull()
+      expect(container.querySelector('.challenge-board')).not.toBeNull()
+      expect(modeButtons[1]?.className).toContain('is-active')
+    } finally {
+      if (root) {
+        await act(async () => {
+          root!.unmount()
+        })
+      }
+      setGlobalProperty('window', previousWindow)
+      setGlobalProperty('document', previousDocument)
+      setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', previousIsActEnvironment)
+      dom.window.close()
     }
   })
 

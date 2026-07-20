@@ -19,11 +19,23 @@ function expectedIconAssetPath(icon: BuildIconDefinition) {
 function loadWorkbookIconDefinitions() {
   const enemyWorkbook = XLSX.readFile(path.join(designerDataDir, 'enemy_data.xlsx'))
   const playerBuildWorkbook = XLSX.readFile(path.join(designerDataDir, 'player_build.xlsx'))
+  const challengeEncounterWorkbook = XLSX.readFile(path.join(designerDataDir, 'challenge_encounter_balance.xlsx'))
 
   const enemyIcons = parseEnemyWorkbook(enemyWorkbook).iconDefinitions ?? []
   const playerBuildIcons = parsePlayerBuildWorkbook(playerBuildWorkbook).iconDefinitions
+  const challengeIcons = loadChallengeEncounterIconDefinitions(challengeEncounterWorkbook)
 
-  return [...enemyIcons, ...playerBuildIcons].filter((icon) => icon.enabled)
+  return [...enemyIcons, ...playerBuildIcons, ...challengeIcons].filter((icon) => icon.enabled)
+}
+
+function loadChallengeEncounterIconDefinitions(workbook: XLSX.WorkBook) {
+  const sheet = workbook.Sheets['图标资源映射']
+  expect(sheet, 'challenge_encounter_balance.xlsx should include 图标资源映射').toBeTruthy()
+
+  return XLSX.utils.sheet_to_json<BuildIconDefinition>(sheet, {
+    defval: '',
+    raw: false,
+  })
 }
 
 describe('designer workbook icon assets', () => {

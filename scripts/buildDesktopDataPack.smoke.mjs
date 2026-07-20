@@ -50,5 +50,7 @@ assert.deepEqual(payload.files.map((entry) => entry.name), [
   'encounter_balance.xlsx',
   'enemy_data.xlsx',
   'player_build.xlsx',
+  'challenge_stage_content.xlsx',
+  'challenge_encounter_balance.xlsx',
 ])
 assert.equal(typeof payload.files[0].sha256, 'string')

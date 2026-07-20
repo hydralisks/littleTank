@@ -21,6 +21,7 @@ import {
 } from '../data/stageTemplates'
 import {
   generateStageBalanceBuilds,
+  generateStrategyTipBuildCandidates,
   getBuildSignature,
 } from './balanceBuildGenerator'
 
@@ -151,6 +152,28 @@ describe('balance build generator', () => {
           activeCount <= 2 &&
           variant.build.passiveTalentIds.length >= 4 &&
           getRemainingBuildPoints(buildRuleId, variant.build.loadout, variant.build.passiveTalentIds) >= 0
+        )
+      }),
+    ).toBe(true)
+  })
+
+  it('adds passive-heavy build candidates when strategy tips recommend trading active skills for talents', () => {
+    applyStageWorkbookOverrides(parseStageWorkbook(XLSX.readFile('public/designer-data/stage_content.xlsx')))
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(XLSX.readFile('public/designer-data/player_build.xlsx')))
+    const stage = getStageById('WestFall-6')
+    const candidates = generateStrategyTipBuildCandidates(stage, { maxCandidates: 6 })
+
+    expect(candidates.length).toBeGreaterThan(0)
+    expect(
+      candidates.some((variant) => {
+        const activeCount = Object.values(variant.build.loadout).filter(Boolean).length
+        return (
+          activeCount <= 2 &&
+          variant.build.passiveTalentIds.includes('warrior_t_reinforced_plates') &&
+          variant.build.passiveTalentIds.includes('warrior_t_barbaric_training') &&
+          variant.build.passiveTalentIds.includes('warrior_t_defensive_stance') &&
+          variant.build.passiveTalentIds.includes('warrior_t_defenders_aegis') &&
+          variant.build.passiveTalentIds.includes('warrior_t_immortal_stance')
         )
       }),
     ).toBe(true)

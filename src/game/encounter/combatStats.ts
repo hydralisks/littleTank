@@ -39,9 +39,12 @@ export interface HealingAbsorbRow extends StatAmountRow {
 export interface EncounterStats {
   durationMs: number
   tankDamageTaken: StatAmountRow[]
+  partyDamageTaken: StatAmountRow[]
   pressureGained: StatAmountRow[]
   castHandling: CastHandlingRow[]
   damageDealt: StatAmountRow[]
+  playerHealingAndAbsorb: HealingAbsorbRow[]
+  partyHealingAndAbsorb: HealingAbsorbRow[]
   healingAndAbsorb: HealingAbsorbRow[]
   enemyHealingAndAbsorb: HealingAbsorbRow[]
   absorbConsumed: StatAmountRow[]
@@ -124,6 +127,19 @@ function categoryForPressure(event: CombatLogEvent) {
     return '关卡规则'
   }
   return '压力'
+}
+
+function categoryForPartyDamage(event: CombatLogEvent) {
+  if (event.source.kind === 'status') {
+    return '状态'
+  }
+  if (event.source.kind === 'affix') {
+    return '词缀'
+  }
+  if (event.source.kind === 'stageRule') {
+    return '关卡规则'
+  }
+  return '敌人技能'
 }
 
 function addAmount(
@@ -324,10 +340,15 @@ function buildCastHandling(events: readonly CombatLogEvent[]): CastHandlingRow[]
 
 export function buildEncounterStats(state: EncounterState): EncounterStats {
   const tankDamage = new Map<string, AmountAccumulator>()
+  const partyDamage = new Map<string, AmountAccumulator>()
   const pressure = new Map<string, AmountAccumulator>()
   const damageDealt = new Map<string, AmountAccumulator>()
   const healing = new Map<string, AmountAccumulator>()
   const absorb = new Map<string, AmountAccumulator>()
+  const playerHealing = new Map<string, AmountAccumulator>()
+  const playerAbsorb = new Map<string, AmountAccumulator>()
+  const partyHealing = new Map<string, AmountAccumulator>()
+  const partyAbsorb = new Map<string, AmountAccumulator>()
   const enemyHealing = new Map<string, AmountAccumulator>()
   const enemyAbsorb = new Map<string, AmountAccumulator>()
   const absorbConsumed = new Map<string, AmountAccumulator>()
@@ -335,6 +356,10 @@ export function buildEncounterStats(state: EncounterState): EncounterStats {
   for (const event of state.runtime.combatLog) {
     if (event.type === 'damage' && event.target.kind === 'tank') {
       addAmount(tankDamage, event, categoryForTankDamage(event))
+    }
+
+    if (event.type === 'damage' && event.target.kind === 'party') {
+      addAmount(partyDamage, event, categoryForPartyDamage(event))
     }
 
     if (event.type === 'pressure' && event.target.kind === 'party') {
@@ -347,10 +372,16 @@ export function buildEncounterStats(state: EncounterState): EncounterStats {
 
     if (event.type === 'healing') {
       addAmount(event.source.kind === 'enemy' ? enemyHealing : healing, event, categoryForHealingAndAbsorb(event))
+      if (event.source.kind !== 'enemy') {
+        addAmount(event.target.kind === 'party' ? partyHealing : playerHealing, event, categoryForHealingAndAbsorb(event))
+      }
     }
 
     if (event.type === 'absorb-created') {
       addAmount(event.source.kind === 'enemy' ? enemyAbsorb : absorb, event, categoryForHealingAndAbsorb(event))
+      if (event.source.kind !== 'enemy') {
+        addAmount(event.target.kind === 'party' ? partyAbsorb : playerAbsorb, event, categoryForHealingAndAbsorb(event))
+      }
     }
 
     if (event.type === 'absorb-consumed') {
@@ -362,6 +393,14 @@ export function buildEncounterStats(state: EncounterState): EncounterStats {
     ...toRows<HealingAbsorbRow>(healing, (row) => ({ ...row, kind: 'healing' })),
     ...toRows<HealingAbsorbRow>(absorb, (row) => ({ ...row, kind: 'absorb' })),
   ]).sort((left, right) => right.total - left.total || left.effectName.localeCompare(right.effectName))
+  const playerHealingAndAbsorb = withCombinedShares([
+    ...toRows<HealingAbsorbRow>(playerHealing, (row) => ({ ...row, kind: 'healing' })),
+    ...toRows<HealingAbsorbRow>(playerAbsorb, (row) => ({ ...row, kind: 'absorb' })),
+  ]).sort((left, right) => right.total - left.total || left.effectName.localeCompare(right.effectName))
+  const partyHealingAndAbsorb = withCombinedShares([
+    ...toRows<HealingAbsorbRow>(partyHealing, (row) => ({ ...row, kind: 'healing' })),
+    ...toRows<HealingAbsorbRow>(partyAbsorb, (row) => ({ ...row, kind: 'absorb' })),
+  ]).sort((left, right) => right.total - left.total || left.effectName.localeCompare(right.effectName))
   const enemyHealingAndAbsorb = withCombinedShares([
     ...toRows<HealingAbsorbRow>(enemyHealing, (row) => ({ ...row, kind: 'healing' })),
     ...toRows<HealingAbsorbRow>(enemyAbsorb, (row) => ({ ...row, kind: 'absorb' })),
@@ -370,9 +409,12 @@ export function buildEncounterStats(state: EncounterState): EncounterStats {
   return {
     durationMs: state.timeMs,
     tankDamageTaken: toRows(tankDamage),
+    partyDamageTaken: toRows(partyDamage),
     pressureGained: toRows(pressure),
     castHandling: buildCastHandling(state.runtime.combatLog),
     damageDealt: toRows(damageDealt),
+    playerHealingAndAbsorb,
+    partyHealingAndAbsorb,
     healingAndAbsorb,
     enemyHealingAndAbsorb,
     absorbConsumed: toRows(absorbConsumed),

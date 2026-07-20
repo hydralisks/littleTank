@@ -37,7 +37,7 @@ describe('learning difficulty scoring', () => {
     expect(classifyLearningDifficulty([scenario(0.04)]).label).toBe('impossible')
   })
 
-  it('lowers learned difficulty when several builds preserve strong pass rates', () => {
+  it('keeps pass-rate difficulty when several builds preserve strong pass rates', () => {
     const rating = classifyLearningDifficulty([
       scenario(0.68, 'best'),
       scenario(0.66, 'backup-a'),
@@ -49,7 +49,7 @@ describe('learning difficulty scoring', () => {
       flexibleBuildMinPassRate: 0.65,
     })
 
-    expect(rating.label).toBe('easy')
+    expect(rating.label).toBe('balanced')
     expect(rating.baseLabel).toBe('balanced')
     expect(rating.flexibleBuildCount).toBe(3)
   })
@@ -93,7 +93,7 @@ describe('learning difficulty scoring', () => {
     expect(effort.score).toBeLessThan(20)
   })
 
-  it('lowers learned difficulty when a fight has only a few clear operation windows', () => {
+  it('does not lower expert pass-rate difficulty when operation load is low', () => {
     const executionLoad = evaluateLearningExecutionLoad({
       enemyCount: 2,
       activeSkillCount: 2,
@@ -108,10 +108,10 @@ describe('learning difficulty scoring', () => {
 
     expect(executionLoad.label).toBe('clear_windows')
     expect(rating.baseLabel).toBe('expert')
-    expect(rating.label).toBe('hard')
+    expect(rating.label).toBe('expert')
   })
 
-  it('can lower very low clear-window pass rates by two labels for tutorial-style execution clarity', () => {
+  it('does not lower near-impossible pass-rate difficulty for tutorial-style execution clarity', () => {
     const executionLoad = evaluateLearningExecutionLoad({
       enemyCount: 2,
       activeSkillCount: 2,
@@ -126,10 +126,10 @@ describe('learning difficulty scoring', () => {
 
     expect(executionLoad.adjustment).toBe(-2)
     expect(rating.baseLabel).toBe('near_impossible')
-    expect(rating.label).toBe('hard')
+    expect(rating.label).toBe('near_impossible')
   })
 
-  it('lowers learned difficulty by one label for low-key fights with several enemies but basic learning effort', () => {
+  it('keeps expert pass-rate difficulty for low-key fights with several enemies but basic learning effort', () => {
     const executionLoad = evaluateLearningExecutionLoad({
       enemyCount: 4,
       activeSkillCount: 4,
@@ -145,10 +145,10 @@ describe('learning difficulty scoring', () => {
     expect(executionLoad.label).toBe('clear_windows')
     expect(executionLoad.adjustment).toBe(-1)
     expect(rating.baseLabel).toBe('expert')
-    expect(rating.label).toBe('hard')
+    expect(rating.label).toBe('expert')
   })
 
-  it('lowers near-impossible clear-window tutorial results by two labels when execution is still simple', () => {
+  it('keeps near-impossible clear-window results when execution is still simple', () => {
     const executionLoad = evaluateLearningExecutionLoad({
       enemyCount: 4,
       activeSkillCount: 4,
@@ -164,10 +164,10 @@ describe('learning difficulty scoring', () => {
     expect(executionLoad.label).toBe('clear_windows')
     expect(executionLoad.adjustment).toBe(-1)
     expect(rating.baseLabel).toBe('near_impossible')
-    expect(rating.label).toBe('hard')
+    expect(rating.label).toBe('near_impossible')
   })
 
-  it('raises learned difficulty when many keys and special tactics create composite operation load', () => {
+  it('integrates composite operation load by taking the maximum dimension difficulty', () => {
     const executionLoad = evaluateLearningExecutionLoad({
       enemyCount: 4,
       activeSkillCount: 8,
@@ -182,7 +182,7 @@ describe('learning difficulty scoring', () => {
 
     expect(executionLoad.label).toBe('composite_load')
     expect(rating.baseLabel).toBe('easy')
-    expect(rating.label).toBe('balanced')
+    expect(rating.label).toBe('hard')
   })
 
   it('keeps direct learning paths neutral when default builds already work', () => {
@@ -234,7 +234,7 @@ describe('learning difficulty scoring', () => {
     expect(path.score).toBeGreaterThanOrEqual(75)
   })
 
-  it('raises learning difficulty when the final pass rate comes from a specialized learning path', () => {
+  it('integrates learning path by taking the maximum dimension difficulty', () => {
     const rating = classifyLearningDifficulty([scenario(0.96, 'generated_14_2')], {
       learningPath: {
         label: 'hidden_solution',
@@ -245,7 +245,40 @@ describe('learning difficulty scoring', () => {
     })
 
     expect(rating.baseLabel).toBe('trivial')
-    expect(rating.label).toBe('balanced')
+    expect(rating.label).toBe('hard')
     expect(rating.learningPath?.label).toBe('hidden_solution')
+  })
+
+  it('raises balanced pass-rate difficulty to hard when learning path is demanding even with low operation load', () => {
+    const rating = classifyLearningDifficulty([scenario(0.56, 'generated_14_2')], {
+      executionLoad: {
+        label: 'clear_windows',
+        score: -20,
+        adjustment: -1,
+        reasons: ['low operation load'],
+      },
+      learningPath: {
+        label: 'hidden_solution',
+        score: 82,
+        adjustment: 2,
+        reasons: ['requires strategy tips and a narrow solution'],
+      },
+    })
+
+    expect(rating.baseLabel).toBe('balanced')
+    expect(rating.label).toBe('hard')
+  })
+
+  it('integrates specialist skill requirement as its own difficulty dimension', () => {
+    const rating = classifyLearningDifficulty([scenario(0.74, 'generated_14_2')], {
+      learningEffort: {
+        label: 'specialist',
+        score: 84,
+        reasons: ['requires precise learned tactics'],
+      },
+    })
+
+    expect(rating.baseLabel).toBe('easy')
+    expect(rating.label).toBe('expert')
   })
 })

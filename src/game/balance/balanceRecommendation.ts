@@ -50,6 +50,10 @@ function manualRank(label: ManualDifficultyLabel) {
     return LABEL_RANK.near_impossible
   }
 
+  if (label === 'unrated') {
+    return LABEL_RANK.invalid_data
+  }
+
   return LABEL_RANK[label] ?? LABEL_RANK.invalid_data
 }
 
@@ -92,6 +96,16 @@ function confidenceFor(input: BalanceDesignRecommendationInput, issueTypes: read
 export function createBalanceDesignRecommendation(
   input: BalanceDesignRecommendationInput,
 ): BalanceDesignRecommendation {
+  if (input.manualLabel === 'unrated') {
+    return {
+      severity: 'none',
+      issueTypes: [],
+      confidence: 'low',
+      summary: `静态 ${input.staticLabel}，固定策略 AI ${input.fixedLabel}，学习型 AI ${input.learningLabel}，人工目标 unrated。`,
+      suggestions: ['暂无人工基线，先只展示静态数值、固定策略 AI、学习型 AI 的分层结果，不输出削弱或增强建议。'],
+    }
+  }
+
   const manual = manualRank(input.manualLabel)
   const staticGap = rank(input.staticLabel) - manual
   const fixedGap = rank(input.fixedLabel) - manual

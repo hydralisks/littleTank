@@ -13,6 +13,7 @@
     "desktop:dev": "npm run build:desktop-data && tauri dev",
     "desktop:build": "tauri build",
     "analyze:balance": "node --experimental-strip-types --loader ./scripts/ts-extension-loader.mjs scripts/analyzeBalance.mjs",
+    "analyze:strategy-tips": "node --experimental-strip-types --loader ./scripts/ts-extension-loader.mjs scripts/analyzeStrategyTips.mjs",
     "analyze:delta": "node --experimental-strip-types --loader ./scripts/ts-extension-loader.mjs scripts/analyzeDelta.mjs",
     "generate:designer-data": "node scripts/generateDesignerWorkbooks.mjs",
     "validate:designer-data": "node --experimental-strip-types scripts/validateDesignerData.mjs",

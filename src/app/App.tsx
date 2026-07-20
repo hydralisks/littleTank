@@ -4,7 +4,7 @@ import {
   getDefaultPersistedBuildForRule,
   normalizePersistedBuildForRule,
 } from '../game/data/playerBuildCatalog'
-import { getNextStageId, getStageById, stageOrder, type StageId } from '../game/data/stageTemplates'
+import { campaignStageOrder, getNextStageId, getStageById, stageOrder, type StageId } from '../game/data/stageTemplates'
 import {
   getPassiveTalentUnlockTierForStage,
   getUnlockedActiveSkillIdsForStage,
@@ -14,7 +14,7 @@ import {
   getEnemyDefinitionIdsForStage,
 } from '../game/data/monsterCodex'
 import { EncounterScreen } from '../ui/EncounterScreen'
-import { StageSelectScreen } from '../ui/StageSelectScreen'
+import { StageSelectScreen, type StageSelectMode } from '../ui/StageSelectScreen'
 import {
   createEmptyTutorialSaveState,
   loadSaveGame,
@@ -31,9 +31,10 @@ function appendUniqueStageId(stageIds: readonly StageId[], stageId: StageId) {
 }
 
 function App() {
-  const initialStageId = stageOrder[0]
+  const initialStageId = campaignStageOrder[0] ?? stageOrder[0]
   const [loadedSave] = useState(() => loadSaveGame())
   const [screen, setScreen] = useState<'select' | 'encounter'>('select')
+  const [stageSelectMode, setStageSelectMode] = useState<StageSelectMode>('campaign')
   const [stageId, setStageId] = useState<StageId>(loadedSave?.stageId ?? initialStageId)
   const [encounterInstance, setEncounterInstance] = useState(0)
   const [highestClearedStageIndex, setHighestClearedStageIndex] = useState(
@@ -50,9 +51,9 @@ function App() {
   )
   const [tutorialReplayVersion, setTutorialReplayVersion] = useState(0)
 
-  const progressionUnlockedStageIndex = Math.min(highestClearedStageIndex + 1, stageOrder.length - 1)
+  const progressionUnlockedStageIndex = Math.min(highestClearedStageIndex + 1, campaignStageOrder.length - 1)
   const maxUnlockedStageIndex = Math.max(progressionUnlockedStageIndex, INITIAL_MAX_UNLOCKED_STAGE_INDEX)
-  const recommendedStageId = stageOrder[Math.max(0, progressionUnlockedStageIndex)]
+  const recommendedStageId = campaignStageOrder[Math.max(0, progressionUnlockedStageIndex)] ?? initialStageId
 
   useEffect(() => {
     saveSaveGame({
@@ -64,10 +65,10 @@ function App() {
     })
   }, [highestClearedStageIndex, persistedBuild, seenEnemyDefinitionIds, stageId, tutorialState])
 
-  function startStage(nextStageId: StageId) {
-    const nextStageIndex = stageOrder.indexOf(nextStageId)
+  function startStage(nextStageId: StageId, mode: StageSelectMode = 'campaign') {
+    const nextStageIndex = mode === 'campaign' ? campaignStageOrder.indexOf(nextStageId) : stageOrder.indexOf(nextStageId)
 
-    if (nextStageIndex < 0 || nextStageIndex > maxUnlockedStageIndex) {
+    if (nextStageIndex < 0 || (mode === 'campaign' && nextStageIndex > maxUnlockedStageIndex)) {
       return
     }
 
@@ -98,6 +99,7 @@ function App() {
     setSeenEnemyDefinitionIds((current) =>
       appendSeenEnemyDefinitionIds(current, getEnemyDefinitionIdsForStage(nextStageId))
     )
+    setStageSelectMode(mode)
     setStageId(nextStageId)
     setEncounterInstance((value) => value + 1)
     setScreen('encounter')
@@ -105,16 +107,20 @@ function App() {
 
   function handleReturnToStageSelect(outcome?: 'victory' | 'defeat') {
     if (outcome === 'victory') {
-      const clearedIndex = stageOrder.indexOf(stageId)
-      setHighestClearedStageIndex((current) => Math.max(current, clearedIndex))
+      const clearedIndex = campaignStageOrder.indexOf(stageId)
+      if (clearedIndex >= 0) {
+        setHighestClearedStageIndex((current) => Math.max(current, clearedIndex))
+      }
     }
 
     setScreen('select')
   }
 
   function handleAdvanceStage() {
-    const clearedIndex = stageOrder.indexOf(stageId)
-    setHighestClearedStageIndex((current) => Math.max(current, clearedIndex))
+    const clearedIndex = campaignStageOrder.indexOf(stageId)
+    if (clearedIndex >= 0) {
+      setHighestClearedStageIndex((current) => Math.max(current, clearedIndex))
+    }
 
     const nextStageId = getNextStageId(stageId)
 
@@ -123,7 +129,7 @@ function App() {
       return
     }
 
-    startStage(nextStageId)
+    startStage(nextStageId, 'campaign')
   }
 
   function markStageSelectTutorialSeen(seenStageId: StageId) {
@@ -164,6 +170,7 @@ function App() {
   if (screen === 'select') {
     return (
       <StageSelectScreen
+        defaultMode={stageSelectMode}
         defaultSelectedStageId={recommendedStageId}
         highestClearedStageIndex={highestClearedStageIndex}
         maxUnlockedStageIndex={maxUnlockedStageIndex}
@@ -219,7 +226,7 @@ function App() {
         })
       }}
       onReturnToStageSelect={handleReturnToStageSelect}
-      onRetryStage={() => startStage(stageId)}
+      onRetryStage={() => startStage(stageId, stageSelectMode)}
       onAdvanceStage={handleAdvanceStage}
     />
   )

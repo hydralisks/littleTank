@@ -17,6 +17,9 @@ export type DesignerDataValidationCode =
   | 'invalid_range'
   | 'invalid_combination'
   | 'unknown_reference'
+  | 'stage_without_opening'
+  | 'stage_without_placements'
+  | 'missing_strategy_tips'
 
 export interface DesignerDataValidationIssue {
   workbook: string
@@ -31,6 +34,20 @@ export interface DesignerDataValidationIssue {
 export interface DesignerDataValidationResult {
   valid: boolean
   errors: DesignerDataValidationIssue[]
+  warnings: DesignerDataValidationIssue[]
+  summary: DesignerDataValidationSummary
+}
+
+export interface DesignerDataValidationSummary {
+  totalStages: number
+  totalOpenings: number
+  totalPlacements: number
+  totalEnemyDefinitions: number
+  totalEnemySkills: number
+  totalActiveSkills: number
+  totalPassiveTalents: number
+  issueCountsByCode: Partial<Record<DesignerDataValidationCode, number>>
+  warningCountsByCode: Partial<Record<DesignerDataValidationCode, number>>
 }
 
 type WorkbookKey = keyof DesignerDataWorkbookMap
@@ -465,6 +482,10 @@ function isBlankRow(row: SheetRow) {
   return Object.values(row).every((value) => normalizeText(value) === '')
 }
 
+function hasText(row: SheetRow, field: string) {
+  return normalizeText(row[field]) !== ''
+}
+
 function readRows(workbook: XLSX.WorkBook, sheetName: string): SheetRow[] {
   const sheet = workbook.Sheets[sheetName]
   if (!sheet) {
@@ -514,6 +535,88 @@ function issue(input: Omit<DesignerDataValidationIssue, 'message'> & { message?:
         input.code,
         input.value ? `value=${input.value}` : undefined,
       ].filter(Boolean).join(' | '),
+  }
+}
+
+function countIssuesByCode(issues: DesignerDataValidationIssue[]) {
+  return issues.reduce<Partial<Record<DesignerDataValidationCode, number>>>((counts, current) => {
+    counts[current.code] = (counts[current.code] ?? 0) + 1
+    return counts
+  }, {})
+}
+
+function addWarning(
+  warnings: DesignerDataValidationIssue[],
+  input: Omit<DesignerDataValidationIssue, 'message'> & { message?: string },
+) {
+  warnings.push(issue(input))
+}
+
+function addStageCoverageWarnings(
+  warnings: DesignerDataValidationIssue[],
+  rows: ReturnType<typeof collectSheetRows>,
+) {
+  const openingStageIds = new Set(rows.openings.map((row) => normalizeText(row.stageId)).filter(Boolean))
+  const placementStageIds = new Set(rows.placements.map((row) => normalizeText(row.stageId)).filter(Boolean))
+
+  rows.stages.forEach((row, index) => {
+    const stageId = normalizeText(row.stageId)
+    if (!stageId) {
+      return
+    }
+
+    if (!openingStageIds.has(stageId)) {
+      addWarning(warnings, {
+        workbook: WORKBOOK_NAMES.encounterBalance,
+        sheet: '关卡开场',
+        field: 'stageId',
+        code: 'stage_without_opening',
+        value: stageId,
+      })
+    }
+
+    if (!normalizeText(row.strategyTips)) {
+      addWarning(warnings, {
+        workbook: WORKBOOK_NAMES.stageContent,
+        sheet: '关卡',
+        row: rowNumber(index),
+        field: 'stageId',
+        code: 'missing_strategy_tips',
+        value: stageId,
+      })
+    }
+  })
+
+  rows.openings.forEach((row, index) => {
+    const stageId = normalizeText(row.stageId)
+    if (stageId && !placementStageIds.has(stageId)) {
+      addWarning(warnings, {
+        workbook: WORKBOOK_NAMES.encounterBalance,
+        sheet: '敌人布置',
+        row: rowNumber(index),
+        field: 'stageId',
+        code: 'stage_without_placements',
+        value: stageId,
+      })
+    }
+  })
+}
+
+function buildValidationSummary(
+  rows: ReturnType<typeof collectSheetRows>,
+  errors: DesignerDataValidationIssue[],
+  warnings: DesignerDataValidationIssue[],
+): DesignerDataValidationSummary {
+  return {
+    totalStages: rows.stages.filter((row) => hasText(row, 'stageId')).length,
+    totalOpenings: rows.openings.filter((row) => hasText(row, 'stageId')).length,
+    totalPlacements: rows.placements.filter((row) => hasText(row, 'stageId') || hasText(row, 'enemyId')).length,
+    totalEnemyDefinitions: rows.enemyDefinitions.filter((row) => hasText(row, 'enemyId')).length,
+    totalEnemySkills: rows.enemySkills.filter((row) => hasText(row, 'skillId')).length,
+    totalActiveSkills: rows.activeSkills.filter((row) => hasText(row, 'skillId')).length,
+    totalPassiveTalents: rows.passiveTalents.filter((row) => hasText(row, 'talentId')).length,
+    issueCountsByCode: countIssuesByCode(errors),
+    warningCountsByCode: countIssuesByCode(warnings),
   }
 }
 
@@ -825,6 +928,7 @@ function collectSheetRows(workbooks: DesignerDataWorkbookMap) {
 
 export function validateDesignerDataWorkbooks(workbooks: DesignerDataWorkbookMap): DesignerDataValidationResult {
   const errors: DesignerDataValidationIssue[] = []
+  const warnings: DesignerDataValidationIssue[] = []
   addMissingSheetAndHeaderIssues(workbooks, errors)
 
   const rows = collectSheetRows(workbooks)
@@ -1209,8 +1313,12 @@ export function validateDesignerDataWorkbooks(workbooks: DesignerDataWorkbookMap
     validateEnum(errors, WORKBOOK_NAMES.enemyData, '图标资源映射', row, index, 'iconType', ENUMS.iconType, { required: true })
   })
 
+  addStageCoverageWarnings(warnings, rows)
+
   return {
     valid: errors.length === 0,
     errors,
+    warnings,
+    summary: buildValidationSummary(rows, errors, warnings),
   }
 }

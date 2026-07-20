@@ -58,6 +58,13 @@ describe('tutorialGuide', () => {
     expect(getEncounterTutorialScript(makeStage('Zul\'Aman-1', "Zul'Aman", 1))?.[0]?.body).toContain('队伍每秒受到治疗')
   })
 
+  it('explains that party healing reduces pressure by the same amount in ZulAman 1', () => {
+    const script = getEncounterTutorialScript(makeStage('Zul\'Aman-1', "Zul'Aman", 1))
+
+    expect(script?.[0]?.body).toContain('压力')
+    expect(script?.[0]?.body).toContain('等量下降')
+  })
+
   it('splits build and combat tutorials across RingingDeeps 2-4', () => {
     const stage2 = makeStage('RingingDeeps-2', 'RingingDeeps', 2)
     const stage3 = makeStage('RingingDeeps-3', 'RingingDeeps', 3)

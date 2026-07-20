@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="party troll taunted">
+  <defs><linearGradient id="bg" x1="8" y1="8" x2="56" y2="56"><stop stop-color="hsl(201 84% 22%)"/><stop offset="1" stop-color="hsl(294 70% 34%)"/></linearGradient></defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+  <path fill="hsl(196 86% 64%)" stroke="rgba(8,12,24,.92)" stroke-width="4" d="M12 30c5-9 18-9 23 0-3 11-20 11-23 0Z"/>
+  <path fill="hsl(218 86% 66%)" stroke="rgba(8,12,24,.92)" stroke-width="4" d="M31 34c5-9 18-9 23 0-3 11-20 11-23 0Z"/>
+</svg>

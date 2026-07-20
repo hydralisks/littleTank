@@ -2,6 +2,51 @@ import { describe, expect, it } from 'vitest'
 import { createBalanceDesignRecommendation } from './balanceRecommendation'
 
 describe('balance design recommendation', () => {
+  it('keeps recommendations neutral when the manual baseline is unrated', () => {
+    const recommendation = createBalanceDesignRecommendation({
+      stageId: "Zul'Aman-1",
+      manualLabel: 'unrated',
+      staticLabel: 'hard',
+      fixedLabel: 'expert',
+      learningLabel: 'balanced',
+      staticMetrics: {
+        enemyCount: 4,
+        totalEnemyHp: 620,
+        rawThreatScore: 72,
+        unavoidablePressureScore: 24,
+        answerablePressureScore: 36,
+        toolMitigationScore: 30,
+        enemySupportRisk: 12,
+        effectiveSupportRisk: 8,
+        executionComplexityScore: 34,
+        adjustedThreatScore: 58,
+        estimatedEnemyCastRisk: 28,
+        estimatedPartyPressureRisk: 19,
+        castDensityRisk: 22,
+        targetComplexityRisk: 30,
+        operationLoadRisk: 24,
+        mechanicRisk: 35,
+        toolCoverageScore: 31,
+        durationPressureRisk: 18,
+        availableActiveSkillCount: 6,
+        playerAutoDamage: 3,
+        playerAutoHeal: 0,
+        partyAutoHeal: 0,
+      },
+      fixedBestPassRate: 0.2,
+      learningBestPassRate: 0.58,
+      learningEffortScore: 44,
+      learningExecutionLoadScore: 26,
+      halfBestBuildCount: 2,
+    })
+
+    expect(recommendation.severity).toBe('none')
+    expect(recommendation.issueTypes).toEqual([])
+    expect(recommendation.confidence).toBe('low')
+    expect(recommendation.summary).toContain('unrated')
+    expect(recommendation.suggestions.join('\n')).toContain('人工基线')
+  })
+
   it('recommends numeric relief when all three evaluators are harder than the target', () => {
     const recommendation = createBalanceDesignRecommendation({
       stageId: 'RingingDeeps-6',

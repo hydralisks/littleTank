@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="berserker">
+  <defs><linearGradient id="bg" x1="8" y1="8" x2="56" y2="56"><stop stop-color="hsl(0 88% 24%)"/><stop offset="1" stop-color="hsl(32 92% 38%)"/></linearGradient></defs>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+  <path fill="hsl(44 96% 62%)" stroke="rgba(8,12,24,.92)" stroke-width="4" stroke-linejoin="round" d="M32 9l8 15 16 3-12 12 3 17-15-8-15 8 3-17L8 27l16-3Z"/>
+  <path fill="none" stroke="hsl(0 95% 64%)" stroke-width="5" stroke-linecap="round" d="M22 31h20M27 22l-7 20M37 22l7 20"/>
+</svg>

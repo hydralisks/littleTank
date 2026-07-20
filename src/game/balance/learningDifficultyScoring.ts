@@ -17,6 +17,7 @@ export interface LearningDifficultyRating {
   flexibleBuildThreshold: number
   executionLoad?: LearningExecutionLoadRating
   learningPath?: LearningPathRating
+  learningEffort?: LearningEffortRating
   reasons: string[]
 }
 
@@ -26,6 +27,7 @@ export interface LearningDifficultyOptions {
   flexibleBuildMinPassRate?: number
   executionLoad?: LearningExecutionLoadRating
   learningPath?: LearningPathRating
+  learningEffort?: LearningEffortRating
 }
 
 export type LearningEffortLabel = 'none' | 'basic' | 'moderate' | 'high' | 'specialist'
@@ -90,39 +92,66 @@ function formatPercent(value: number) {
   return `${Math.round(value * 100)}%`
 }
 
-function stepDownDifficulty(label: DifficultyLabel): DifficultyLabel {
-  switch (label) {
-    case 'easy':
-      return 'trivial'
-    case 'balanced':
-      return 'easy'
-    case 'hard':
-      return 'balanced'
-    case 'expert':
+const DIFFICULTY_RANK: Record<DifficultyLabel, number> = {
+  invalid_data: -1,
+  trivial: 0,
+  easy: 1,
+  balanced: 2,
+  hard: 3,
+  expert: 4,
+  near_impossible: 5,
+  impossible: 6,
+}
+
+function maxDifficultyLabel(labels: readonly DifficultyLabel[]) {
+  return labels.reduce((best, label) =>
+    DIFFICULTY_RANK[label] > DIFFICULTY_RANK[best] ? label : best
+  )
+}
+
+function executionLoadDifficultyLabel(executionLoad: LearningExecutionLoadRating | undefined): DifficultyLabel | null {
+  if (!executionLoad) {
+    return null
+  }
+
+  if (executionLoad.label === 'composite_load') {
+    return 'hard'
+  }
+
+  return 'trivial'
+}
+
+function learningPathDifficultyLabel(learningPath: LearningPathRating | undefined): DifficultyLabel | null {
+  if (!learningPath) {
+    return null
+  }
+
+  switch (learningPath.label) {
+    case 'hidden_solution':
+    case 'specialized':
       return 'hard'
-    case 'near_impossible':
-      return 'expert'
-    default:
-      return label
+    case 'learned':
+      return 'balanced'
+    case 'direct':
+      return 'trivial'
   }
 }
 
-function stepUpDifficulty(label: DifficultyLabel): DifficultyLabel {
-  switch (label) {
-    case 'trivial':
-      return 'easy'
-    case 'easy':
-      return 'balanced'
-    case 'balanced':
-      return 'hard'
-    case 'hard':
+function learningEffortDifficultyLabel(learningEffort: LearningEffortRating | undefined): DifficultyLabel | null {
+  if (!learningEffort) {
+    return null
+  }
+
+  switch (learningEffort.label) {
+    case 'specialist':
       return 'expert'
-    case 'expert':
-      return 'near_impossible'
-    case 'near_impossible':
-      return 'impossible'
-    default:
-      return label
+    case 'high':
+      return 'hard'
+    case 'moderate':
+      return 'balanced'
+    case 'basic':
+    case 'none':
+      return 'trivial'
   }
 }
 
@@ -301,31 +330,28 @@ export function classifyLearningDifficulty(
   const flexibleBuildMinPassRate = Math.max(0, options.flexibleBuildMinPassRate ?? 0.65)
   const flexibleBuildThreshold = Math.max(flexibleBuildMinPassRate, bestPassRate * flexibleBuildBestRatio)
   const flexibleBuildCount = [...buildRates.values()].filter((rate) => rate >= flexibleBuildThreshold).length
-  const hasFlexibleBuildAdjustment = flexibleBuildCount >= flexibleBuildMinCount && baseLabel !== 'impossible'
-  const flexibleLabel = hasFlexibleBuildAdjustment ? stepDownDifficulty(baseLabel) : baseLabel
+  const hasFlexibleBuildCoverage = flexibleBuildCount >= flexibleBuildMinCount && baseLabel !== 'impossible'
   const executionLoad = options.executionLoad
   const learningPath = options.learningPath
-  let label = flexibleLabel
-  if (executionLoad?.adjustment === -2) {
-    label = stepDownDifficulty(stepDownDifficulty(flexibleLabel))
-  } else if (executionLoad?.adjustment === -1) {
-    label = stepDownDifficulty(flexibleLabel)
-  } else if (executionLoad?.adjustment === 1) {
-    label = stepUpDifficulty(flexibleLabel)
-  }
-
-  if (
-    executionLoad?.label === 'clear_windows' &&
-    executionLoad.score <= 12 &&
-    baseLabel === 'near_impossible' &&
-    label === 'expert'
-  ) {
-    label = stepDownDifficulty(label)
-  }
-
-  for (let index = 0; index < (learningPath?.adjustment ?? 0); index += 1) {
-    label = stepUpDifficulty(label)
-  }
+  const learningEffort = options.learningEffort
+  const executionLoadLabel = executionLoadDifficultyLabel(executionLoad)
+  const learningPathLabel = learningPathDifficultyLabel(learningPath)
+  const learningEffortLabel = learningEffortDifficultyLabel(learningEffort)
+  const label = maxDifficultyLabel([
+    baseLabel,
+    ...(executionLoadLabel ? [executionLoadLabel] : []),
+    ...(learningPathLabel ? [learningPathLabel] : []),
+    ...(learningEffortLabel ? [learningEffortLabel] : []),
+  ])
+  const executionLoadReasons = executionLoad && executionLoadLabel
+    ? [`operation-load difficulty: ${executionLoadLabel} (${executionLoad.label}, score ${executionLoad.score})`]
+    : []
+  const learningPathReasons = learningPath && learningPathLabel
+    ? [`learning-path difficulty: ${learningPathLabel} (${learningPath.label}, score ${learningPath.score})`]
+    : []
+  const learningEffortReasons = learningEffort && learningEffortLabel
+    ? [`skill-requirement difficulty: ${learningEffortLabel} (${learningEffort.label}, score ${learningEffort.score})`]
+    : []
 
   return {
     label,
@@ -335,13 +361,27 @@ export function classifyLearningDifficulty(
     flexibleBuildThreshold,
     ...(executionLoad ? { executionLoad } : {}),
     ...(learningPath ? { learningPath } : {}),
+    ...(learningEffort ? { learningEffort } : {}),
     reasons: [
+      `pass-rate difficulty: ${baseLabel}`,
+      ...executionLoadReasons,
+      ...learningPathReasons,
+      ...learningEffortReasons,
+      `composite learning difficulty uses the maximum dimension: ${label}`,
+      ...(hasFlexibleBuildCoverage
+        ? ['multiple builds meet the stability threshold; this is recorded as flexibility and no longer lowers the final difficulty']
+        : []),
+      ...(DIFFICULTY_RANK[label] > DIFFICULTY_RANK[baseLabel]
+        ? ['composite difficulty is above the pass-rate dimension because another dimension is stricter']
+        : []),
+      ...(executionLoadLabel && DIFFICULTY_RANK[executionLoadLabel] < DIFFICULTY_RANK[baseLabel]
+        ? ['operation-load dimension is below pass-rate difficulty; pass-rate remains the limiting dimension']
+        : []),
       `学习型 AI 最佳通过率：${formatPercent(bestPassRate)}`,
       `学习型 AI 使用单一较强玩家 profile，不再拆分 average/skilled/expert`,
       `多 build 稳定阈值：${formatPercent(flexibleBuildThreshold)}，达标 build 数：${flexibleBuildCount}`,
-      ...(hasFlexibleBuildAdjustment ? ['多套 build 可以保持较高通过率，难度下调一档'] : []),
       ...(learningPath && learningPath.adjustment > 0
-        ? [`学习路径为 ${learningPath.label}，难度上调 ${learningPath.adjustment} 档`]
+        ? [`学习路径为 ${learningPath.label}，作为独立维度参与综合取最大值`]
         : []),
     ],
   }

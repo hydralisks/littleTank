@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import * as XLSX from 'xlsx'
 import {
+  appendEncounterWorkbookOverrides,
+  applyEncounterWorkbookOverrides,
+  getStageBuildRuleId,
+} from './encounterTemplates'
+import { applyStageWorkbookOverrides, getUnlockedActiveSkillIdsForStage } from './stageTemplates'
+import {
   parseEncounterWorkbook,
   parseEnemyWorkbook,
   parseStageWorkbook,
   resolveDesignerDataSource,
 } from './workbookLoader'
+import { getStageById } from './stageTemplates'
+import type { StageNumber } from './stageTemplates'
 
 describe('resolveDesignerDataSource', () => {
   it('uses desktop data pack when the desktop runtime flag is set', () => {
@@ -37,6 +45,38 @@ describe('parseStageWorkbook', () => {
     expect(overrides.stageOverrides[0]).toMatchObject({
       stageId: 'RingingDeeps-6',
       strategyTips: '让蜡像和暗影之锄打在同一侧',
+    })
+  })
+
+  it('reads challenge stage metadata from stage rows', () => {
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([]), '区域')
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([
+      {
+        stageId: 'Challenge-1',
+        areaId: 'Challenge',
+        order: 1,
+        title: '鱼人登陆队',
+        challengeId: 'CH-1',
+        recommendedDifficulty: 'balanced',
+        allowedClassIdsCsv: 'warrior_t',
+        enemySummary: '鱼人斥候、鱼人猎潮者',
+        unlockedActiveSkillIdsCsv: 'warrior_t_taunt,warrior_t_interrupt',
+        passiveTalentUnlockTier: 1,
+      },
+    ]), '关卡')
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet([]), '图例')
+
+    const overrides = parseStageWorkbook(workbook)
+
+    expect(overrides.stageOverrides[0]).toMatchObject({
+      stageId: 'Challenge-1',
+      challengeId: 'CH-1',
+      recommendedDifficulty: 'balanced',
+      allowedClassIds: ['warrior_t'],
+      enemySummary: '鱼人斥候、鱼人猎潮者',
+      unlockedActiveSkillIds: ['warrior_t_taunt', 'warrior_t_interrupt'],
+      passiveTalentUnlockTier: 1,
     })
   })
 })
@@ -169,5 +209,118 @@ describe('parseEncounterWorkbook', () => {
       valueB: 20000,
       tickIntervalMs: 0,
     })
+  })
+})
+
+describe('encounter workbook mode boundaries', () => {
+  function stageNumberForTest(stageId: string): StageNumber {
+    const value = Number(stageId.split('-')[1] ?? 1)
+    return Math.min(6, Math.max(1, value)) as StageNumber
+  }
+
+  it('keeps story build rules when challenge encounter overrides are appended', () => {
+    applyEncounterWorkbookOverrides({
+      openingOverrides: {
+        'harbor-1': { buildRuleId: 'story_rule' },
+      },
+      placementOverrides: {},
+      openingStatusOverrides: {},
+      affixBindings: {},
+      affixDefinitions: {},
+      specialRuleBindings: {},
+      specialRuleDefinitions: {},
+    })
+
+    appendEncounterWorkbookOverrides({
+      openingOverrides: {
+        'Challenge-1': { buildRuleId: 'challenge_rule' },
+      },
+      placementOverrides: {},
+      openingStatusOverrides: {},
+      affixBindings: {},
+      affixDefinitions: {},
+      specialRuleBindings: {},
+      specialRuleDefinitions: {},
+    }, { stageIdPrefix: 'Challenge-' })
+
+    expect(getStageBuildRuleId(getStageById('harbor-1'))).toBe('story_rule')
+    expect(getStageBuildRuleId({
+      ...getStageById('harbor-1'),
+      id: 'Challenge-1',
+      areaId: 'Challenge',
+      stageNumber: 1,
+    })).toBe('challenge_rule')
+  })
+
+  it('does not change story workbook build rules when challenge workbook data is appended', () => {
+    const storyEncounterWorkbook = XLSX.readFile('public/designer-data/encounter_balance.xlsx')
+    const challengeEncounterWorkbook = XLSX.readFile('public/designer-data/challenge_encounter_balance.xlsx')
+
+    applyEncounterWorkbookOverrides(parseEncounterWorkbook(storyEncounterWorkbook))
+    const storyBuildRuleIds = ['RingingDeeps-1', 'RingingDeeps-4', 'WestFall-6'].map((stageId) =>
+      getStageBuildRuleId({
+        ...getStageById('harbor-1'),
+        id: stageId,
+        areaId: stageId.startsWith('WestFall') ? 'WestFall' : 'RingingDeeps',
+        stageNumber: stageNumberForTest(stageId),
+      }),
+    )
+
+    appendEncounterWorkbookOverrides(
+      parseEncounterWorkbook(challengeEncounterWorkbook),
+      { stageIdPrefix: 'Challenge-' },
+    )
+
+    const afterChallengeAppendBuildRuleIds = ['RingingDeeps-1', 'RingingDeeps-4', 'WestFall-6'].map((stageId) =>
+      getStageBuildRuleId({
+        ...getStageById('harbor-1'),
+        id: stageId,
+        areaId: stageId.startsWith('WestFall') ? 'WestFall' : 'RingingDeeps',
+        stageNumber: stageNumberForTest(stageId),
+      }),
+    )
+
+    expect(afterChallengeAppendBuildRuleIds).toEqual(storyBuildRuleIds)
+  })
+})
+
+describe('challenge stage workbook mode boundaries', () => {
+  it('uses only explicit challenge unlock fields instead of deriving them from source story stages', () => {
+    applyStageWorkbookOverrides({
+      areaOverrides: [
+        { areaId: 'RingingDeeps', title: 'RingingDeeps' },
+        { areaId: 'Challenge', title: 'Challenge' },
+      ],
+      stageOverrides: [
+        {
+          stageId: 'RingingDeeps-1',
+          areaId: 'RingingDeeps',
+          order: 1,
+          unlockedActiveSkillIds: ['warrior_t_taunt'],
+        },
+      ],
+      legendOverrides: [],
+    })
+
+    applyStageWorkbookOverrides({
+      areaOverrides: [
+        { areaId: 'Challenge', title: 'Challenge' },
+      ],
+      stageOverrides: [
+        {
+          stageId: 'Challenge-1',
+          areaId: 'Challenge',
+          order: 1,
+          unlockedActiveSkillIds: [],
+          passiveTalentUnlockTier: -1,
+        },
+      ],
+      legendOverrides: [],
+      updateCampaignOrder: false,
+    })
+
+    const challengeStage = getStageById('Challenge-1')
+
+    expect(getUnlockedActiveSkillIdsForStage(challengeStage)).toEqual([])
   })
 })

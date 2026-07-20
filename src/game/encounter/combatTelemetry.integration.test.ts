@@ -282,6 +282,11 @@ describe('combat telemetry integration', () => {
           target: expect.objectContaining({ kind: 'tank' }),
           ability: expect.objectContaining({ id: 'bone-jab' }),
         }),
+        expect.objectContaining({
+          source: expect.objectContaining({ kind: 'enemy' }),
+          target: expect.objectContaining({ kind: 'party' }),
+          ability: expect.objectContaining({ id: 'ember-bolt' }),
+        }),
       ]),
     )
     expect(eventsOfType(nextState, 'pressure')).toEqual(

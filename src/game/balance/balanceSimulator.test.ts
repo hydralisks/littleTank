@@ -134,6 +134,69 @@ describe('balance simulator', () => {
     expect(result).not.toHaveProperty('partyPressureRatio')
   })
 
+  it('collects compact data estimate metrics for each scenario without full combat trace', () => {
+    const stage = getStageById('harbor-1')
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const result = runBalanceScenario({
+      stage,
+      build,
+      buildId: 'default',
+      profile: noMistakeProfile,
+      attempts: 1,
+      maxDurationMs: 1000,
+      initialStateMutator: instantVictoryState,
+    })
+
+    expect(result.combatLogTrace).toBeUndefined()
+    expect(result.dataEstimate).toMatchObject({
+      attempts: 1,
+      averageDurationSec: expect.any(Number),
+      playerResourcePerSec: expect.any(Number),
+      tankDamageTakenPerSec: expect.any(Number),
+      healingAndAbsorbPerSec: expect.any(Number),
+      playerSideDamagePerSec: expect.any(Number),
+      partyPressurePerSec: expect.any(Number),
+    })
+  })
+
+  it('does not count the same processed resource event repeatedly across automation decisions', () => {
+    const stage = getStageById('harbor-1')
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const result = runBalanceScenario({
+      stage,
+      build,
+      buildId: 'default',
+      profile: {
+        ...noMistakeProfile,
+        decisionIntervalMs: 1,
+      },
+      attempts: 1,
+      maxDurationMs: 1000,
+      tickMs: 1000,
+      initialStateMutator: (state) => ({
+        ...instantVictoryState(state),
+        timeMs: 1000,
+        player: {
+          ...state.player,
+          resource: 10,
+        },
+        runtime: {
+          ...state.runtime,
+          lastProcessedEvents: [
+            {
+              type: 'player/resource-changed',
+              occurredAtMs: 0,
+              amount: 20,
+              reason: 'stale-test-event',
+            },
+          ],
+        },
+      }),
+    })
+
+    expect(result.dataEstimate?.playerResourcePerSec).toBe(0)
+  })
+
   it('optionally collects a minimal trace for calibration', () => {
     const stage = getStageById('harbor-1')
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
@@ -854,6 +917,33 @@ describe('balance simulator', () => {
     expect(analysis.buildSearchMode).toBe('two_phase')
     expect(analysis.scoringMode).toBe('best_build_per_profile')
     expect(analysis.phaseOneBuildCount).toBeGreaterThanOrEqual(1)
+  })
+
+  it('includes external build candidates in two-phase fixed strategy analysis', () => {
+    const stage = getStageById('harbor-1')
+    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const externalBuild: PersistedBuildState = {
+      ...defaultBuild,
+      passiveTalentIds: ['warrior_t_reinforced_plates'],
+    }
+    const analysis = runTwoPhaseStageBalanceAnalysis({
+      stage,
+      profiles: [noMistakeProfile],
+      extraBuildCandidates: [{ id: 'manual_playtest_recommended', build: externalBuild }],
+      attemptsPerScenario: 1,
+      phaseOneAttemptsPerScenario: 1,
+      phaseOneMaxActiveBuilds: 1,
+      phaseOneMaxPassiveVariants: 1,
+      finalBuildCount: 2,
+      maxDurationMs: 1000,
+      initialStateMutator: (state) =>
+        state.passiveTalentIds.includes('warrior_t_reinforced_plates')
+          ? instantVictoryState(state)
+          : state,
+    })
+
+    expect(analysis.phaseOneBuildCount).toBeGreaterThan(1)
+    expect(analysis.scenarios.some((scenario) => scenario.buildId === 'manual_playtest_recommended')).toBe(true)
   })
 
   it('selects final two-phase builds by shared aggregate performance instead of profile-specific winners', () => {

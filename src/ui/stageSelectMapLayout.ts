@@ -1,4 +1,4 @@
-import { stageAreaOrder, type StageAreaId, type StageInfo, type StageNumber } from '../game/data/stageTemplates'
+import { campaignStageAreaOrder, type StageAreaId, type StageInfo, type StageNumber } from '../game/data/stageTemplates'
 
 export interface StageNodeLayout {
   x: string
@@ -40,7 +40,7 @@ export function getStageNodeLayout(stage: StageInfo): StageNodeLayout {
     return layoutByArea[stage.stageNumber]
   }
 
-  const areaIndex = stageAreaOrder.indexOf(stage.areaId as StageAreaId)
+  const areaIndex = campaignStageAreaOrder.indexOf(stage.areaId as StageAreaId)
   const fallbackArea = DEFAULT_LAYOUT_AREAS[Math.max(0, areaIndex) % DEFAULT_LAYOUT_AREAS.length] ?? DEFAULT_LAYOUT_AREAS[0]
   return STAGE_NODE_LAYOUT_BY_AREA_ORDER[fallbackArea][stage.stageNumber] ?? STAGE_NODE_LAYOUT_BY_AREA_ORDER[fallbackArea][1]
 }

@@ -1,0 +1,521 @@
+{
+  "title": "第二章策略提示敏感性",
+  "generatedAt": "2026-07-14T13:11:46.924Z",
+  "sampleLabel": "quick",
+  "stages": [
+    {
+      "stageId": "WestFall-1",
+      "title": "南瓜农场",
+      "strategyTips": "注意在鱼人斥候集体攻击的阶段使用减伤类技能",
+      "signals": [
+        "defensive_timing"
+      ],
+      "baseline": {
+        "mode": "baseline",
+        "bestPassRate": 1,
+        "selectedBuildIds": [
+          "default",
+          "generated_2_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "保留 strategyTips 与提示优先构筑候选；候选构筑 2 个。"
+        ]
+      },
+      "lowAttention": {
+        "mode": "low_attention",
+        "bestPassRate": 1,
+        "selectedBuildIds": [
+          "default",
+          "generated_2_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "不插入 strategyTips 优先构筑候选，但保留提示文本参与战术过滤；候选构筑 2 个。"
+        ]
+      },
+      "ignored": {
+        "mode": "ignored",
+        "bestPassRate": 1,
+        "selectedBuildIds": [
+          "default",
+          "generated_2_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "清空 strategyTips，并且不插入提示优先构筑候选；候选构筑 2 个。"
+        ]
+      },
+      "violated": {
+        "mode": "violated",
+        "bestPassRate": 1,
+        "selectedBuildIds": [
+          "default",
+          "generated_2_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "清空 strategyTips，并排除可识别的提示对齐构筑/战术；候选构筑 2 个。"
+        ]
+      },
+      "dependency": {
+        "label": "low",
+        "absoluteDrop": 0,
+        "relativeDrop": 0,
+        "reasons": [
+          "完全忽视 strategyTips 后通过率下降 0pp / 0%",
+          "提示依赖较低，常规学习路径基本能覆盖。"
+        ]
+      }
+    },
+    {
+      "stageId": "WestFall-2",
+      "title": "哨兵岭",
+      "strategyTips": "优先击杀初始dps更高的敌人，注意每次释放“复仇”的群体伤害尽量覆盖到更多目标",
+      "signals": [
+        "priority_kill",
+        "aoe_positioning",
+        "resource_absorb_uptime"
+      ],
+      "baseline": {
+        "mode": "baseline",
+        "bestPassRate": 0.875,
+        "selectedBuildIds": [
+          "default",
+          "generated_7_1"
+        ],
+        "selectedCastStrategyIds": [
+          "broad-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "kill-high-impact"
+        ],
+        "notes": [
+          "保留 strategyTips 与提示优先构筑候选；候选构筑 2 个。"
+        ]
+      },
+      "lowAttention": {
+        "mode": "low_attention",
+        "bestPassRate": 0.875,
+        "selectedBuildIds": [
+          "default",
+          "generated_7_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "mechanic-focus"
+        ],
+        "notes": [
+          "不插入 strategyTips 优先构筑候选，但保留提示文本参与战术过滤；候选构筑 2 个。"
+        ]
+      },
+      "ignored": {
+        "mode": "ignored",
+        "bestPassRate": 0.5,
+        "selectedBuildIds": [
+          "default",
+          "generated_7_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "清空 strategyTips，并且不插入提示优先构筑候选；候选构筑 2 个。"
+        ]
+      },
+      "violated": {
+        "mode": "violated",
+        "bestPassRate": 0,
+        "selectedBuildIds": [
+          "default"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "清空 strategyTips，并排除可识别的提示对齐构筑/战术；候选构筑 1 个。"
+        ]
+      },
+      "dependency": {
+        "label": "high",
+        "absoluteDrop": 0.375,
+        "relativeDrop": 0.42857142857142855,
+        "reasons": [
+          "完全忽视 strategyTips 后通过率下降 38pp / 43%",
+          "提示对稳定通关有明显帮助。"
+        ]
+      }
+    },
+    {
+      "stageId": "WestFall-3",
+      "title": "月溪镇",
+      "strategyTips": "努力在敌方治疗间隔中单体击杀当前血量最低的敌人",
+      "signals": [
+        "priority_kill"
+      ],
+      "baseline": {
+        "mode": "baseline",
+        "bestPassRate": 0.25,
+        "selectedBuildIds": [
+          "default",
+          "generated_5_1"
+        ],
+        "selectedCastStrategyIds": [
+          "broad-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "kill-high-impact"
+        ],
+        "notes": [
+          "保留 strategyTips 与提示优先构筑候选；候选构筑 2 个。"
+        ]
+      },
+      "lowAttention": {
+        "mode": "low_attention",
+        "bestPassRate": 0.375,
+        "selectedBuildIds": [
+          "default",
+          "generated_5_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "kill-high-impact"
+        ],
+        "notes": [
+          "不插入 strategyTips 优先构筑候选，但保留提示文本参与战术过滤；候选构筑 2 个。"
+        ]
+      },
+      "ignored": {
+        "mode": "ignored",
+        "bestPassRate": 0,
+        "selectedBuildIds": [
+          "default",
+          "generated_5_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "清空 strategyTips，并且不插入提示优先构筑候选；候选构筑 2 个。"
+        ]
+      },
+      "violated": {
+        "mode": "violated",
+        "bestPassRate": 0.125,
+        "selectedBuildIds": [
+          "default",
+          "generated_5_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "清空 strategyTips，并排除可识别的提示对齐构筑/战术；候选构筑 2 个。"
+        ]
+      },
+      "dependency": {
+        "label": "critical",
+        "absoluteDrop": 0.25,
+        "relativeDrop": 1,
+        "reasons": [
+          "完全忽视 strategyTips 后通过率下降 25pp / 100%",
+          "提示可能对应关键解法或关键构筑。"
+        ]
+      }
+    },
+    {
+      "stageId": "WestFall-4",
+      "title": "死亡矿井",
+      "strategyTips": "最高优先级的我方技能是“盾牌猛击”，最高威胁的敌方技能是“鱼人闪电术”",
+      "signals": [
+        "defensive_timing",
+        "spell_reflect",
+        "priority_kill"
+      ],
+      "baseline": {
+        "mode": "baseline",
+        "bestPassRate": 0,
+        "selectedBuildIds": [
+          "default",
+          "generated_1_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "kill-high-impact"
+        ],
+        "notes": [
+          "保留 strategyTips 与提示优先构筑候选；候选构筑 2 个。"
+        ]
+      },
+      "lowAttention": {
+        "mode": "low_attention",
+        "bestPassRate": 0,
+        "selectedBuildIds": [
+          "default",
+          "generated_1_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "kill-high-impact"
+        ],
+        "notes": [
+          "不插入 strategyTips 优先构筑候选，但保留提示文本参与战术过滤；候选构筑 2 个。"
+        ]
+      },
+      "ignored": {
+        "mode": "ignored",
+        "bestPassRate": 0,
+        "selectedBuildIds": [
+          "default",
+          "generated_1_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "清空 strategyTips，并且不插入提示优先构筑候选；候选构筑 2 个。"
+        ]
+      },
+      "violated": {
+        "mode": "violated",
+        "bestPassRate": 0,
+        "selectedBuildIds": [
+          "default",
+          "generated_1_1"
+        ],
+        "selectedCastStrategyIds": [
+          "broad-low-mid-casts"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "清空 strategyTips，并排除可识别的提示对齐构筑/战术；候选构筑 2 个。"
+        ]
+      },
+      "dependency": {
+        "label": "low",
+        "absoluteDrop": 0,
+        "relativeDrop": 0,
+        "reasons": [
+          "完全忽视 strategyTips 后通过率下降 0pp / 0%",
+          "提示依赖较低，常规学习路径基本能覆盖。"
+        ]
+      }
+    },
+    {
+      "stageId": "WestFall-5",
+      "title": "灯塔",
+      "strategyTips": "卡好gcd时间反弹“鱼人闪电术”，怒气保持“无视苦痛”覆盖",
+      "signals": [
+        "spell_reflect",
+        "aoe_positioning",
+        "resource_absorb_uptime"
+      ],
+      "baseline": {
+        "mode": "baseline",
+        "bestPassRate": 0,
+        "selectedBuildIds": [
+          "default",
+          "generated_3_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "保留 strategyTips 与提示优先构筑候选；候选构筑 2 个。"
+        ]
+      },
+      "lowAttention": {
+        "mode": "low_attention",
+        "bestPassRate": 0,
+        "selectedBuildIds": [
+          "default",
+          "generated_3_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "不插入 strategyTips 优先构筑候选，但保留提示文本参与战术过滤；候选构筑 2 个。"
+        ]
+      },
+      "ignored": {
+        "mode": "ignored",
+        "bestPassRate": 0,
+        "selectedBuildIds": [
+          "default",
+          "generated_3_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "清空 strategyTips，并且不插入提示优先构筑候选；候选构筑 2 个。"
+        ]
+      },
+      "violated": {
+        "mode": "violated",
+        "bestPassRate": 0,
+        "selectedBuildIds": [
+          "default",
+          "generated_3_1"
+        ],
+        "selectedCastStrategyIds": [
+          "broad-low-mid-casts"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "清空 strategyTips，并排除可识别的提示对齐构筑/战术；候选构筑 2 个。"
+        ]
+      },
+      "dependency": {
+        "label": "low",
+        "absoluteDrop": 0,
+        "relativeDrop": 0,
+        "reasons": [
+          "完全忽视 strategyTips 后通过率下降 0pp / 0%",
+          "提示依赖较低，常规学习路径基本能覆盖。"
+        ]
+      }
+    },
+    {
+      "stageId": "WestFall-6",
+      "title": "海岸",
+      "strategyTips": "注意配合使用新解锁的tier 2强力天赋，不适合当前关卡的主动技能也可以放弃掉，来给被动天赋多腾出点数",
+      "signals": [
+        "passive_heavy"
+      ],
+      "baseline": {
+        "mode": "baseline",
+        "bestPassRate": 0.25,
+        "selectedBuildIds": [
+          "default",
+          "generated_5_2"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "保留 strategyTips 与提示优先构筑候选；候选构筑 6 个。"
+        ]
+      },
+      "lowAttention": {
+        "mode": "low_attention",
+        "bestPassRate": 0,
+        "selectedBuildIds": [
+          "default",
+          "generated_1_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "不插入 strategyTips 优先构筑候选，但保留提示文本参与战术过滤；候选构筑 2 个。"
+        ]
+      },
+      "ignored": {
+        "mode": "ignored",
+        "bestPassRate": 0,
+        "selectedBuildIds": [
+          "default",
+          "generated_1_1"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "清空 strategyTips，并且不插入提示优先构筑候选；候选构筑 2 个。"
+        ]
+      },
+      "violated": {
+        "mode": "violated",
+        "bestPassRate": 0,
+        "selectedBuildIds": [
+          "default"
+        ],
+        "selectedCastStrategyIds": [
+          "balanced-window"
+        ],
+        "selectedTacticalStrategyIds": [
+          "strict-threat"
+        ],
+        "notes": [
+          "清空 strategyTips，并排除可识别的提示对齐构筑/战术；候选构筑 1 个。"
+        ]
+      },
+      "dependency": {
+        "label": "critical",
+        "absoluteDrop": 0.25,
+        "relativeDrop": 1,
+        "reasons": [
+          "完全忽视 strategyTips 后通过率下降 25pp / 100%",
+          "提示可能对应关键解法或关键构筑。"
+        ]
+      }
+    }
+  ]
+}

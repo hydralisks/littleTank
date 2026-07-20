@@ -9,6 +9,8 @@ const DESKTOP_DATA_FILES = [
   'encounter_balance.xlsx',
   'enemy_data.xlsx',
   'player_build.xlsx',
+  'challenge_stage_content.xlsx',
+  'challenge_encounter_balance.xlsx',
 ]
 
 function ensureDirectory(dirPath) {
