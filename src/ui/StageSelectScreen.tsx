@@ -6,6 +6,7 @@ import {
   SKILL_HOTKEYS,
   canUseSkillInRule,
   canUseTalentInRule,
+  getDefaultPersistedBuildForRule,
   getActivePointCost,
   getActiveSkillCatalog,
   getActiveSkillDefinition,
@@ -14,6 +15,8 @@ import {
   getPassivePointCost,
   getPassiveTalentCatalog,
   getPassiveTalentDefinition,
+  getPlayerClassCatalog,
+  getPlayerClassDefinition,
   getTotalBuildPoints,
   isHotkeyEnabledForRule,
   normalizePersistedBuildForRule,
@@ -21,6 +24,7 @@ import {
 import type {
   PassiveTalentId,
   PersistedBuildState,
+  PlayerClassId,
   SkillHotkey,
   SkillId,
   SkillLoadout,
@@ -40,6 +44,16 @@ import {
   stageCatalog,
 } from '../game/data/stageTemplates'
 import { buildMonsterCodexEntries } from '../game/data/monsterCodex'
+import * as playerClassRuntimeRegistry from '../game/playerClasses/playerClassRuntimeRegistry'
+import {
+  hasClassVictory,
+  type ClassProgressionState,
+} from '../game/progression/classProgression'
+import {
+  getAvailableClassIdsForStage,
+  resolveStageClassId,
+} from '../game/progression/stageClassAvailability'
+import { isChallengeStageOpen } from '../game/progression/classTrialPolicy'
 import { getStageNodeLayout } from './stageSelectMapLayout'
 import {
   buildStageSelectBuildRuleModal,
@@ -50,25 +64,28 @@ import { resolveIconAssetUrl } from './statusIconResolver'
 import { MonsterCodexPanel } from './MonsterCodexPanel'
 import { PassiveTalentPanel } from './PassiveTalentPanel'
 import { SkillConfigPanel } from './SkillConfigPanel'
+import { StageClassEntryControl, type StageClassEntryOption } from './StageClassEntryControl'
 import { TutorialOverlay } from './TutorialOverlay'
 import { getMonsterCodexTutorialScript, getStageSelectTutorialScript } from './tutorialGuide'
 
-interface StageSelectScreenProps {
+interface StageSelectScreenProps extends ClassProgressionState {
   defaultMode?: StageSelectMode
   defaultSelectedStageId: StageId
   highestClearedStageIndex: number
   maxUnlockedStageIndex: number
   partyStageId: StageId
-  persistedBuild: PersistedBuildState
+  selectedClassId: PlayerClassId
+  buildsByClassId: Record<PlayerClassId, PersistedBuildState>
   seenEnemyDefinitionIds?: readonly string[]
   monsterCodexTutorialSeen?: boolean
   stageSelectTutorialSeenStageIds?: readonly StageId[]
   tutorialReplayVersion?: number
-  onStartStage: (stageId: StageId, mode: StageSelectMode) => void
+  onSelectClass: (classId: PlayerClassId) => void
+  onStartStage: (stageId: StageId, mode: StageSelectMode, classId: PlayerClassId) => void
   onResetTutorials?: () => void
   onMonsterCodexTutorialComplete?: () => void
   onStageSelectTutorialComplete?: (stageId: StageId) => void
-  onBuildChange?: (build: PersistedBuildState, stageId: StageId) => void
+  onBuildChange?: (classId: PlayerClassId, build: PersistedBuildState, stageId: StageId) => void
 }
 
 const AREA_CAPTIONS: Record<StageAreaId, { x: string; y: string }> = {
@@ -160,13 +177,14 @@ function StageInfoIcon({ iconId, title }: { iconId?: string; title: string }) {
 
 function canAssignSkillToHotkey(
   buildRuleId: string,
+  classId: PlayerClassId,
   loadout: SkillLoadout,
   hotkey: SkillHotkey,
   skillId: SkillId,
   remainingBuildPoints: number,
   unlockedActiveSkillIds: readonly SkillId[],
 ) {
-  if (!isHotkeyEnabledForRule(buildRuleId, hotkey) || !canUseSkillInRule(buildRuleId, 'warrior_t', skillId, unlockedActiveSkillIds)) {
+  if (!isHotkeyEnabledForRule(buildRuleId, hotkey) || !canUseSkillInRule(buildRuleId, classId, skillId, unlockedActiveSkillIds)) {
     return false
   }
 
@@ -268,11 +286,16 @@ export function StageSelectScreen({
   highestClearedStageIndex,
   maxUnlockedStageIndex,
   partyStageId,
-  persistedBuild,
+  selectedClassId,
+  buildsByClassId,
+  challengeVictoriesByClass,
+  campaignVictoriesByClass,
+  campaignUnlockedClassIds,
   seenEnemyDefinitionIds = [],
   monsterCodexTutorialSeen = true,
   stageSelectTutorialSeenStageIds = [],
   tutorialReplayVersion = 0,
+  onSelectClass,
   onStartStage,
   onResetTutorials,
   onMonsterCodexTutorialComplete,
@@ -305,6 +328,36 @@ export function StageSelectScreen({
   const selectedChallengeStageId = resolveExistingStageId(selectedChallenge.stageId, fallbackChallengeEntry.stageId)
   const effectiveSelectedStageId = stageSelectMode === 'challenge' ? selectedChallengeStageId : selectedCampaignStageId
   const selectedStage = getStageById(effectiveSelectedStageId)
+  const classRuntimeDefinitions = playerClassRuntimeRegistry.getPlayerClassRuntimeDefinitions()
+  const enabledClassIds = getPlayerClassCatalog().map((definition) => definition.classId)
+  const availableClassIds = getAvailableClassIdsForStage(selectedStage, {
+    highestClearedCampaignStageIndex: highestClearedStageIndex,
+    challengeVictoriesByClass,
+    campaignVictoriesByClass,
+    campaignUnlockedClassIds,
+    registeredClassIds: classRuntimeDefinitions.map((runtime) => runtime.classId),
+    enabledClassIds,
+  })
+  const effectiveClassId = resolveStageClassId(selectedClassId, availableClassIds)
+  const classEntryOptions = classRuntimeDefinitions
+    .filter((runtime) => availableClassIds.includes(runtime.classId))
+    .map<StageClassEntryOption | null>((runtime) => {
+      const classDefinition = getPlayerClassDefinition(runtime.classId)
+      if (!classDefinition) {
+        return null
+      }
+      return {
+        classId: runtime.classId,
+        className: classDefinition.className,
+        buttonIconKey: runtime.buttonIconKey,
+        cleared: hasClassVictory(
+          stageSelectMode === 'challenge' ? challengeVictoriesByClass : campaignVictoriesByClass,
+          runtime.classId,
+          effectiveSelectedStageId,
+        ),
+      }
+    })
+    .filter((option): option is StageClassEntryOption => Boolean(option))
   const tutorialScript = getStageSelectTutorialScript(selectedStage) ?? []
   const shouldShowSelectedStageTutorial = tutorialScript.length > 0 && !stageSelectTutorialSeenStageIds.includes(selectedStageId)
   const [tutorialState, setTutorialState] = useState(() => ({
@@ -315,12 +368,27 @@ export function StageSelectScreen({
   const selectedBuildRuleId = getStageBuildRuleId(selectedStage)
   const selectedBuildRule = getBuildRuleDefinition(selectedBuildRuleId)
   const unlockedActiveSkillIds = getUnlockedActiveSkillIdsForStage(selectedStage)
-  const buildPreview = normalizePersistedBuildForRule(
-    persistedBuild,
-    selectedBuildRuleId, 'warrior_t',
-    getPassiveTalentUnlockTierForStage(selectedStage),
-    unlockedActiveSkillIds,
-  )
+  const selectedBuild = effectiveClassId ? buildsByClassId[effectiveClassId] : undefined
+  const persistedBuild = effectiveClassId && selectedBuild
+    ? selectedBuild
+    : effectiveClassId
+      ? getDefaultPersistedBuildForRule(selectedBuildRuleId, effectiveClassId)
+      : null
+  const buildPreview = persistedBuild && effectiveClassId
+    ? normalizePersistedBuildForRule(
+        persistedBuild,
+        selectedBuildRuleId,
+        effectiveClassId,
+        getPassiveTalentUnlockTierForStage(selectedStage),
+        unlockedActiveSkillIds,
+      )
+    : {
+        build: {
+          loadout: Object.fromEntries(SKILL_HOTKEYS.map((hotkey) => [hotkey, null])) as SkillLoadout,
+          passiveTalentIds: [],
+        },
+        warnings: [],
+      }
   const selectedStageIndex = campaignStageOrder.indexOf(effectiveSelectedStageId)
   const isMonsterCodexUnlocked = highestClearedStageIndex >= 1
   const monsterCodexTutorialScript = isMonsterCodexUnlocked && !monsterCodexTutorialSeen
@@ -342,11 +410,21 @@ export function StageSelectScreen({
   const skillLoadout = buildPreview.build.loadout
   const selectedPassiveTalentIds = buildPreview.build.passiveTalentIds
   const activeSkills = getActiveSkillCatalog()
-    .filter((skill) => canUseSkillInRule(selectedBuildRuleId, 'warrior_t', skill.id, unlockedActiveSkillIds))
+    .filter((skill) => Boolean(effectiveClassId) && canUseSkillInRule(
+      selectedBuildRuleId,
+      effectiveClassId!,
+      skill.id,
+      unlockedActiveSkillIds,
+    ))
     .sort((left, right) => (left.uiOrder ?? 999) - (right.uiOrder ?? 999) || left.id.localeCompare(right.id))
   const unlockedPassiveTalentTier = getPassiveTalentUnlockTierForStage(selectedStage)
   const passiveTalents = getPassiveTalentCatalog().filter((talent) =>
-    canUseTalentInRule(selectedBuildRuleId, 'warrior_t', talent.id, unlockedPassiveTalentTier)
+    Boolean(effectiveClassId) && canUseTalentInRule(
+      selectedBuildRuleId,
+      effectiveClassId!,
+      talent.id,
+      unlockedPassiveTalentTier,
+    )
   )
   const activePoints = getActivePointCost(skillLoadout)
   const passivePoints = getPassivePointCost(selectedPassiveTalentIds)
@@ -400,7 +478,14 @@ export function StageSelectScreen({
   const monsterCodexEntries = buildMonsterCodexEntries(seenEnemyDefinitionIds)
 
   function commitBuild(nextLoadout: SkillLoadout, nextPassiveTalentIds: PassiveTalentId[]) {
-    onBuildChange?.({ loadout: nextLoadout, passiveTalentIds: nextPassiveTalentIds }, effectiveSelectedStageId)
+    if (!effectiveClassId) {
+      return
+    }
+    onBuildChange?.(
+      effectiveClassId,
+      { loadout: nextLoadout, passiveTalentIds: nextPassiveTalentIds },
+      effectiveSelectedStageId,
+    )
   }
 
   function advanceTutorial() {
@@ -441,13 +526,14 @@ export function StageSelectScreen({
   }
 
   function handleAssignSkill(skillId: SkillId) {
-    if (!selectedConfigHotkey) {
+    if (!selectedConfigHotkey || !effectiveClassId) {
       return
     }
 
     if (
       !canAssignSkillToHotkey(
         selectedBuildRuleId,
+        effectiveClassId,
         skillLoadout,
         selectedConfigHotkey,
         skillId,
@@ -472,7 +558,12 @@ export function StageSelectScreen({
   }
 
   function handleTogglePassive(talentId: PassiveTalentId) {
-    if (!canUseTalentInRule(selectedBuildRuleId, 'warrior_t', talentId, unlockedPassiveTalentTier)) {
+    if (!effectiveClassId || !canUseTalentInRule(
+      selectedBuildRuleId,
+      effectiveClassId,
+      talentId,
+      unlockedPassiveTalentTier,
+    )) {
       return
     }
     if (!canTogglePassiveTalent(selectedBuildRuleId, talentId, selectedPassiveTalentIds, activePoints)) {
@@ -682,14 +773,17 @@ export function StageSelectScreen({
               )
             })}
 
-            <button
-              type="button"
-              className="stage-map__enter-action"
-              disabled={selectedStageIndex > maxUnlockedStageIndex}
-              onClick={() => onStartStage(selectedStageId, 'campaign')}
-            >
-              {selectedStageIndex > maxUnlockedStageIndex ? '\u5c1a\u672a\u89e3\u9501' : '\u8fdb\u5165\u8fd9\u4e00\u5173'}
-            </button>
+            <StageClassEntryControl
+              classes={classEntryOptions}
+              selectedClassId={effectiveClassId ?? selectedClassId}
+              disabled={selectedStageIndex > maxUnlockedStageIndex || !effectiveClassId}
+              onSelectClass={onSelectClass}
+              onEnter={() => {
+                if (effectiveClassId) {
+                  onStartStage(effectiveSelectedStageId, 'campaign', effectiveClassId)
+                }
+              }}
+            />
           </div>
           ) : (
             <div className="challenge-board" aria-label="挑战模式">
@@ -704,6 +798,7 @@ export function StageSelectScreen({
                   const challengeStageId = resolveExistingStageId(challenge.stageId, fallbackChallengeEntry.stageId)
                   const challengeStage = getStageById(challengeStageId)
                   const isSelectedChallenge = challenge.id === selectedChallenge.id
+                  const isOpen = isChallengeStageOpen(challengeStageId, highestClearedStageIndex)
 
                   return (
                     <button
@@ -712,8 +807,13 @@ export function StageSelectScreen({
                       className={[
                         'challenge-card',
                         isSelectedChallenge ? 'is-selected' : '',
+                        isOpen ? '' : 'is-locked',
                       ].filter(Boolean).join(' ')}
+                      disabled={!isOpen}
                       onClick={() => {
+                        if (!isOpen) {
+                          return
+                        }
                         setSelectedChallengeId(challenge.id)
                         setBuildInfoModal('none')
                         setOpenBuildPanel(null)
@@ -730,13 +830,17 @@ export function StageSelectScreen({
                 })}
               </div>
 
-              <button
-                type="button"
-                className="stage-map__enter-action"
-                onClick={() => onStartStage(selectedChallengeStageId, 'challenge')}
-              >
-                进入这一关
-              </button>
+              <StageClassEntryControl
+                classes={classEntryOptions}
+                selectedClassId={effectiveClassId ?? selectedClassId}
+                disabled={!isChallengeStageOpen(selectedChallengeStageId, highestClearedStageIndex) || !effectiveClassId}
+                onSelectClass={onSelectClass}
+                onEnter={() => {
+                  if (effectiveClassId) {
+                    onStartStage(effectiveSelectedStageId, 'challenge', effectiveClassId)
+                  }
+                }}
+              />
             </div>
           )}
 
@@ -1042,9 +1146,10 @@ export function StageSelectScreen({
         onAssignSkill={handleAssignSkill}
         onClearHotkey={handleClearHotkey}
         canAssignToSelectedHotkey={(skillId) =>
-          selectedConfigHotkey
+          selectedConfigHotkey && effectiveClassId
             ? canAssignSkillToHotkey(
                 selectedBuildRuleId,
+                effectiveClassId,
                 skillLoadout,
                 selectedConfigHotkey,
                 skillId,
@@ -1067,7 +1172,8 @@ export function StageSelectScreen({
         onClose={closeBuildPanel}
         onToggleTalent={handleTogglePassive}
         canToggleTalent={(talentId) =>
-          canUseTalentInRule(selectedBuildRuleId, 'warrior_t', talentId, unlockedPassiveTalentTier) &&
+          Boolean(effectiveClassId) &&
+          canUseTalentInRule(selectedBuildRuleId, effectiveClassId!, talentId, unlockedPassiveTalentTier) &&
           canTogglePassiveTalent(selectedBuildRuleId, talentId, selectedPassiveTalentIds, activePoints)
         }
       />

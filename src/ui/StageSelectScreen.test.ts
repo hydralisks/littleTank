@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act } from 'react'
+import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { JSDOM } from 'jsdom'
 import { createElement } from 'react'
@@ -13,9 +13,12 @@ import {
 import {
   applyPlayerBuildWorkbookOverrides,
   getDefaultPersistedBuildForRule,
+  getPlayerClassCatalog,
   resetPlayerBuildCatalog,
 } from '../game/data/playerBuildCatalog'
 import type { PersistedBuildState } from '../game/encounter/encounterTypes'
+import * as playerClassRuntimeRegistry from '../game/playerClasses/playerClassRuntimeRegistry'
+import { getAvailableClassIdsForStage } from '../game/progression/stageClassAvailability'
 import { parsePlayerBuildWorkbook } from '../game/data/workbookLoader'
 import { buildMonsterCodexEntries, getEnemyDefinitionIdsForStage } from '../game/data/monsterCodex'
 import { getStageNodeLayout } from './stageSelectMapLayout'
@@ -34,14 +37,189 @@ type ReactActGlobal = typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean
 }
 
+function createWarriorClassProps(build: PersistedBuildState) {
+  return {
+    selectedClassId: 'warrior_t',
+    buildsByClassId: { warrior_t: build },
+    challengeVictoriesByClass: {},
+    campaignVictoriesByClass: {},
+    campaignUnlockedClassIds: ['warrior_t'],
+    onSelectClass: () => undefined,
+  }
+}
+
 describe('StageSelectScreen map layout', () => {
   afterEach(() => {
+    vi.restoreAllMocks()
     applyStageWorkbookOverrides({
       areaOverrides: [],
       stageOverrides: [],
       legendOverrides: [],
     })
     resetPlayerBuildCatalog()
+  })
+
+  it('renders cumulative class entry options and starts the challenge with the selected class', async () => {
+    applyStageWorkbookOverrides({
+      areaOverrides: [
+        { areaId: 'RingingDeeps', title: 'Ringing Deeps' },
+      ],
+      stageOverrides: [
+        { stageId: 'RingingDeeps-1', areaId: 'RingingDeeps', order: 1 },
+        { stageId: 'RingingDeeps-6', areaId: 'RingingDeeps', order: 6 },
+      ],
+      legendOverrides: [],
+    })
+    applyStageWorkbookOverrides({
+      areaOverrides: [{ areaId: 'Challenge', title: 'Challenge' }],
+      stageOverrides: [
+        {
+          stageId: 'Challenge-1',
+          areaId: 'Challenge',
+          order: 1,
+          allowedClassIds: ['warrior_t', 'druid_bear_t'],
+        },
+      ],
+      legendOverrides: [],
+    })
+    const designerBuildOverrides = parsePlayerBuildWorkbook(
+      XLSX.readFile('public/designer-data/player_build.xlsx'),
+    )
+    applyPlayerBuildWorkbookOverrides({
+      ...designerBuildOverrides,
+      classDefinitions: [...designerBuildOverrides.classDefinitions, {
+        classId: 'druid_bear_t',
+        className: '熊T',
+        roleTag: 'tank',
+        classDescription: 'Test bear tank.',
+        recommendedBuildRuleIds: ['standard_5slot'],
+        enabled: true,
+      }],
+      activeSkillDefinitions: [...designerBuildOverrides.activeSkillDefinitions, {
+        skillId: 'druid_bear_t_growl',
+        classId: 'druid_bear_t',
+        skillName: '低吼',
+        shortName: '低吼',
+        description: 'Test taunt.',
+        iconId: 'taunt',
+        pointCost: 4,
+        resourceCost: 0,
+        cooldownMs: 8000,
+        gcdMs: 800,
+        targetingType: 'currentEnemy',
+        skillLogicId: 'taunt_single',
+        castStopMode: 'none',
+        canAffectSkull: true,
+        enabled: true,
+      }],
+      defaultActiveBuilds: [...designerBuildOverrides.defaultActiveBuilds, {
+        presetId: 'standard_5slot',
+        buildRuleId: 'standard_5slot',
+        classId: 'druid_bear_t',
+        hotkey: '1',
+        skillId: 'druid_bear_t_growl',
+        priority: 1,
+      }],
+    })
+    vi.spyOn(playerClassRuntimeRegistry, 'getPlayerClassRuntimeDefinitions').mockReturnValue([
+      playerClassRuntimeRegistry.getPlayerClassRuntimeDefinition('warrior_t'),
+      {
+        classId: 'druid_bear_t',
+        selectionOrder: 1,
+        buttonIconKey: 'paw-print',
+        aiStrategyId: 'druid_bear_t_default',
+        primaryResource: {
+          id: 'rage',
+          label: '怒气',
+          maxResource: 100,
+          passiveGainPerSecond: 3,
+          damageTakenGainDivisor: 5,
+          minimumDamageTakenGain: 4,
+        },
+        initializeRuntime: () => ({}),
+      },
+    ])
+
+    const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
+      url: 'http://localhost/',
+    })
+    const previousWindow = globalThis.window
+    const previousDocument = globalThis.document
+    const previousIsActEnvironment = (globalThis as ReactActGlobal).IS_REACT_ACT_ENVIRONMENT
+    setGlobalProperty('window', dom.window)
+    setGlobalProperty('document', dom.window.document)
+    setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', true)
+    const onSelectClass = vi.fn()
+    const onStartStage = vi.fn()
+    let root: Root | null = null
+    const warriorBuild = getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')
+    const bearBuild = getDefaultPersistedBuildForRule('standard_5slot', 'druid_bear_t')
+    expect(playerClassRuntimeRegistry.getPlayerClassRuntimeDefinitions()).toHaveLength(2)
+    expect(getPlayerClassCatalog().map((definition) => definition.classId)).toContain('druid_bear_t')
+    expect(getStageById('Challenge-1').allowedClassIds).toContain('druid_bear_t')
+    expect(getAvailableClassIdsForStage(getStageById('Challenge-1'), {
+      highestClearedCampaignStageIndex: 5,
+      challengeVictoriesByClass: { warrior_t: ['Challenge-1'] },
+      campaignVictoriesByClass: {},
+      campaignUnlockedClassIds: ['warrior_t'],
+      registeredClassIds: ['warrior_t', 'druid_bear_t'],
+      enabledClassIds: ['warrior_t', 'druid_bear_t'],
+    })).toEqual(['warrior_t', 'druid_bear_t'])
+
+    function Harness() {
+      const [selectedClassId, setSelectedClassId] = useState('warrior_t')
+      return createElement(StageSelectScreen, {
+        defaultMode: 'challenge',
+        defaultSelectedStageId: 'RingingDeeps-1',
+        highestClearedStageIndex: 5,
+        maxUnlockedStageIndex: 6,
+        partyStageId: 'RingingDeeps-6',
+        selectedClassId,
+        buildsByClassId: { warrior_t: warriorBuild, druid_bear_t: bearBuild },
+        challengeVictoriesByClass: { warrior_t: ['Challenge-1'] },
+        campaignVictoriesByClass: {},
+        campaignUnlockedClassIds: ['warrior_t'],
+        onSelectClass: (classId: string) => {
+          onSelectClass(classId)
+          setSelectedClassId(classId)
+        },
+        onStartStage,
+      })
+    }
+
+    try {
+      const container = dom.window.document.getElementById('root')!
+      root = createRoot(container)
+      await act(async () => root!.render(createElement(Harness)))
+
+      expect(container.querySelectorAll('.stage-class-entry__slot')).toHaveLength(12)
+      expect(container.querySelectorAll('button.stage-class-entry__slot')).toHaveLength(2)
+      expect([...container.querySelectorAll('button.stage-class-entry__slot')]
+        .map((button) => button.getAttribute('data-class-id'))).toEqual(['warrior_t', 'druid_bear_t'])
+      expect(container.querySelector('[data-class-id="warrior_t"] .stage-class-entry__check')).not.toBeNull()
+      expect(container.querySelector('[data-class-id="druid_bear_t"] .stage-class-entry__check')).toBeNull()
+
+      await act(async () => {
+        container.querySelector<HTMLElement>('[data-class-id="druid_bear_t"]')
+          ?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+      })
+      expect(onSelectClass).toHaveBeenCalledWith('druid_bear_t')
+      expect(container.querySelector('.stage-class-entry__enter')?.textContent).toBe('熊T 进入这一关')
+
+      await act(async () => {
+        container.querySelector<HTMLElement>('.stage-class-entry__enter')
+          ?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
+      })
+      expect(onStartStage).toHaveBeenCalledWith('Challenge-1', 'challenge', 'druid_bear_t')
+    } finally {
+      if (root) {
+        await act(async () => root!.unmount())
+      }
+      setGlobalProperty('window', previousWindow)
+      setGlobalProperty('document', previousDocument)
+      setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', previousIsActEnvironment)
+      dom.window.close()
+    }
   })
 
   it('places stage nodes by explicit area and order instead of stage id prefix', () => {
@@ -124,7 +302,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 3,
           maxUnlockedStageIndex: 7,
           partyStageId: 'RingingDeeps-5',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t'),
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t')),
           onStartStage: () => undefined,
         }))
       })
@@ -167,12 +345,12 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 1,
           partyStageId: 'harbor-1',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t'),
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t')),
           onStartStage,
         }))
       })
 
-      const mapAction = container.querySelector('.stage-map > .stage-map__enter-action') as HTMLElement | null
+      const mapAction = container.querySelector('.stage-map > .stage-class-entry .stage-map__enter-action') as HTMLElement | null
       const selectedArrow = container.querySelector('.stage-map > .stage-map__selected-arrow') as HTMLElement | null
       expect(mapAction).not.toBeNull()
       expect(container.querySelector('.stage-brief > .stage-brief__action')).toBeNull()
@@ -193,7 +371,7 @@ describe('StageSelectScreen map layout', () => {
         mapAction?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
       })
 
-      expect(onStartStage).toHaveBeenCalledWith('harbor-2', 'campaign')
+      expect(onStartStage).toHaveBeenCalledWith('harbor-2', 'campaign', 'warrior_t')
     } finally {
       if (root) {
         await act(async () => {
@@ -263,7 +441,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 0,
           partyStageId: 'TestArea-1',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t'),
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t')),
           onStartStage: () => undefined,
         }))
       })
@@ -319,7 +497,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 0,
           partyStageId: 'harbor-1',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t'),
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t')),
           onStartStage: () => undefined,
         }))
       })
@@ -351,11 +529,17 @@ describe('StageSelectScreen map layout', () => {
     applyStageWorkbookOverrides({
       areaOverrides: [
         { areaId: 'harbor', title: 'Harbor' },
-        { areaId: 'challenge', title: 'Challenge' },
+        { areaId: 'RingingDeeps', title: 'Ringing Deeps' },
       ],
       stageOverrides: [
         { stageId: 'harbor-1', areaId: 'harbor', order: 1 },
-        { stageId: 'harbor-6', areaId: 'harbor', order: 6 },
+        { stageId: 'RingingDeeps-6', areaId: 'RingingDeeps', order: 6 },
+      ],
+      legendOverrides: [],
+    })
+    applyStageWorkbookOverrides({
+      areaOverrides: [{ areaId: 'challenge', title: 'Challenge' }],
+      stageOverrides: [
         { stageId: 'Challenge-1', areaId: 'challenge', order: 1, title: 'Challenge Test' },
       ],
       legendOverrides: [],
@@ -383,8 +567,8 @@ describe('StageSelectScreen map layout', () => {
           defaultSelectedStageId: 'harbor-1',
           highestClearedStageIndex: 5,
           maxUnlockedStageIndex: 6,
-          partyStageId: 'harbor-6',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot', 'warrior_t'),
+          partyStageId: 'RingingDeeps-6',
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_5slot', 'warrior_t')),
           onStartStage,
         }))
       })
@@ -408,11 +592,11 @@ describe('StageSelectScreen map layout', () => {
       expect(container.querySelector('.stage-brief')?.textContent).not.toContain('使用入门关的构筑规则')
 
       await act(async () => {
-        const enterChallenge = container.querySelector('.challenge-board > .stage-map__enter-action') as HTMLElement | null
+        const enterChallenge = container.querySelector('.challenge-board > .stage-class-entry .stage-map__enter-action') as HTMLElement | null
         enterChallenge?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))
       })
 
-      expect(onStartStage).toHaveBeenCalledWith('Challenge-1', 'challenge')
+      expect(onStartStage).toHaveBeenCalledWith('Challenge-1', 'challenge', 'warrior_t')
     } finally {
       if (root) {
         await act(async () => {
@@ -505,7 +689,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 2,
           partyStageId: 'RingingDeeps-1',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot', 'warrior_t'),
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_5slot', 'warrior_t')),
           onStartStage: vi.fn(),
         }))
       })
@@ -558,7 +742,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 5,
           maxUnlockedStageIndex: 6,
           partyStageId: 'harbor-6',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot', 'warrior_t'),
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_5slot', 'warrior_t')),
           onStartStage: () => undefined,
         }))
       })
@@ -604,7 +788,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 0,
           partyStageId: 'harbor-1',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t'),
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t')),
           onStartStage: () => undefined,
           onBuildChange: () => undefined,
         }))
@@ -682,7 +866,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 2,
           maxUnlockedStageIndex: 3,
           partyStageId: 'harbor-4',
-          persistedBuild,
+          ...createWarriorClassProps(persistedBuild),
           onStartStage: () => undefined,
           onBuildChange,
         }))
@@ -709,6 +893,7 @@ describe('StageSelectScreen map layout', () => {
       })
 
       expect(onBuildChange).toHaveBeenCalledWith(
+        'warrior_t',
         expect.objectContaining({
           passiveTalentIds: expect.arrayContaining(['warrior_t_reinforced_plates']),
         }),
@@ -793,7 +978,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 0,
           partyStageId: 'RingingDeeps-2',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t'),
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t')),
           onStartStage: () => undefined,
           onBuildChange: () => undefined,
         }))
@@ -871,7 +1056,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 0,
           partyStageId: 'RingingDeeps-2',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t'),
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t')),
           stageSelectTutorialSeenStageIds: ['RingingDeeps-2'],
           onStartStage: () => undefined,
           onBuildChange: () => undefined,
@@ -926,7 +1111,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 0,
           partyStageId: 'RingingDeeps-2',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t'),
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t')),
           onStartStage: () => undefined,
           onBuildChange: () => undefined,
         }))
@@ -989,7 +1174,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 3,
           maxUnlockedStageIndex: 3,
           partyStageId: 'harbor-4',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot', 'warrior_t'),
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_5slot', 'warrior_t')),
           seenEnemyDefinitionIds,
           onStartStage: () => undefined,
         }))
@@ -1043,7 +1228,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 2,
           partyStageId: 'harbor-3',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t'),
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t')),
           seenEnemyDefinitionIds: [getEnemyDefinitionIdsForStage('harbor-2')[0]],
           onStartStage: () => undefined,
         }))
@@ -1089,7 +1274,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 1,
           maxUnlockedStageIndex: 2,
           partyStageId: 'harbor-3',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t'),
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t')),
           seenEnemyDefinitionIds,
           monsterCodexTutorialSeen: false,
           onMonsterCodexTutorialComplete,

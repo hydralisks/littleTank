@@ -4,15 +4,30 @@ import {
   getDefaultPersistedBuildForRule,
   normalizePersistedBuildForRule,
 } from '../game/data/playerBuildCatalog'
-import { campaignStageOrder, getNextStageId, getStageById, stageOrder, type StageId } from '../game/data/stageTemplates'
 import {
+  campaignStageOrder,
+  getNextStageId,
   getPassiveTalentUnlockTierForStage,
+  getStageById,
   getUnlockedActiveSkillIdsForStage,
+  stageOrder,
+  type StageId,
 } from '../game/data/stageTemplates'
 import {
   appendSeenEnemyDefinitionIds,
   getEnemyDefinitionIdsForStage,
 } from '../game/data/monsterCodex'
+import type { PersistedBuildState, PlayerClassId } from '../game/encounter/encounterTypes'
+import { WARRIOR_T_CLASS_ID } from '../game/playerClasses/playerClassRuntimeRegistry'
+import {
+  createEmptyClassProgression,
+  recordStageVictory,
+  type ClassProgressionState,
+} from '../game/progression/classProgression'
+import {
+  getAvailableClassIdsForStage,
+  resolveStageClassId,
+} from '../game/progression/stageClassAvailability'
 import { EncounterScreen } from '../ui/EncounterScreen'
 import { StageSelectScreen, type StageSelectMode } from '../ui/StageSelectScreen'
 import {
@@ -40,8 +55,26 @@ function App() {
   const [highestClearedStageIndex, setHighestClearedStageIndex] = useState(
     loadedSave?.highestClearedStageIndex ?? INITIAL_HIGHEST_CLEARED_STAGE_INDEX,
   )
-  const [persistedBuild, setPersistedBuild] = useState(() =>
-    loadedSave?.build ?? getDefaultPersistedBuildForRule(getStageBuildRuleId(getStageById(initialStageId)), 'warrior_t'),
+  const [selectedClassId, setSelectedClassId] = useState<PlayerClassId>(
+    loadedSave?.selectedClassId ?? WARRIOR_T_CLASS_ID,
+  )
+  const [encounterClassId, setEncounterClassId] = useState<PlayerClassId>(WARRIOR_T_CLASS_ID)
+  const [buildsByClassId, setBuildsByClassId] = useState<Record<PlayerClassId, PersistedBuildState>>(() =>
+    loadedSave?.buildsByClassId ?? {
+      warrior_t: getDefaultPersistedBuildForRule(
+        getStageBuildRuleId(getStageById(initialStageId)),
+        WARRIOR_T_CLASS_ID,
+      ),
+    },
+  )
+  const [classProgression, setClassProgression] = useState<ClassProgressionState>(() =>
+    loadedSave
+      ? {
+          challengeVictoriesByClass: loadedSave.challengeVictoriesByClass,
+          campaignVictoriesByClass: loadedSave.campaignVictoriesByClass,
+          campaignUnlockedClassIds: loadedSave.campaignUnlockedClassIds,
+        }
+      : createEmptyClassProgression(),
   )
   const [tutorialState, setTutorialState] = useState<TutorialSaveState>(() =>
     loadedSave?.tutorial ?? createEmptyTutorialSaveState(),
@@ -59,94 +92,143 @@ function App() {
     saveSaveGame({
       highestClearedStageIndex,
       stageId,
-      build: persistedBuild,
+      selectedClassId,
+      buildsByClassId,
+      ...classProgression,
       seenEnemyDefinitionIds,
       tutorial: tutorialState,
     })
-  }, [highestClearedStageIndex, persistedBuild, seenEnemyDefinitionIds, stageId, tutorialState])
+  }, [
+    buildsByClassId,
+    classProgression,
+    highestClearedStageIndex,
+    seenEnemyDefinitionIds,
+    selectedClassId,
+    stageId,
+    tutorialState,
+  ])
 
-  function startStage(nextStageId: StageId, mode: StageSelectMode = 'campaign') {
+  function startStage(
+    nextStageId: StageId,
+    mode: StageSelectMode,
+    classId: PlayerClassId,
+    clearedCampaignIndex = highestClearedStageIndex,
+  ) {
     const nextStageIndex = mode === 'campaign' ? campaignStageOrder.indexOf(nextStageId) : stageOrder.indexOf(nextStageId)
-
-    if (nextStageIndex < 0 || (mode === 'campaign' && nextStageIndex > maxUnlockedStageIndex)) {
+    const nextMaxUnlockedStageIndex = Math.max(
+      Math.min(clearedCampaignIndex + 1, campaignStageOrder.length - 1),
+      INITIAL_MAX_UNLOCKED_STAGE_INDEX,
+    )
+    if (nextStageIndex < 0 || (mode === 'campaign' && nextStageIndex > nextMaxUnlockedStageIndex)) {
       return
     }
 
     const nextStage = getStageById(nextStageId)
+    const availableClassIds = getAvailableClassIdsForStage(nextStage, {
+      highestClearedCampaignStageIndex: clearedCampaignIndex,
+      ...classProgression,
+    })
+    if (!availableClassIds.includes(classId)) {
+      return
+    }
+
+    const buildRuleId = getStageBuildRuleId(nextStage)
+    const sourceBuild = buildsByClassId[classId]
+      ?? getDefaultPersistedBuildForRule(buildRuleId, classId)
     const newlyUnlockedSkillIds = nextStage.unlockedActiveSkillIds
     const shouldAutoEquipNewSkills = shouldAutoEquipNewSkillsForStage(
       tutorialState,
+      classId,
       nextStageId,
       newlyUnlockedSkillIds,
     )
-    const normalizedBuild = normalizePersistedBuildForRule(
-      persistedBuild,
-      getStageBuildRuleId(nextStage), 'warrior_t',
+    const normalized = normalizePersistedBuildForRule(
+      sourceBuild,
+      buildRuleId,
+      classId,
       getPassiveTalentUnlockTierForStage(nextStage),
       getUnlockedActiveSkillIdsForStage(nextStage),
       shouldAutoEquipNewSkills ? newlyUnlockedSkillIds : [],
     )
 
-    setPersistedBuild(normalizedBuild.build)
+    setBuildsByClassId((current) => ({ ...current, [classId]: normalized.build }))
     if (shouldAutoEquipNewSkills) {
       setTutorialState((current) => ({
         ...current,
-        autoEquippedStageIds: current.autoEquippedStageIds.includes(nextStageId)
-          ? current.autoEquippedStageIds
-          : [...current.autoEquippedStageIds, nextStageId],
+        autoEquippedStageIdsByClass: {
+          ...current.autoEquippedStageIdsByClass,
+          [classId]: appendUniqueStageId(
+            current.autoEquippedStageIdsByClass[classId] ?? [],
+            nextStageId,
+          ),
+        },
       }))
     }
     setSeenEnemyDefinitionIds((current) =>
-      appendSeenEnemyDefinitionIds(current, getEnemyDefinitionIdsForStage(nextStageId))
+      appendSeenEnemyDefinitionIds(current, getEnemyDefinitionIdsForStage(nextStageId)),
     )
+    setEncounterClassId(classId)
     setStageSelectMode(mode)
     setStageId(nextStageId)
     setEncounterInstance((value) => value + 1)
     setScreen('encounter')
   }
 
-  function handleReturnToStageSelect(outcome?: 'victory' | 'defeat') {
-    if (outcome === 'victory') {
+  function settleStageVictory() {
+    setClassProgression((current) => recordStageVictory(current, {
+      mode: stageSelectMode,
+      stageId,
+      classId: encounterClassId,
+    }))
+    if (stageSelectMode === 'campaign') {
       const clearedIndex = campaignStageOrder.indexOf(stageId)
       if (clearedIndex >= 0) {
         setHighestClearedStageIndex((current) => Math.max(current, clearedIndex))
       }
     }
+  }
 
+  function handleReturnToStageSelect(outcome?: 'victory' | 'defeat') {
+    if (outcome === 'victory') {
+      settleStageVictory()
+    }
     setScreen('select')
   }
 
   function handleAdvanceStage() {
+    settleStageVictory()
     const clearedIndex = campaignStageOrder.indexOf(stageId)
-    if (clearedIndex >= 0) {
-      setHighestClearedStageIndex((current) => Math.max(current, clearedIndex))
-    }
-
     const nextStageId = getNextStageId(stageId)
-
     if (!nextStageId) {
       setScreen('select')
       return
     }
 
-    startStage(nextStageId, 'campaign')
+    const nextStage = getStageById(nextStageId)
+    const nextClearedIndex = Math.max(highestClearedStageIndex, clearedIndex)
+    const availableClassIds = getAvailableClassIdsForStage(nextStage, {
+      highestClearedCampaignStageIndex: nextClearedIndex,
+      ...classProgression,
+    })
+    const nextClassId = resolveStageClassId(encounterClassId, availableClassIds)
+    if (!nextClassId) {
+      setScreen('select')
+      return
+    }
+    startStage(nextStageId, 'campaign', nextClassId, nextClearedIndex)
   }
 
   function markStageSelectTutorialSeen(seenStageId: StageId) {
     setTutorialState((current) => ({
       ...current,
-      seenStageSelectStageIds: current.seenStageSelectStageIds.includes(seenStageId)
-        ? current.seenStageSelectStageIds
-        : [...current.seenStageSelectStageIds, seenStageId],
+      seenStageSelectStageIds: appendUniqueStageId(current.seenStageSelectStageIds, seenStageId),
     }))
   }
 
   function markEncounterTutorialSeen(seenStageId: StageId) {
     setTutorialState((current) => ({
       ...current,
-      seenEncounterStageIds: current.seenEncounterStageIds.includes(seenStageId)
-        ? current.seenEncounterStageIds
-        : [...current.seenEncounterStageIds, seenStageId],
+      seenEncounterStageIds: appendUniqueStageId(current.seenEncounterStageIds, seenStageId),
     }))
   }
 
@@ -175,59 +257,64 @@ function App() {
         highestClearedStageIndex={highestClearedStageIndex}
         maxUnlockedStageIndex={maxUnlockedStageIndex}
         partyStageId={recommendedStageId}
-        persistedBuild={persistedBuild}
+        selectedClassId={selectedClassId}
+        buildsByClassId={buildsByClassId}
+        {...classProgression}
         seenEnemyDefinitionIds={seenEnemyDefinitionIds}
         monsterCodexTutorialSeen={tutorialState.seenMonsterCodexTutorial}
         stageSelectTutorialSeenStageIds={tutorialState.seenStageSelectStageIds}
         tutorialReplayVersion={tutorialReplayVersion}
+        onSelectClass={setSelectedClassId}
         onStartStage={startStage}
         onResetTutorials={resetTutorials}
         onMonsterCodexTutorialComplete={markMonsterCodexTutorialSeen}
         onStageSelectTutorialComplete={markStageSelectTutorialSeen}
-        onBuildChange={(build, editedStageId) => {
-          const nextTutorialState = {
-            ...tutorialState,
-            manualBuildConfiguredStageIds: appendUniqueStageId(
-              tutorialState.manualBuildConfiguredStageIds,
-              editedStageId,
-            ),
-          }
-          setPersistedBuild(build)
-          setTutorialState(nextTutorialState)
-          saveSaveGame({
-            highestClearedStageIndex,
-            stageId,
-            build,
-            seenEnemyDefinitionIds,
-            tutorial: nextTutorialState,
-          })
+        onBuildChange={(classId, build, editedStageId) => {
+          setBuildsByClassId((current) => ({ ...current, [classId]: build }))
+          setTutorialState((current) => ({
+            ...current,
+            manualBuildConfiguredStageIdsByClass: {
+              ...current.manualBuildConfiguredStageIdsByClass,
+              [classId]: appendUniqueStageId(
+                current.manualBuildConfiguredStageIdsByClass[classId] ?? [],
+                editedStageId,
+              ),
+            },
+          }))
         }}
       />
     )
   }
 
+  const encounterStage = getStageById(stageId)
+  const encounterBuild = buildsByClassId[encounterClassId]
+    ?? getDefaultPersistedBuildForRule(getStageBuildRuleId(encounterStage), encounterClassId)
+
   return (
     <EncounterScreen
-      key={`${stageId}-${encounterInstance}`}
-      stage={getStageById(stageId)}
-      classId="warrior_t"
-      buildState={persistedBuild}
-      unlockedPassiveTalentTier={getPassiveTalentUnlockTierForStage(getStageById(stageId))}
-      unlockedActiveSkillIds={getUnlockedActiveSkillIdsForStage(getStageById(stageId))}
+      key={`${stageId}-${encounterClassId}-${encounterInstance}`}
+      stage={encounterStage}
+      classId={encounterClassId}
+      buildState={encounterBuild}
+      unlockedPassiveTalentTier={getPassiveTalentUnlockTierForStage(encounterStage)}
+      unlockedActiveSkillIds={getUnlockedActiveSkillIdsForStage(encounterStage)}
       tutorialEnabled={!tutorialState.seenEncounterStageIds.includes(stageId)}
       onTutorialComplete={() => markEncounterTutorialSeen(stageId)}
       onBuildChange={(build) => {
-        setPersistedBuild(build)
-        saveSaveGame({
-          highestClearedStageIndex,
-          stageId,
-          build,
-          seenEnemyDefinitionIds,
-          tutorial: tutorialState,
-        })
+        setBuildsByClassId((current) => ({ ...current, [encounterClassId]: build }))
+        setTutorialState((current) => ({
+          ...current,
+          manualBuildConfiguredStageIdsByClass: {
+            ...current.manualBuildConfiguredStageIdsByClass,
+            [encounterClassId]: appendUniqueStageId(
+              current.manualBuildConfiguredStageIdsByClass[encounterClassId] ?? [],
+              stageId,
+            ),
+          },
+        }))
       }}
       onReturnToStageSelect={handleReturnToStageSelect}
-      onRetryStage={() => startStage(stageId, stageSelectMode)}
+      onRetryStage={() => startStage(stageId, stageSelectMode, encounterClassId)}
       onAdvanceStage={handleAdvanceStage}
     />
   )
