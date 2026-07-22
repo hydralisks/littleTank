@@ -61,6 +61,49 @@ function stageRows(): Row[] {
   })
 }
 
+function createChallengeWorkbookMap() {
+  const stages = Array.from({ length: 9 }, (_, index) => ({
+    stageId: `Challenge-${index + 1}`,
+    areaId: 'Challenge',
+    order: index + 1,
+    title: `Challenge-${index + 1}`,
+    unlockedActiveSkillIdsCsv: 'warrior_t_taunt',
+    passiveTalentUnlockTier: Math.floor(index / 3) + 1,
+    challengeId: `CH-${index + 1}`,
+    allowedClassIdsCsv: 'warrior_t',
+    buildRuleId: 'standard_5slot',
+    enabled: true,
+  }))
+  return {
+    challengeStageContent: workbookFromSheets({
+      [SHEETS.areas]: [{ areaId: 'Challenge', title: 'Challenge', shortTitle: 'CH', mapLabel: 'Challenge', description: 'test', accent: '#fff' }],
+      [SHEETS.stages]: stages,
+      [SHEETS.legends]: [{ areaId: 'Challenge', id: 'stable', iconId: 'stable', label: 'Stable', source: 'test', target: 'test', description: 'test' }],
+    }),
+    challengeEncounterBalance: workbookFromSheets({
+      [SHEETS.openings]: stages.map((stage) => ({
+        stageId: stage.stageId,
+        playerHp: 100,
+        playerMaxHp: 100,
+        playerResource: 0,
+        playerGcdRemainingMs: 0,
+        partyHp: 100,
+        partyMaxHp: 100,
+        partyPressure: 0,
+        partyMaxPressure: 100,
+        buildRuleId: stage.buildRuleId,
+      })),
+      [SHEETS.placements]: emptySheet(['stageId', 'spawnId', 'enemyId', 'row', 'col']),
+      [SHEETS.openingStatuses]: emptySheet(['stageId', 'targetType', 'statusId', 'sourceType']),
+      [SHEETS.affixBindings]: emptySheet(['stageId', 'affixIdsCsv']),
+      [SHEETS.affixDefinitions]: emptySheet(['affixId', 'affixName', 'iconId', 'description', 'delayMs', 'targetType', 'targetSelector', 'statusId']),
+      [SHEETS.specialRuleBindings]: emptySheet(['stageId', 'ruleIdsCsv']),
+      [SHEETS.specialRuleDefinitions]: emptySheet(['ruleId', 'ruleName', 'iconId', 'description', 'ruleLogicId']),
+      [SHEETS.iconMap]: emptySheet(['iconId', 'iconName', 'assetKey', 'iconType']),
+    }),
+  }
+}
+
 function createWorkbookMap(): DesignerDataWorkbookMap {
   return {
     stageContent: workbookFromSheets({
@@ -136,6 +179,7 @@ function createWorkbookMap(): DesignerDataWorkbookMap {
         { iconId: 'vitalReserve', iconName: 'Vital Reserve', assetKey: 'guarded', iconType: 'talent', enabled: true },
       ],
     }),
+    ...createChallengeWorkbookMap(),
   }
 }
 

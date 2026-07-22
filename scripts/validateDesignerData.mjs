@@ -15,6 +15,8 @@ const result = validateDesignerDataWorkbooks({
   encounterBalance: readWorkbook('encounter_balance.xlsx'),
   enemyData: readWorkbook('enemy_data.xlsx'),
   playerBuild: readWorkbook('player_build.xlsx'),
+  challengeStageContent: readWorkbook('challenge_stage_content.xlsx'),
+  challengeEncounterBalance: readWorkbook('challenge_encounter_balance.xlsx'),
 })
 
 function formatCounts(counts) {

@@ -1,10 +1,15 @@
 import * as XLSX from 'xlsx'
+import { hasPlayerSkillRuntime } from '../encounter/playerSkillRuntimeRegistry'
+import { CHALLENGE_GROUP_POLICIES } from '../progression/classTrialPolicy'
+import { hasPassiveTalentLogic } from './playerTalentLogicRegistry'
 
 export interface DesignerDataWorkbookMap {
   stageContent: XLSX.WorkBook
   encounterBalance: XLSX.WorkBook
   enemyData: XLSX.WorkBook
   playerBuild: XLSX.WorkBook
+  challengeStageContent: XLSX.WorkBook
+  challengeEncounterBalance: XLSX.WorkBook
 }
 
 export type DesignerDataValidationCode =
@@ -65,6 +70,8 @@ const WORKBOOK_NAMES: Record<WorkbookKey, string> = {
   encounterBalance: 'encounter_balance.xlsx',
   enemyData: 'enemy_data.xlsx',
   playerBuild: 'player_build.xlsx',
+  challengeStageContent: 'challenge_stage_content.xlsx',
+  challengeEncounterBalance: 'challenge_encounter_balance.xlsx',
 }
 
 const SHEET_SPECS: SheetSpec[] = [
@@ -238,6 +245,93 @@ const SHEET_SPECS: SheetSpec[] = [
   {
     workbookKey: 'playerBuild',
     workbookName: WORKBOOK_NAMES.playerBuild,
+    sheetName: '图标资源映射',
+    requiredHeaders: ['iconId', 'iconName', 'assetKey', 'iconType'],
+  },
+  {
+    workbookKey: 'challengeStageContent',
+    workbookName: WORKBOOK_NAMES.challengeStageContent,
+    sheetName: '区域',
+    requiredHeaders: ['areaId', 'title', 'shortTitle', 'mapLabel', 'description', 'accent'],
+  },
+  {
+    workbookKey: 'challengeStageContent',
+    workbookName: WORKBOOK_NAMES.challengeStageContent,
+    sheetName: '关卡',
+    requiredHeaders: [
+      'stageId',
+      'areaId',
+      'order',
+      'title',
+      'unlockedActiveSkillIdsCsv',
+      'passiveTalentUnlockTier',
+      'challengeId',
+      'allowedClassIdsCsv',
+      'buildRuleId',
+    ],
+  },
+  {
+    workbookKey: 'challengeStageContent',
+    workbookName: WORKBOOK_NAMES.challengeStageContent,
+    sheetName: '图例',
+    requiredHeaders: ['areaId', 'id', 'iconId', 'label', 'source', 'target', 'description'],
+  },
+  {
+    workbookKey: 'challengeEncounterBalance',
+    workbookName: WORKBOOK_NAMES.challengeEncounterBalance,
+    sheetName: '关卡开场',
+    requiredHeaders: [
+      'stageId',
+      'playerHp',
+      'playerMaxHp',
+      'playerResource',
+      'playerGcdRemainingMs',
+      'partyHp',
+      'partyMaxHp',
+      'partyPressure',
+      'partyMaxPressure',
+      'buildRuleId',
+    ],
+  },
+  {
+    workbookKey: 'challengeEncounterBalance',
+    workbookName: WORKBOOK_NAMES.challengeEncounterBalance,
+    sheetName: '敌人布置',
+    requiredHeaders: ['stageId', 'spawnId', 'enemyId', 'row', 'col'],
+  },
+  {
+    workbookKey: 'challengeEncounterBalance',
+    workbookName: WORKBOOK_NAMES.challengeEncounterBalance,
+    sheetName: '开场状态',
+    requiredHeaders: ['stageId', 'targetType', 'statusId', 'sourceType'],
+  },
+  {
+    workbookKey: 'challengeEncounterBalance',
+    workbookName: WORKBOOK_NAMES.challengeEncounterBalance,
+    sheetName: '关卡词缀绑定',
+    requiredHeaders: ['stageId', 'affixIdsCsv'],
+  },
+  {
+    workbookKey: 'challengeEncounterBalance',
+    workbookName: WORKBOOK_NAMES.challengeEncounterBalance,
+    sheetName: '词缀定义',
+    requiredHeaders: ['affixId', 'affixName', 'iconId', 'description', 'delayMs', 'targetType', 'targetSelector', 'statusId'],
+  },
+  {
+    workbookKey: 'challengeEncounterBalance',
+    workbookName: WORKBOOK_NAMES.challengeEncounterBalance,
+    sheetName: '特殊规则绑定',
+    requiredHeaders: ['stageId', 'ruleIdsCsv'],
+  },
+  {
+    workbookKey: 'challengeEncounterBalance',
+    workbookName: WORKBOOK_NAMES.challengeEncounterBalance,
+    sheetName: '特殊规则定义',
+    requiredHeaders: ['ruleId', 'ruleName', 'iconId', 'description', 'ruleLogicId'],
+  },
+  {
+    workbookKey: 'challengeEncounterBalance',
+    workbookName: WORKBOOK_NAMES.challengeEncounterBalance,
     sheetName: '图标资源映射',
     requiredHeaders: ['iconId', 'iconName', 'assetKey', 'iconType'],
   },
@@ -894,6 +988,344 @@ function collectIds(
   return ids
 }
 
+function isEnabledRow(row: SheetRow) {
+  return optionalText(row, 'enabled').toLowerCase() !== 'false'
+}
+
+function getPrefixedStatusOwner(statusId: string, classIds: ReadonlySet<string>) {
+  const knownClassIds = new Set([
+    ...classIds,
+    ...CHALLENGE_GROUP_POLICIES.flatMap((group) => group.trialClassId ? [group.trialClassId] : []),
+  ])
+  return [...knownClassIds]
+    .sort((left, right) => right.length - left.length)
+    .find((classId) => statusId.startsWith(`${classId}_`))
+}
+
+function addClassOwnershipIssues(
+  errors: DesignerDataValidationIssue[],
+  rows: ReturnType<typeof collectSheetRows>,
+  classIds: ReadonlySet<string>,
+) {
+  const activeSkillClassById = new Map(
+    rows.activeSkills.map((row) => [optionalText(row, 'skillId'), optionalText(row, 'classId')]),
+  )
+  const passiveTalentClassById = new Map(
+    rows.passiveTalents.map((row) => [optionalText(row, 'talentId'), optionalText(row, 'classId')]),
+  )
+
+  rows.activeSkills.forEach((row, index) => {
+    const skillId = optionalText(row, 'skillId')
+    const classId = optionalText(row, 'classId')
+    if (skillId && classId && !skillId.startsWith(`${classId}_`)) {
+      addInvalidCombinationIssue(errors, WORKBOOK_NAMES.playerBuild, '主动技能定义', index, 'skillId', skillId)
+    }
+    const skillLogicId = optionalText(row, 'skillLogicId')
+    if (isEnabledRow(row) && skillLogicId && !hasPlayerSkillRuntime(skillLogicId)) {
+      addInvalidCombinationIssue(
+        errors,
+        WORKBOOK_NAMES.playerBuild,
+        '主动技能定义',
+        index,
+        'skillLogicId',
+        skillLogicId,
+      )
+    }
+  })
+
+  rows.passiveTalents.forEach((row, index) => {
+    const talentId = optionalText(row, 'talentId')
+    const classId = optionalText(row, 'classId')
+    if (talentId && classId && !talentId.startsWith(`${classId}_`)) {
+      addInvalidCombinationIssue(errors, WORKBOOK_NAMES.playerBuild, '被动天赋定义', index, 'talentId', talentId)
+    }
+    const talentLogicId = optionalText(row, 'talentLogicId')
+    if (isEnabledRow(row) && talentLogicId && !hasPassiveTalentLogic(talentLogicId)) {
+      addInvalidCombinationIssue(
+        errors,
+        WORKBOOK_NAMES.playerBuild,
+        '被动天赋定义',
+        index,
+        'talentLogicId',
+        talentLogicId,
+      )
+    }
+  })
+
+  rows.defaultActiveBuilds.forEach((row, index) => {
+    const classId = optionalText(row, 'classId')
+    const skillId = optionalText(row, 'skillId')
+    if (classId && skillId && activeSkillClassById.get(skillId) !== classId) {
+      addInvalidCombinationIssue(errors, WORKBOOK_NAMES.playerBuild, '默认主动构筑', index, 'skillId', skillId)
+    }
+  })
+
+  rows.defaultPassiveBuilds.forEach((row, index) => {
+    const classId = optionalText(row, 'classId')
+    const talentId = optionalText(row, 'talentId')
+    if (classId && talentId && passiveTalentClassById.get(talentId) !== classId) {
+      addInvalidCombinationIssue(errors, WORKBOOK_NAMES.playerBuild, '默认被动构筑', index, 'talentId', talentId)
+    }
+  })
+
+  const validateStatusOwner = (
+    sheet: string,
+    rowIndex: number,
+    statusId: string,
+    ownerClassId: string | undefined,
+  ) => {
+    const statusOwnerClassId = getPrefixedStatusOwner(statusId, classIds)
+    if (statusOwnerClassId && ownerClassId && statusOwnerClassId !== ownerClassId) {
+      addInvalidCombinationIssue(
+        errors,
+        WORKBOOK_NAMES.playerBuild,
+        sheet,
+        rowIndex,
+        'statusId',
+        `${statusId} belongs to ${statusOwnerClassId}, not ${ownerClassId}`,
+      )
+    }
+  }
+
+  rows.activeSkillEffects.forEach((row, index) => {
+    validateStatusOwner(
+      '主动技能效果',
+      index,
+      optionalText(row, 'statusId'),
+      activeSkillClassById.get(optionalText(row, 'skillId')),
+    )
+  })
+
+  rows.passiveTalents.forEach((row, index) => {
+    const ownerClassId = optionalText(row, 'classId')
+    for (const statusId of parseCsv(row.grantedStatusIdsCsv)) {
+      validateStatusOwner('被动天赋定义', index, statusId, ownerClassId)
+    }
+  })
+
+  rows.passiveTalentEffects.forEach((row, index) => {
+    const ownerClassId = passiveTalentClassById.get(optionalText(row, 'talentId'))
+    validateStatusOwner('被动天赋效果', index, optionalText(row, 'statusId'), ownerClassId)
+
+    const skillId = optionalText(row, 'skillId')
+    const skillClassId = activeSkillClassById.get(skillId)
+    if (skillId && ownerClassId && skillClassId && skillClassId !== ownerClassId) {
+      addInvalidCombinationIssue(
+        errors,
+        WORKBOOK_NAMES.playerBuild,
+        '被动天赋效果',
+        index,
+        'skillId',
+        `${skillId} belongs to ${skillClassId}, not ${ownerClassId}`,
+      )
+    }
+  })
+}
+
+function addChallengeConsistencyIssues(
+  errors: DesignerDataValidationIssue[],
+  rows: ReturnType<typeof collectSheetRows>,
+  classIds: ReadonlySet<string>,
+  buildRuleIds: ReadonlySet<string>,
+  activeSkillClassById: ReadonlyMap<string, string>,
+) {
+  const enabledChallengeStages = rows.challengeStages.filter(isEnabledRow)
+  const enabledStagesById = new Map<string, SheetRow[]>()
+  for (const stage of enabledChallengeStages) {
+    const stageId = optionalText(stage, 'stageId')
+    const entries = enabledStagesById.get(stageId) ?? []
+    entries.push(stage)
+    enabledStagesById.set(stageId, entries)
+  }
+
+  const expectedStageIds = new Set(CHALLENGE_GROUP_POLICIES.flatMap((group) => [...group.challengeIds]))
+  for (const stageId of expectedStageIds) {
+    if ((enabledStagesById.get(stageId) ?? []).length !== 1) {
+      addInvalidCombinationIssue(
+        errors,
+        WORKBOOK_NAMES.challengeStageContent,
+        '关卡',
+        0,
+        'stageId',
+        `${stageId} requires exactly one enabled row`,
+      )
+    }
+  }
+
+  const challengeStageIds = new Set(
+    rows.challengeStages.map((row) => optionalText(row, 'stageId')).filter(Boolean),
+  )
+  rows.challengeOpenings.forEach((row, index) => {
+    const stageId = requireText(
+      errors,
+      WORKBOOK_NAMES.challengeEncounterBalance,
+      '关卡开场',
+      row,
+      index,
+      'stageId',
+    )
+    validateReference(
+      errors,
+      WORKBOOK_NAMES.challengeEncounterBalance,
+      '关卡开场',
+      index,
+      'stageId',
+      stageId,
+      challengeStageIds,
+    )
+    validateReference(
+      errors,
+      WORKBOOK_NAMES.challengeEncounterBalance,
+      '关卡开场',
+      index,
+      'buildRuleId',
+      requireText(errors, WORKBOOK_NAMES.challengeEncounterBalance, '关卡开场', row, index, 'buildRuleId'),
+      buildRuleIds,
+    )
+    for (const field of [
+      'playerHp',
+      'playerMaxHp',
+      'playerResource',
+      'playerGcdRemainingMs',
+      'partyHp',
+      'partyMaxHp',
+      'partyPressure',
+      'partyMaxPressure',
+    ]) {
+      validateNumber(errors, WORKBOOK_NAMES.challengeEncounterBalance, '关卡开场', row, index, field, {
+        required: true,
+      })
+    }
+  })
+
+  enabledChallengeStages.forEach((stage, index) => {
+    const stageId = requireText(
+      errors,
+      WORKBOOK_NAMES.challengeStageContent,
+      '关卡',
+      stage,
+      index,
+      'stageId',
+    )
+    validateReference(
+      errors,
+      WORKBOOK_NAMES.challengeStageContent,
+      '关卡',
+      index,
+      'stageId',
+      stageId,
+      expectedStageIds,
+    )
+    validateNumber(errors, WORKBOOK_NAMES.challengeStageContent, '关卡', stage, index, 'order', {
+      required: true,
+      min: 1,
+      max: 9,
+      integer: true,
+    })
+    validateNumber(errors, WORKBOOK_NAMES.challengeStageContent, '关卡', stage, index, 'passiveTalentUnlockTier', {
+      required: true,
+      min: 0,
+      integer: true,
+    })
+    const stageRuleId = requireText(
+      errors,
+      WORKBOOK_NAMES.challengeStageContent,
+      '关卡',
+      stage,
+      index,
+      'buildRuleId',
+    )
+    validateReference(
+      errors,
+      WORKBOOK_NAMES.challengeStageContent,
+      '关卡',
+      index,
+      'buildRuleId',
+      stageRuleId,
+      buildRuleIds,
+    )
+
+    const allowedClassIds = parseCsv(stage.allowedClassIdsCsv)
+    for (const classId of allowedClassIds) {
+      validateReference(
+        errors,
+        WORKBOOK_NAMES.challengeStageContent,
+        '关卡',
+        index,
+        'allowedClassIdsCsv',
+        classId,
+        classIds,
+      )
+    }
+    for (const skillId of parseCsv(stage.unlockedActiveSkillIdsCsv)) {
+      const ownerClassId = activeSkillClassById.get(skillId)
+      if (!ownerClassId || !allowedClassIds.includes(ownerClassId)) {
+        addInvalidCombinationIssue(
+          errors,
+          WORKBOOK_NAMES.challengeStageContent,
+          '关卡',
+          index,
+          'unlockedActiveSkillIdsCsv',
+          skillId,
+        )
+      }
+    }
+
+    const openings = rows.challengeOpenings.filter((row) => optionalText(row, 'stageId') === stageId)
+    if (openings.length !== 1) {
+      addInvalidCombinationIssue(
+        errors,
+        WORKBOOK_NAMES.challengeEncounterBalance,
+        '关卡开场',
+        index,
+        'stageId',
+        `${stageId} requires exactly one opening`,
+      )
+    } else {
+      const openingRuleId = optionalText(openings[0], 'buildRuleId')
+      if (stageRuleId !== openingRuleId) {
+        addInvalidCombinationIssue(
+          errors,
+          WORKBOOK_NAMES.challengeEncounterBalance,
+          '关卡开场',
+          index,
+          'buildRuleId',
+          openingRuleId,
+        )
+      }
+    }
+  })
+
+  const enabledClassIds = new Set(
+    rows.playerClasses
+      .filter(isEnabledRow)
+      .map((row) => optionalText(row, 'classId'))
+      .filter(Boolean),
+  )
+  CHALLENGE_GROUP_POLICIES.forEach((group, groupIndex) => {
+    const trialClassId = group.trialClassId
+    if (!trialClassId || !enabledClassIds.has(trialClassId)) {
+      return
+    }
+    for (const requiredGroup of CHALLENGE_GROUP_POLICIES.slice(groupIndex)) {
+      for (const stageId of requiredGroup.challengeIds) {
+        const stage = (enabledStagesById.get(stageId) ?? [])[0]
+        if (stage && !parseCsv(stage.allowedClassIdsCsv).includes(trialClassId)) {
+          const rowIndex = enabledChallengeStages.indexOf(stage)
+          addInvalidCombinationIssue(
+            errors,
+            WORKBOOK_NAMES.challengeStageContent,
+            '关卡',
+            rowIndex,
+            'allowedClassIdsCsv',
+            `${trialClassId} is required by trial policy`,
+          )
+        }
+      }
+    }
+  })
+}
+
 function collectSheetRows(workbooks: DesignerDataWorkbookMap) {
   return {
     stageAreas: readRows(workbooks.stageContent, '区域'),
@@ -923,6 +1355,19 @@ function collectSheetRows(workbooks: DesignerDataWorkbookMap) {
     defaultActiveBuilds: readRows(workbooks.playerBuild, '默认主动构筑'),
     defaultPassiveBuilds: readRows(workbooks.playerBuild, '默认被动构筑'),
     icons: readRows(workbooks.playerBuild, '图标资源映射'),
+    challengeAreas: readRows(workbooks.challengeStageContent, '区域'),
+    challengeStages: readRows(workbooks.challengeStageContent, '关卡'),
+    challengeLegends: readRows(workbooks.challengeStageContent, '图例'),
+    challengeOpenings: readRows(workbooks.challengeEncounterBalance, '关卡开场'),
+    challengePlacements: readRows(workbooks.challengeEncounterBalance, '敌人布置'),
+    challengeOpeningStatuses: readRows(workbooks.challengeEncounterBalance, '开场状态'),
+    challengeAffixBindings: readRows(workbooks.challengeEncounterBalance, '关卡词缀绑定'),
+    challengeAffixDefinitions: readRows(workbooks.challengeEncounterBalance, '词缀定义'),
+    challengeDamageSourceDefinitions: readRows(workbooks.challengeEncounterBalance, '伤害来源定义'),
+    challengeDamageSourceBindings: readRows(workbooks.challengeEncounterBalance, '关卡伤害来源绑定'),
+    challengeSpecialRuleBindings: readRows(workbooks.challengeEncounterBalance, '特殊规则绑定'),
+    challengeSpecialRuleDefinitions: readRows(workbooks.challengeEncounterBalance, '特殊规则定义'),
+    challengeIcons: readRows(workbooks.challengeEncounterBalance, '图标资源映射'),
   }
 }
 
@@ -934,6 +1379,10 @@ export function validateDesignerDataWorkbooks(workbooks: DesignerDataWorkbookMap
   const rows = collectSheetRows(workbooks)
   const areaIds = collectIds(errors, rows.stageAreas, WORKBOOK_NAMES.stageContent, '区域', 'areaId')
   const stageIds = collectIds(errors, rows.stages, WORKBOOK_NAMES.stageContent, '关卡', 'stageId')
+  collectIds(errors, rows.challengeAreas, WORKBOOK_NAMES.challengeStageContent, '区域', 'areaId')
+  collectIds(errors, rows.challengeStages, WORKBOOK_NAMES.challengeStageContent, '关卡', 'stageId')
+  collectIds(errors, rows.challengeStages, WORKBOOK_NAMES.challengeStageContent, '关卡', 'challengeId')
+  collectIds(errors, rows.challengeOpenings, WORKBOOK_NAMES.challengeEncounterBalance, '关卡开场', 'stageId')
   const affixIds = collectIds(errors, rows.affixDefinitions, WORKBOOK_NAMES.encounterBalance, '词缀定义', 'affixId')
   const specialRuleIds = collectIds(errors, rows.specialRuleDefinitions, WORKBOOK_NAMES.encounterBalance, '特殊规则定义', 'ruleId')
   const enemyIds = new Set([
@@ -988,6 +1437,12 @@ export function validateDesignerDataWorkbooks(workbooks: DesignerDataWorkbookMap
       ...parseCsv(row.appliedSelfStatusIdsCsv),
     ]),
   )
+  const activeSkillClassById = new Map(
+    rows.activeSkills.map((row) => [optionalText(row, 'skillId'), optionalText(row, 'classId')]),
+  )
+
+  addClassOwnershipIssues(errors, rows, classIds)
+  addChallengeConsistencyIssues(errors, rows, classIds, buildRuleIds, activeSkillClassById)
 
   rows.stageAreas.forEach((row, index) => requireText(errors, WORKBOOK_NAMES.stageContent, '区域', row, index, 'areaId'))
   const stageOrdersByArea = new Map<string, Set<number>>()

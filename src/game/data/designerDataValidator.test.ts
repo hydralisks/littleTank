@@ -4,6 +4,18 @@ import { validateDesignerDataWorkbooks, type DesignerDataWorkbookMap } from './d
 
 type Row = Record<string, string | number | boolean>
 
+const CHALLENGE_STAGE_HEADERS = [
+  'stageId',
+  'areaId',
+  'order',
+  'title',
+  'unlockedActiveSkillIdsCsv',
+  'passiveTalentUnlockTier',
+  'challengeId',
+  'allowedClassIdsCsv',
+  'buildRuleId',
+]
+
 function workbookFromSheets(sheets: Record<string, Row[]>): XLSX.WorkBook {
   const workbook = XLSX.utils.book_new()
 
@@ -12,6 +24,57 @@ function workbookFromSheets(sheets: Record<string, Row[]>): XLSX.WorkBook {
   }
 
   return workbook
+}
+
+function emptySheet(headers: string[]): Row[] {
+  return [Object.fromEntries(headers.map((header) => [header, '']))]
+}
+
+function createChallengeStageRows(): Row[] {
+  return Array.from({ length: 9 }, (_, index) => ({
+    stageId: `Challenge-${index + 1}`,
+    areaId: 'Challenge',
+    order: index + 1,
+    title: `Challenge-${index + 1}`,
+    unlockedActiveSkillIdsCsv: 'warrior_t_taunt',
+    passiveTalentUnlockTier: Math.floor(index / 3) + 1,
+    challengeId: `CH-${index + 1}`,
+    allowedClassIdsCsv: 'warrior_t',
+    buildRuleId: 'standard_5slot',
+    enabled: true,
+  }))
+}
+
+function createChallengeWorkbookMap() {
+  const challengeStages = createChallengeStageRows()
+  return {
+    challengeStageContent: workbookFromSheets({
+      '区域': [{ areaId: 'Challenge', title: 'Challenge', shortTitle: 'CH', mapLabel: 'Challenge', description: 'test', accent: '#fff' }],
+      '关卡': challengeStages,
+      '图例': [{ areaId: 'Challenge', id: 'stable', iconId: 'stable', label: 'Stable', source: 'test', target: 'test', description: 'test' }],
+    }),
+    challengeEncounterBalance: workbookFromSheets({
+      '关卡开场': challengeStages.map((stage) => ({
+        stageId: stage.stageId,
+        playerHp: 100,
+        playerMaxHp: 100,
+        playerResource: 0,
+        playerGcdRemainingMs: 0,
+        partyHp: 100,
+        partyMaxHp: 100,
+        partyPressure: 0,
+        partyMaxPressure: 100,
+        buildRuleId: stage.buildRuleId,
+      })),
+      '敌人布置': emptySheet(['stageId', 'spawnId', 'enemyId', 'row', 'col']),
+      '开场状态': emptySheet(['stageId', 'targetType', 'statusId', 'sourceType']),
+      '关卡词缀绑定': emptySheet(['stageId', 'affixIdsCsv']),
+      '词缀定义': emptySheet(['affixId', 'affixName', 'iconId', 'description', 'delayMs', 'targetType', 'targetSelector', 'statusId']),
+      '特殊规则绑定': emptySheet(['stageId', 'ruleIdsCsv']),
+      '特殊规则定义': emptySheet(['ruleId', 'ruleName', 'iconId', 'description', 'ruleLogicId']),
+      '图标资源映射': emptySheet(['iconId', 'iconName', 'assetKey', 'iconType']),
+    }),
+  }
 }
 
 function createStageRows(): Row[] {
@@ -316,6 +379,7 @@ function createValidWorkbookMap(): DesignerDataWorkbookMap {
         { iconId: 'vanguard-oath', iconName: 'Vanguard Oath', assetKey: 'vanguard-oath', iconType: 'status', enabled: true },
       ],
     }),
+    ...createChallengeWorkbookMap(),
   }
 }
 
@@ -337,6 +401,184 @@ describe('designerDataValidator', () => {
 
     expect(result.errors).not.toEqual(expect.arrayContaining([
       expect.objectContaining({ sheet: '构筑规则定义', field: 'classId' }),
+    ]))
+  })
+
+  it('rejects challenge openings whose build rule differs from the stage snapshot', () => {
+    const workbooks = createValidWorkbookMap()
+    const openingRows = XLSX.utils.sheet_to_json<Row>(
+      workbooks.challengeEncounterBalance.Sheets['关卡开场'],
+      { defval: '' },
+    )
+    openingRows[0].buildRuleId = '8slot_0'
+    workbooks.challengeEncounterBalance.Sheets['关卡开场'] = XLSX.utils.json_to_sheet(openingRows)
+
+    const result = validateDesignerDataWorkbooks(workbooks)
+
+    expect(result.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        workbook: 'challenge_encounter_balance.xlsx',
+        sheet: '关卡开场',
+        field: 'buildRuleId',
+        code: 'invalid_combination',
+        value: '8slot_0',
+      }),
+    ]))
+  })
+
+  it('rejects incomplete challenge groups and duplicate challenge ids', () => {
+    const workbooks = createValidWorkbookMap()
+    const stageRows = XLSX.utils.sheet_to_json<Row>(workbooks.challengeStageContent.Sheets['关卡'], { defval: '' })
+    stageRows.splice(2, 1)
+    stageRows[1].challengeId = 'CH-1'
+    workbooks.challengeStageContent.Sheets['关卡'] = XLSX.utils.json_to_sheet(stageRows, {
+      header: CHALLENGE_STAGE_HEADERS,
+    })
+
+    const result = validateDesignerDataWorkbooks(workbooks)
+
+    expect(result.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        workbook: 'challenge_stage_content.xlsx',
+        sheet: '关卡',
+        field: 'stageId',
+        code: 'invalid_combination',
+        value: 'Challenge-3 requires exactly one enabled row',
+      }),
+      expect.objectContaining({
+        workbook: 'challenge_stage_content.xlsx',
+        sheet: '关卡',
+        field: 'challengeId',
+        code: 'duplicate_id',
+        value: 'CH-1',
+      }),
+    ]))
+  })
+
+  it('rejects unknown allowed classes and skills not owned by an allowed class', () => {
+    const workbooks = createValidWorkbookMap()
+    const stageRows = XLSX.utils.sheet_to_json<Row>(workbooks.challengeStageContent.Sheets['关卡'], { defval: '' })
+    stageRows[0].allowedClassIdsCsv = 'missing_tank'
+    stageRows[1].allowedClassIdsCsv = 'druid_bear_t'
+    workbooks.challengeStageContent.Sheets['关卡'] = XLSX.utils.json_to_sheet(stageRows, {
+      header: CHALLENGE_STAGE_HEADERS,
+    })
+
+    const result = validateDesignerDataWorkbooks(workbooks)
+
+    expect(result.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        workbook: 'challenge_stage_content.xlsx',
+        sheet: '关卡',
+        field: 'allowedClassIdsCsv',
+        code: 'unknown_reference',
+        value: 'missing_tank',
+      }),
+      expect.objectContaining({
+        workbook: 'challenge_stage_content.xlsx',
+        sheet: '关卡',
+        field: 'unlockedActiveSkillIdsCsv',
+        code: 'invalid_combination',
+        value: 'warrior_t_taunt',
+      }),
+    ]))
+  })
+
+  it('rejects enabled player content without registered runtime handlers', () => {
+    const workbooks = createValidWorkbookMap()
+    const activeRows = XLSX.utils.sheet_to_json<Row>(workbooks.playerBuild.Sheets['主动技能定义'], { defval: '' })
+    activeRows[0].skillLogicId = 'missing_skill_runtime'
+    workbooks.playerBuild.Sheets['主动技能定义'] = XLSX.utils.json_to_sheet(activeRows)
+    const talentRows = XLSX.utils.sheet_to_json<Row>(workbooks.playerBuild.Sheets['被动天赋定义'], { defval: '' })
+    talentRows[0].talentLogicId = 'missing_talent_runtime'
+    workbooks.playerBuild.Sheets['被动天赋定义'] = XLSX.utils.json_to_sheet(talentRows)
+
+    const result = validateDesignerDataWorkbooks(workbooks)
+
+    expect(result.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        sheet: '主动技能定义',
+        field: 'skillLogicId',
+        code: 'invalid_combination',
+        value: 'missing_skill_runtime',
+      }),
+      expect.objectContaining({
+        sheet: '被动天赋定义',
+        field: 'talentLogicId',
+        code: 'invalid_combination',
+        value: 'missing_talent_runtime',
+      }),
+    ]))
+  })
+
+  it('requires enabled trial classes in their own and all later challenge groups', () => {
+    const workbooks = createValidWorkbookMap()
+    const classRows = XLSX.utils.sheet_to_json<Row>(workbooks.playerBuild.Sheets['职业定义'], { defval: '' })
+    classRows.push({
+      classId: 'druid_bear_t',
+      className: 'Bear Tank',
+      roleTag: 'tank',
+      classDescription: 'test',
+      recommendedBuildRuleIdsCsv: '',
+      enabled: true,
+    })
+    workbooks.playerBuild.Sheets['职业定义'] = XLSX.utils.json_to_sheet(classRows)
+
+    const result = validateDesignerDataWorkbooks(workbooks)
+
+    expect(result.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        workbook: 'challenge_stage_content.xlsx',
+        sheet: '关卡',
+        field: 'allowedClassIdsCsv',
+        code: 'invalid_combination',
+        value: 'druid_bear_t is required by trial policy',
+      }),
+    ]))
+  })
+
+  it('allows shared statuses but rejects cross-class prefixed statuses', () => {
+    const workbooks = createValidWorkbookMap()
+    const classRows = XLSX.utils.sheet_to_json<Row>(workbooks.playerBuild.Sheets['职业定义'], { defval: '' })
+    classRows.push({
+      classId: 'druid_bear_t',
+      className: 'Bear Tank',
+      roleTag: 'tank',
+      classDescription: 'test',
+      recommendedBuildRuleIdsCsv: '',
+      enabled: false,
+    })
+    workbooks.playerBuild.Sheets['职业定义'] = XLSX.utils.json_to_sheet(classRows)
+    const statusRows = XLSX.utils.sheet_to_json<Row>(workbooks.playerBuild.Sheets['玩家主动状态定义'], { defval: '' })
+    statusRows.push({
+      statusId: 'druid_bear_t_hide',
+      statusName: 'Bear Hide',
+      statusCategory: 'playerBuff',
+      iconId: 'taunted',
+      durationMs: 1000,
+      maxStacks: 1,
+      dispellable: false,
+      description: 'test',
+      effectLogicId: 'none',
+      enabled: true,
+    })
+    workbooks.playerBuild.Sheets['玩家主动状态定义'] = XLSX.utils.json_to_sheet(statusRows)
+    const effectRows = XLSX.utils.sheet_to_json<Row>(workbooks.playerBuild.Sheets['主动技能效果'], { defval: '' })
+    effectRows[0].statusId = 'druid_bear_t_hide'
+    workbooks.playerBuild.Sheets['主动技能效果'] = XLSX.utils.json_to_sheet(effectRows)
+
+    const result = validateDesignerDataWorkbooks(workbooks)
+
+    expect(result.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        sheet: '主动技能效果',
+        field: 'statusId',
+        code: 'invalid_combination',
+        value: 'druid_bear_t_hide belongs to druid_bear_t, not warrior_t',
+      }),
+    ]))
+    expect(result.errors).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: 'statusId', value: 'taunted belongs to' }),
     ]))
   })
 

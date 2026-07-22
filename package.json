@@ -16,7 +16,7 @@
     "analyze:strategy-tips": "node --experimental-strip-types --loader ./scripts/ts-extension-loader.mjs scripts/analyzeStrategyTips.mjs",
     "analyze:delta": "node --experimental-strip-types --loader ./scripts/ts-extension-loader.mjs scripts/analyzeDelta.mjs",
     "generate:designer-data": "node scripts/generateDesignerWorkbooks.mjs",
-    "validate:designer-data": "node --experimental-strip-types scripts/validateDesignerData.mjs",
+    "validate:designer-data": "node --experimental-strip-types --loader ./scripts/ts-extension-loader.mjs scripts/validateDesignerData.mjs",
     "build:desktop-data": "node scripts/buildDesktopDataPack.mjs public/designer-data src-tauri/resources/desktop-data src-tauri/src/generated_data_pack.rs",
     "test:desktop-data": "node scripts/buildDesktopDataPack.smoke.mjs"
   },
