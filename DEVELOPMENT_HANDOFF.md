@@ -6,14 +6,52 @@
 - In particular, do not run `npm run generate:designer-data` or `node scripts/generateDesignerWorkbooks.mjs` by default.
 - Treat `public/designer-data/*.xlsx` and public art/resource samples as user/planner-owned working content. Read them when needed, but do not regenerate or overwrite them without explicit user approval.
 
+## 2026-07-22 challenge progression snapshots
+
+- New classes follow campaign-wide skill and talent progression; their trial challenges do not have a separate unlock track.
+- Every three-challenge group explicitly copies the full progression state of the campaign boss stage that unlocked it:
+  - Challenge 1~3 -> `RingingDeeps-6`: 5 cumulative active skills, passive tier 1, `standard_5slot`.
+  - Challenge 4~6 -> `WestFall-6`: 10 cumulative active skills, passive tier 2, `8slot_0`.
+  - Challenge 7~9 -> `Zul'Aman-6`: 16 cumulative active skills, passive tier 3, `8slot_2`.
+- `public/designer-data/challenge_stage_content.xlsx` now stores those explicit active-skill, passive-tier, and build-rule snapshots. `public/designer-data/challenge_encounter_balance.xlsx` has matching opening `buildRuleId` values.
+- Future challenge groups should copy the explicit snapshot from the sixth stage of their unlock chapter. Runtime must not infer it from `sourceStageIdsCsv`.
+- Build-rule IDs such as `standard_5slot`, `8slot_0`, and `8slot_2` are approved as class-neutral progression templates. They own points, slots, hotkeys, and inheritance only.
+- The selected `classId` separately filters legal skills, talents, and default presets. Default builds resolve by `(buildRuleId, classId)`, and build normalization must receive the class explicitly.
+- `构筑规则定义.classId` should become an optional compatibility field during implementation; shared template rows should not remain bound to `warrior_t`.
+- Class runtime lookup must be exact; missing classes or handlers block stage entry instead of silently falling back to Warrior.
+- Bear T should compose the existing resource, status, skill, and talent registries. Blood DK secondary resources belong in an explicit discriminated `classRuntime`; recent-damage healing counts only effective post-mitigation health loss.
+- New-class content targets 15~17 active skills and at least 20 passive talents. Passive tiers should favor an even `5 / 5 / 5 / 5` distribution, with larger pools remaining approximately balanced across tiers.
+- Balance reports must be keyed by `(stageId, classId, buildRuleId)` and must never hide a weak class behind the best cross-class result.
+- Trial-group targets: learning-AI difficulty within one label of Warrior per stage, three-stage average best-pass-rate delta within 15 percentage points, `<5%` versus Warrior `>=15%` as a tool-gap blocker, and `>=85%` versus Warrior `<=69%` as an overpowered blocker.
+- Fixed AI, learning AI, delta analysis, and manual three-stage clears are all required before campaign enablement. Automated analysis remains read-only.
+- Delivery phases are fixed: multi-class infrastructure first, complete Bear T second, Blood DK only after Bear is stable, then the intentionally unspecified fourth class for challenges 7~9.
+- Formal approved design: `docs/superpowers/specs/2026-07-22-player-tank-class-expansion-design.md`.
+- Class eligibility was not changed in this data sync because Bear T and Blood DK T definitions are not yet present in `player_build.xlsx`.
+- Verification: designer-data validation passed with zero warnings; 32 workbook/build tests and 2 targeted challenge runtime tests passed.
+
+## 2026-07-21 player tank expansion architecture baseline
+
+- The first architecture section is approved and recorded in `docs/player-tank-class-expansion-handoff.md`.
+- Canonical class IDs are `warrior_t`, `druid_bear_t`, and `dk_blood_t`. Class-specific content uses the matching prefix; semantically shared statuses such as `taunted` remain canonical shared definitions.
+- Chapter 1 / Ringing Deeps remains Warrior-only. Every later class is introduced through one dedicated three-challenge trial group and unlocks for campaign Chapters 2+ only after clearing all three challenges with that class.
+- Current groups are Bear T on challenges 1~3, Blood DK T on challenges 4~6, and the fourth class on challenges 7~9. Future classes should append challenge 10~12, 13~15, and so on instead of adding class-specific branching.
+- Use the approved split: planner-authored combat content stays in `player_build.xlsx`; a runtime class registry owns technical capabilities; a trial policy owns three-stage groups; one stage-class availability service resolves UI and encounter eligibility.
+- Expected save concepts are `challengeVictoriesByClass`, `campaignUnlockedClassIds`, `selectedClassId`, and `buildsByClassId`.
+- Main-campaign clear markers additionally require `campaignVictoriesByClass`; challenge and campaign victories remain separate to avoid ambiguity when challenge content reuses stage templates.
+- Legacy `build` migrates to `buildsByClassId.warrior_t`. Warrior remains the default selected and permanently available class. Missing class builds initialize from that class's own default build.
+- Permanent unlocks are never removed by later trial-policy changes. On load, stored unlocks are unioned with classes whose current three-stage trial records are already complete.
+- Victory recording, save migration, and unlock reconciliation must all be idempotent.
+- Stage entry UI uses a fixed 4-by-3, 12-slot class grid filled top-to-bottom before moving right. Unavailable buttons remain invisible while their slots preserve layout space.
+- This entry documents approved design only. No production code or planner workbook was changed.
+
 ## 2026-07-20 player tank class expansion handoff
 
 - New class expansion entry document: `docs/player-tank-class-expansion-handoff.md`.
 - The next recommended feature direction is to add new tank classes after `warrior_t`, starting with Guardian Druid / 熊T, then Blood Death Knight / 死亡骑士T.
 - Design stance:
   - `warrior_t`: predictive shield tank, already implemented as the baseline.
-  - `guardian_druid_t`: first recommended new class because it can reuse the current rage resource and most survival/stat/telemetry systems.
-  - `blood_death_knight_t`: second recommended new class because it likely needs a recent-damage healing window, Bone Shield style stacks, and possibly a secondary rune resource.
+  - `druid_bear_t`: first recommended new class because it can reuse the current rage resource and most survival/stat/telemetry systems.
+  - `dk_blood_t`: second recommended new class because it likely needs a recent-damage healing window, Bone Shield style stacks, and possibly a secondary rune resource.
 - Important boundary: do not make the new classes direct reskins of Warrior T. The handoff doc records expected strengths, weaknesses, candidate skills, passive themes, AI strategy needs, and validation points.
 - No `public/designer-data` workbook was modified for this documentation handoff. The next implementation agent should first write tests and code/data-interface support, and only edit planner workbooks if the user explicitly asks for that step.
 
