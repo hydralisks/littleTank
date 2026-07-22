@@ -14,7 +14,12 @@ export interface StageClassAvailabilityInput extends ClassProgressionState {
   enabledClassIds?: readonly PlayerClassId[]
 }
 
-const FIRST_CHAPTER_END_INDEX = campaignStageOrder.indexOf('RingingDeeps-6')
+function getFirstChapterEndIndex() {
+  const configuredEndIndex = campaignStageOrder.indexOf('RingingDeeps-6')
+  return configuredEndIndex >= 0
+    ? configuredEndIndex
+    : Math.min(5, campaignStageOrder.length - 1)
+}
 
 export function getAvailableClassIdsForStage(
   stage: StageInfo,
@@ -31,9 +36,10 @@ export function getAvailableClassIdsForStage(
     : null
   const eligible = new Set<PlayerClassId>([WARRIOR_T_CLASS_ID])
   const campaignIndex = campaignStageOrder.indexOf(stage.id)
+  const firstChapterEndIndex = getFirstChapterEndIndex()
 
   if (campaignIndex >= 0) {
-    if (campaignIndex > FIRST_CHAPTER_END_INDEX) {
+    if (campaignIndex > firstChapterEndIndex) {
       for (const classId of input.campaignUnlockedClassIds) {
         eligible.add(classId)
       }

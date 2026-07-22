@@ -31,6 +31,10 @@ describe('stageClassAvailability', () => {
       ...challenge4WithAllContent,
       allowedClassIds: ['warrior_t'],
     }
+    const chapterOneWithAllContent = {
+      ...baseStage,
+      allowedClassIds: futureClassIds,
+    }
     const afterRingingDeeps = {
       ...createEmptyClassProgression(),
       highestClearedCampaignStageIndex: 5,
@@ -44,6 +48,7 @@ describe('stageClassAvailability', () => {
     }
 
     expect(getAvailableClassIdsForStage(getStageById('RingingDeeps-1'), afterRingingDeeps)).toEqual(['warrior_t'])
+    expect(getAvailableClassIdsForStage(chapterOneWithAllContent, bearPermanentlyUnlocked)).toEqual(['warrior_t'])
     expect(getAvailableClassIdsForStage(challenge1WithBearContent, afterRingingDeeps)).toEqual([
       'warrior_t', 'druid_bear_t',
     ])
