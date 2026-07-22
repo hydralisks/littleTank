@@ -68,6 +68,7 @@ export interface DeltaComparison {
 export interface StageDeltaAnalysis {
   stageId: string
   classId: PlayerClassId
+  buildRuleId: string
   title: string
   analysisType: DeltaAnalysisType
   baselineVariantId: string
@@ -315,6 +316,7 @@ export function runStageDeltaAnalysis(options: RunStageDeltaAnalysisOptions): St
   return {
     stageId: options.stage.id,
     classId: options.classId,
+    buildRuleId: getStageBuildRuleId(options.stage),
     title: options.stage.title,
     analysisType: options.type,
     baselineVariantId: baseline.id,

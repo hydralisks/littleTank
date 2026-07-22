@@ -1,5 +1,5 @@
 import type { StageInfo } from '../data/stageTemplates'
-import type { SkillId } from '../encounter/encounterTypes'
+import type { PlayerClassId, SkillId } from '../encounter/encounterTypes'
 import type { BalanceBuildVariant } from './balanceSimulator'
 import type {
   LearningCastStrategy,
@@ -32,6 +32,8 @@ export interface StrategyTipsModeResult {
 
 export interface StrategyTipsStageSensitivity {
   stageId: string
+  classId: PlayerClassId
+  buildRuleId: string
   title: string
   strategyTips: string
   signals: StrategyTipSignal[]
@@ -40,6 +42,12 @@ export interface StrategyTipsStageSensitivity {
   ignored: StrategyTipsModeResult
   violated: StrategyTipsModeResult
   dependency: StrategyTipDependencySummary
+}
+
+export function getStrategyTipsStageKey(
+  stage: Pick<StrategyTipsStageSensitivity, 'stageId' | 'classId' | 'buildRuleId'>,
+) {
+  return `${stage.stageId} / ${stage.classId} / ${stage.buildRuleId}`
 }
 
 export interface StrategyTipsChapterSensitivityReport {
@@ -332,7 +340,7 @@ export function renderStrategyTipsSensitivityMarkdown(report: StrategyTipsChapte
     '| --- | --- | ---: | ---: | ---: | ---: | --- |',
     ...report.stages.map((stage) =>
       [
-        `\`${stage.stageId}\` ${stage.title}`,
+        `\`${getStrategyTipsStageKey(stage)}\` ${stage.title}`,
         formatList(stage.signals.map(signalLabel)),
         formatModeCell(stage.baseline, stage.baseline),
         formatModeCell(stage.baseline, stage.lowAttention),
@@ -345,7 +353,7 @@ export function renderStrategyTipsSensitivityMarkdown(report: StrategyTipsChapte
     '## 逐关说明',
     '',
     ...report.stages.flatMap((stage) => [
-      `### ${stage.stageId} ${stage.title}`,
+      `### \`${getStrategyTipsStageKey(stage)}\` ${stage.title}`,
       '',
       `- strategyTips：${stage.strategyTips || '无'}`,
       `- 识别信号：${formatList(stage.signals.map(signalLabel))}`,

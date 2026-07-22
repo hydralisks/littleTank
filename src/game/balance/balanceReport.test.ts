@@ -45,9 +45,12 @@ describe('balance report rendering', () => {
   it('renders best-build summaries without weak-build wording', () => {
     const report: BalanceReport = {
       generatedAt: '2026-05-21T00:00:00.000Z',
+      classComparisons: [],
       stages: [
         {
           stageId: 'RingingDeeps-1',
+          classId: 'warrior_t',
+          buildRuleId: 'standard_5slot',
           title: 'RD1',
           manualLabel: 'hard',
           automatedLabel: 'balanced',
@@ -116,6 +119,7 @@ describe('balance report rendering', () => {
 
     const markdown = renderBalanceReportMarkdown(report)
 
+    expect(markdown).toContain('`RingingDeeps-1 / warrior_t / standard_5slot`')
     expect(markdown).toContain('人工基线：`hard`')
     expect(markdown).toContain('自动标签：`balanced`')
     expect(markdown).toContain('评分模式：`best_build_per_profile`')
@@ -133,9 +137,12 @@ describe('balance report rendering', () => {
   it('renders half-best build counts in the stage summary', () => {
     const report: BalanceReport = {
       generatedAt: '2026-05-21T00:00:00.000Z',
+      classComparisons: [],
       stages: [
         {
           stageId: 'RingingDeeps-1',
+          classId: 'warrior_t',
+          buildRuleId: 'standard_5slot',
           title: 'RD1',
           manualLabel: 'easy',
           automatedLabel: 'easy',

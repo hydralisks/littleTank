@@ -3,6 +3,7 @@ import {
   classifyStrategyTipSignals,
   filterViolatedBuildCandidates,
   formatPassRateDrop,
+  getStrategyTipsStageKey,
   summarizeStrategyTipDependency,
 } from './strategyTipsSensitivity'
 import type { SkillLoadout } from '../encounter/encounterTypes'
@@ -23,6 +24,17 @@ function createLoadout(overrides: Partial<SkillLoadout>): SkillLoadout {
 }
 
 describe('strategy tips sensitivity', () => {
+  it('keeps otherwise identical stage rows separate by class', () => {
+    expect(getStrategyTipsStageKey({
+      stageId: 'Challenge-1',
+      classId: 'warrior_t',
+      buildRuleId: 'standard_5slot',
+    })).not.toBe(getStrategyTipsStageKey({
+      stageId: 'Challenge-1',
+      classId: 'druid_bear_t',
+      buildRuleId: 'standard_5slot',
+    }))
+  })
   it('classifies passive-heavy, reflect, and priority-kill tips', () => {
     expect(classifyStrategyTipSignals('注意配合使用新解锁的tier 2强力天赋，不适合当前关卡的主动技能也可以放弃掉')).toContain('passive_heavy')
     expect(classifyStrategyTipSignals('卡好gcd时间反弹“鱼人闪电术”，怒气保持“无视苦痛”覆盖')).toEqual(expect.arrayContaining(['spell_reflect', 'resource_absorb_uptime']))

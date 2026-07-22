@@ -14,6 +14,7 @@ import {
 } from '../src/game/data/workbookLoader.ts'
 import { runStageDeltaAnalysis } from '../src/game/balance/deltaAnalysis.ts'
 import { renderDeltaReportMarkdown } from '../src/game/balance/deltaReport.ts'
+import { getPlayerClassRuntimeDefinition } from '../src/game/playerClasses/playerClassRuntimeRegistry.ts'
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const designerDataDir = path.join(projectRoot, 'public', 'designer-data')
@@ -60,6 +61,7 @@ function parseCliOptions(args) {
     sample: 'quick',
     attempts: null,
     seeds: null,
+    classId: 'warrior_t',
   }
 
   for (const arg of args) {
@@ -83,6 +85,8 @@ function parseCliOptions(args) {
       options.attempts = Number(arg.slice('--attempts='.length))
     } else if (arg.startsWith('--seeds=')) {
       options.seeds = Number(arg.slice('--seeds='.length))
+    } else if (arg.startsWith('--class=')) {
+      options.classId = arg.slice('--class='.length).trim() || 'warrior_t'
     }
   }
 
@@ -107,7 +111,7 @@ function readJsonIfExists(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'))
 }
 
-function findStageReport(stageId) {
+function findStageReport(stageId, classId) {
   const candidates = [
     path.join(outputDir, 'latest.json'),
     path.join(outputDir, 'westfall-auto-scoring.json'),
@@ -116,7 +120,7 @@ function findStageReport(stageId) {
 
   for (const candidate of candidates) {
     const report = readJsonIfExists(candidate)
-    const stage = report?.stages?.find((entry) => entry.stageId === stageId)
+    const stage = report?.stages?.find((entry) => entry.stageId === stageId && entry.classId === classId)
     if (stage) {
       return stage
     }
@@ -125,12 +129,12 @@ function findStageReport(stageId) {
   return null
 }
 
-function findBestReportedBuild(stageId, baseBuildId) {
+function findBestReportedBuild(stageId, classId, baseBuildId) {
   if (baseBuildId !== 'best') {
     return undefined
   }
 
-  const stageReport = findStageReport(stageId)
+  const stageReport = findStageReport(stageId, classId)
   const selectedBuildId = stageReport?.learningAnalysis?.selectedBuildIds
     ?.find((buildId) => buildId !== 'default') ?? stageReport?.fixedAnalysis?.bestBuildsByProfile
       ?.find((summary) => summary.buildId !== 'default')?.buildId
@@ -157,6 +161,7 @@ function findBestReportedBuild(stageId, baseBuildId) {
 }
 
 const options = parseCliOptions(process.argv.slice(2))
+getPlayerClassRuntimeDefinition(options.classId)
 if (options.stages.length === 0) {
   throw new Error('Usage: npm run analyze:delta -- --stages=WestFall-2,WestFall-3 [--type=passive]')
 }
@@ -180,9 +185,10 @@ const stages = options.stages.map((stageId) => {
   console.log(`[delta] ${stageId}: start`)
   const analysis = runStageDeltaAnalysis({
     stage,
+    classId: options.classId,
     type: options.type,
     baseBuildId: options.baseBuild,
-    baseBuild: findBestReportedBuild(stageId, options.baseBuild),
+    baseBuild: findBestReportedBuild(stageId, options.classId, options.baseBuild),
     talentIds: options.talents,
     includePairs: true,
     profile: LEARNING_PROFILE,
@@ -200,8 +206,8 @@ const report = {
 }
 
 fs.mkdirSync(outputDir, { recursive: true })
-const jsonPath = path.join(outputDir, 'delta-analysis.json')
-const markdownPath = path.join(outputDir, 'delta-analysis.md')
+const jsonPath = path.join(outputDir, `delta-analysis-${options.classId}.json`)
+const markdownPath = path.join(outputDir, `delta-analysis-${options.classId}.md`)
 fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2), 'utf8')
 fs.writeFileSync(markdownPath, renderDeltaReportMarkdown(report), 'utf8')
 console.log(`[delta] wrote ${markdownPath}`)

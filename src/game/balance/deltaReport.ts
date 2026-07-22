@@ -1,5 +1,9 @@
 import type { StageDeltaAnalysis } from './deltaAnalysis'
 
+function getDeltaStageKey(stage: Pick<StageDeltaAnalysis, 'stageId' | 'classId' | 'buildRuleId'>) {
+  return `${stage.stageId} / ${stage.classId} / ${stage.buildRuleId}`
+}
+
 export interface DeltaReport {
   generatedAt: string
   stages: StageDeltaAnalysis[]
@@ -145,14 +149,14 @@ export function renderDeltaReportMarkdown(report: DeltaReport) {
       const low = stage.comparisons
         .filter((comparison) => comparison.confidence === 'low')
         .map((comparison) => comparison.comparedVariantLabel)
-      return `| \`${stage.stageId}\` | \`${stage.baselineVariantId}\` | ${strong.join(', ') || 'none'} | ${low.join(', ') || 'none'} |`
+      return `| \`${getDeltaStageKey(stage)}\` | \`${stage.baselineVariantId}\` | ${strong.join(', ') || 'none'} | ${low.join(', ') || 'none'} |`
     }),
     '',
   ]
 
   for (const stage of report.stages) {
     lines.push(
-      `## ${stage.stageId} - ${stage.title}`,
+      `## \`${getDeltaStageKey(stage)}\` - ${stage.title}`,
       '',
       `Analysis type: \`${stage.analysisType}\``,
       '',

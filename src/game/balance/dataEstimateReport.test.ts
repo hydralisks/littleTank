@@ -12,6 +12,8 @@ describe('data estimate report', () => {
       stages: [
         {
           stageId: 'RingingDeeps-1',
+          classId: 'warrior_t',
+          buildRuleId: 'standard_5slot',
           title: '测试关',
           fixedAnalysis: {
             scenarios: [
@@ -72,6 +74,7 @@ describe('data estimate report', () => {
     })
 
     const markdown = renderDataEstimateMarkdown(report)
+    expect(markdown).toContain('`RingingDeeps-1 / warrior_t / standard_5slot`')
     expect(markdown).toContain('# 第一章基础数值统计')
     expect(markdown).toContain('资源/秒')
     expect(markdown).toContain('承伤/秒')

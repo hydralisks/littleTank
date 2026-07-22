@@ -26,6 +26,9 @@ describe('diagnostic report renderer', () => {
   it('renders compact aggregate diagnostic action candidates from scenario summaries', () => {
     const markdown = renderDiagnosticScenarioSummariesMarkdown('固定策略 AI 内部诊断', [
       {
+        stageId: 'Challenge-1',
+        classId: 'warrior_t',
+        buildRuleId: 'standard_5slot',
         profileId: 'average',
         buildId: 'default',
         passRate: 1 / 3,
@@ -35,6 +38,7 @@ describe('diagnostic report renderer', () => {
 
     expect(markdown).toContain('## 固定策略 AI 内部诊断')
     expect(markdown).toContain('high_danger_casts_completed')
+    expect(markdown).toContain('`Challenge-1 / warrior_t / standard_5slot`')
     expect(markdown).toContain('高危读条处理优先级')
     expect(markdown).toContain('medium')
     expect(markdown).toContain('| 诊断信号 | 样本覆盖 | 失败样本出现率 | 胜利样本出现率 | 失败均值 | 置信度 | 候选 action |')
@@ -45,6 +49,9 @@ describe('diagnostic report renderer', () => {
   it('renders an empty note when no diagnostic summaries are available', () => {
     const markdown = renderDiagnosticScenarioSummariesMarkdown('学习型 AI 内部诊断', [
       {
+        stageId: 'Challenge-1',
+        classId: 'warrior_t',
+        buildRuleId: 'standard_5slot',
         profileId: 'learning',
         buildId: 'default',
         passRate: 1,

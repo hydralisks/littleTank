@@ -6,6 +6,7 @@ import {
   appendEncounterWorkbookOverrides,
   applyEncounterWorkbookOverrides,
   createEncounterTemplate,
+  getStageBuildRuleId,
 } from '../src/game/data/encounterTemplates.ts'
 import {
   applyEnemyWorkbookOverrides,
@@ -34,6 +35,7 @@ import {
 import {
   getManualDifficultyBaseline,
   RINGING_DEEPS_MANUAL_BASELINES,
+  getBalanceReportStageKey,
   renderBalanceReportMarkdown,
 } from '../src/game/balance/balanceReport.ts'
 import {
@@ -59,6 +61,9 @@ import {
 } from '../src/game/balance/manualPlaytestBuilds.ts'
 import { scoreStageStaticDifficulty } from '../src/game/balance/staticStageScoring.ts'
 import { runLearningStageBalanceAnalysis } from '../src/game/balance/learningBalanceEvaluator.ts'
+import { getPlayerClassRuntimeDefinitions } from '../src/game/playerClasses/playerClassRuntimeRegistry.ts'
+import { CHALLENGE_GROUP_POLICIES } from '../src/game/progression/classTrialPolicy.ts'
+import { compareTankClassTrialResults } from '../src/game/balance/tankClassBalanceComparison.ts'
 import { createBalanceDesignRecommendation } from '../src/game/balance/balanceRecommendation.ts'
 import {
   renderBalanceReportDiffMarkdown,
@@ -551,7 +556,11 @@ function resolveRecommendedIds(value, lookup) {
     .filter(Boolean)
 }
 
-function buildChallengeRecommendedBuildCandidate(row, stage) {
+function buildChallengeRecommendedBuildCandidate(row, stage, classId) {
+  const rowClassId = String(row.classId ?? 'warrior_t').trim() || 'warrior_t'
+  if (rowClassId !== classId) {
+    return null
+  }
   const activeSkillIds = resolveRecommendedIds(row.recommendedActiveSkillNamesCsv, createActiveSkillLookup())
   const passiveTalentIds = resolveRecommendedIds(row.recommendedPassiveTalentNamesCsv, createPassiveTalentLookup())
   if (activeSkillIds.length === 0 && passiveTalentIds.length === 0) {
@@ -565,7 +574,7 @@ function buildChallengeRecommendedBuildCandidate(row, stage) {
 
   const normalized = normalizePersistedBuildForRule(
     { loadout, passiveTalentIds },
-    row.buildRuleId ? String(row.buildRuleId) : 'standard_5slot', 'warrior_t',
+    row.buildRuleId ? String(row.buildRuleId) : 'standard_5slot', classId,
     getPassiveTalentUnlockTierForStage(stage),
     getUnlockedActiveSkillIdsForStage(stage),
     [],
@@ -573,6 +582,7 @@ function buildChallengeRecommendedBuildCandidate(row, stage) {
 
   return {
     id: 'challenge_recommended',
+    classId,
     build: normalized,
   }
 }
@@ -1121,7 +1131,7 @@ function getRequestedStageEntries(stageWorkbook) {
   }
 
   const getStoryManualLabel = (stageId) =>
-    getManualPlaytestEntryForStage(manualPlaytestEntries, stageId)?.manualDifficulty ??
+    getManualPlaytestEntryForStage(manualPlaytestEntries, stageId, 'warrior_t')?.manualDifficulty ??
     getManualDifficultyBaseline(stageId)
 
   if (cliOptions.stages.length > 0) {
@@ -1286,7 +1296,7 @@ function formatStageSummaryConclusion(stage) {
 }
 
 function renderReportSummaryRows(report) {
-  return report.stages.map((stage) => `- \`${stage.stageId}\`：${formatStageSummaryConclusion(stage)}`)
+  return report.stages.map((stage) => `- \`${getBalanceReportStageKey(stage)}\`：${formatStageSummaryConclusion(stage)}`)
 }
 
 function translateStrategyId(id) {
@@ -1536,7 +1546,7 @@ function renderChapterAutoScoringMarkdown(report) {
     ...report.stages.map((stage) => {
       const learning = stage.learningAnalysis
       return `| ${[
-        `\`${stage.stageId}\``,
+        `\`${getBalanceReportStageKey(stage)}\``,
         `\`${stage.manualLabel}\``,
         `\`${stage.staticScore.label}\` (${stage.staticScore.score})`,
         formatRatingCell(stage.fixedAnalysis.rating),
@@ -1563,7 +1573,7 @@ function renderChapterAutoScoringMarkdown(report) {
         `${formatLearningExecutionLoadCell(stage.learningAnalysis)}；${stage.learningAnalysis.learningExecutionLoad?.reasons.join('；') ?? ''}`,
         `${formatLearningPathCell(stage.learningAnalysis)}；${stage.learningAnalysis.learningPath?.reasons.join('；') ?? ''}`,
       ].join('<br>')
-      return `| \`${stage.stageId}\` | ${staticReasons} | ${priorityKills} | ${priorityInterrupts} | ${strategyTips} | ${fixedReasons} | ${learningReasons} |`
+      return `| \`${getBalanceReportStageKey(stage)}\` | ${staticReasons} | ${priorityKills} | ${priorityInterrupts} | ${strategyTips} | ${fixedReasons} | ${learningReasons} |`
     }),
     '',
     '## 使用建议',
@@ -1585,7 +1595,7 @@ function renderChapterAutoScoringMarkdown(report) {
     '| --- | --- | --- |',
     ...report.stages.map((stage) => {
       const recommendation = stage.designRecommendation
-      return `| \`${stage.stageId}\` | ${formatIssueTypes(recommendation.issueTypes)} | ${formatDesignRecommendation(recommendation)} |`
+      return `| \`${getBalanceReportStageKey(stage)}\` | ${formatIssueTypes(recommendation.issueTypes)} | ${formatDesignRecommendation(recommendation)} |`
     }),
     '',
     '## 每关敌人数值建议',
@@ -1594,7 +1604,7 @@ function renderChapterAutoScoringMarkdown(report) {
     '',
     '| 关卡 | 敌人建议 |',
     '| --- | --- |',
-    ...report.stages.map((stage) => `| \`${stage.stageId}\` | ${renderStageEnemyBalanceAdvice(stage)} |`),
+    ...report.stages.map((stage) => `| \`${getBalanceReportStageKey(stage)}\` | ${renderStageEnemyBalanceAdvice(stage)} |`),
   )
 
   return `${lines.join('\n').trimEnd()}\n`
@@ -1602,30 +1612,32 @@ function renderChapterAutoScoringMarkdown(report) {
 
 const analyzedStageCache = new Map()
 
-function getStageEntryKey(stageId, manualLabel, stageEntry) {
-  return `${stageId}:${manualLabel}:${stageEntry ? 'challenge' : 'story'}`
+function getStageEntryKey(stageId, classId, buildRuleId, manualLabel, stageEntry) {
+  return `${stageId}:${classId}:${buildRuleId}:${manualLabel}:${stageEntry ? 'challenge' : 'story'}`
 }
 
-function analyzeStageEntry(stageId, manualLabel, stageEntry, sampleConfig) {
-  const cacheKey = getStageEntryKey(stageId, manualLabel, stageEntry)
+function analyzeStageEntry(stageId, classId, manualLabel, stageEntry, sampleConfig) {
+  const stage = getStageById(stageId)
+  if (!stage) {
+    throw new Error(`Missing stage after designer data load: ${stageId}`)
+  }
+  const buildRuleId = getStageBuildRuleId(stage)
+  const cacheKey = getStageEntryKey(stageId, classId, buildRuleId, manualLabel, stageEntry)
   const cached = analyzedStageCache.get(cacheKey)
   if (cached) {
     return cached
   }
 
   const stageStartMs = Date.now()
-  console.log(`[balance] ${stageId}: start`)
-  const stage = getStageById(stageId)
-  if (!stage) {
-    throw new Error(`Missing stage after designer data load: ${stageId}`)
-  }
+  console.log(`[balance] ${stageId}/${classId}: start`)
 
-  console.log(`[balance] ${stageId}: fixed AI start`)
+  console.log(`[balance] ${stageId}/${classId}: fixed AI start`)
   const manualPlaytestBuildCandidate = !stageEntry
-    ? buildManualPlaytestCandidateForStage(manualPlaytestEntries, stage)
+    ? buildManualPlaytestCandidateForStage(manualPlaytestEntries, stage, classId)
     : null
   const analysis = runTwoPhaseStageBalanceAnalysis({
     stage,
+    classId,
     profiles: BALANCE_PROFILES,
     extraBuildCandidates: manualPlaytestBuildCandidate ? [manualPlaytestBuildCandidate] : [],
     phaseOneAttemptsPerScenario: sampleConfig.fixedPhaseOneAttempts,
@@ -1638,7 +1650,7 @@ function analyzeStageEntry(stageId, manualLabel, stageEntry, sampleConfig) {
     collectDiagnostics: true,
   })
   console.log(
-    `[balance] ${stageId}: fixed AI done (${Math.round((Date.now() - stageStartMs) / 1000)}s, phaseOneBuilds=${analysis.phaseOneBuildCount ?? 0}, finalBuilds=${analysis.finalBuildCount ?? 0})`,
+    `[balance] ${stageId}/${classId}: fixed AI done (${Math.round((Date.now() - stageStartMs) / 1000)}s, phaseOneBuilds=${analysis.phaseOneBuildCount ?? 0}, finalBuilds=${analysis.finalBuildCount ?? 0})`,
   )
 
   console.log(`[balance] ${stageId}: static score start`)
@@ -1646,7 +1658,7 @@ function analyzeStageEntry(stageId, manualLabel, stageEntry, sampleConfig) {
   console.log(`[balance] ${stageId}: static score done (${staticScore.label}, score=${staticScore.score})`)
 
   const challengeRecommendedBuildCandidate = stageEntry
-    ? buildChallengeRecommendedBuildCandidate(stageEntry, stage)
+    ? buildChallengeRecommendedBuildCandidate(stageEntry, stage, classId)
     : null
   const generatedBuildCandidates = selectLearningBuildCandidatesFromFixedAnalysis(
     analysis.scenarios,
@@ -1661,12 +1673,13 @@ function analyzeStageEntry(stageId, manualLabel, stageEntry, sampleConfig) {
     ? generatedBuildCandidates
     : analysis.bestBuildsByProfile.map((summary) => ({
       id: summary.buildId,
+      classId,
       build: {
         loadout: summary.loadout,
         passiveTalentIds: summary.passiveTalentIds,
       },
     }))
-  const strategyTipBuildCandidates = generateStrategyTipBuildCandidates(stage, {
+  const strategyTipBuildCandidates = generateStrategyTipBuildCandidates(stage, classId, {
     maxCandidates: cliOptions.quick ? 6 : 4,
   })
   const learningBuildCandidates = prependUniqueBuildCandidates(
@@ -1681,6 +1694,7 @@ function analyzeStageEntry(stageId, manualLabel, stageEntry, sampleConfig) {
   )
   const learningAnalysis = runLearningStageBalanceAnalysis({
     stage,
+    classId,
     profiles: LEARNING_BALANCE_PROFILES,
     buildCandidates: learningBuildCandidates,
     castStrategies: LEARNING_CAST_STRATEGIES,
@@ -1714,6 +1728,8 @@ function analyzeStageEntry(stageId, manualLabel, stageEntry, sampleConfig) {
 
   const result = {
     stageId,
+    classId,
+    buildRuleId,
     title: stage.title,
     strategyTips: stage.strategyTips ?? '',
     manualLabel,
@@ -1737,21 +1753,57 @@ function analyzeStageEntry(stageId, manualLabel, stageEntry, sampleConfig) {
   return result
 }
 
+function getAnalysisClassIds(stage) {
+  const contentCap = stage.allowedClassIds?.length ? new Set(stage.allowedClassIds) : null
+  return getPlayerClassRuntimeDefinitions()
+    .map((entry) => entry.classId)
+    .filter((classId) => !contentCap || contentCap.has(classId))
+}
+
+function buildTankClassComparisons(stages) {
+  return CHALLENGE_GROUP_POLICIES.flatMap((group) => {
+    if (!group.trialClassId) {
+      return []
+    }
+    const rows = group.challengeIds.map((stageId) => ({
+      warrior: stages.find((stage) => stage.stageId === stageId && stage.classId === 'warrior_t'),
+      target: stages.find((stage) => stage.stageId === stageId && stage.classId === group.trialClassId),
+    }))
+    if (rows.some((row) => !row.warrior || !row.target)) {
+      return []
+    }
+    return [compareTankClassTrialResults({
+      classId: group.trialClassId,
+      stages: rows.map(({ warrior, target }) => ({
+        stageId: warrior.stageId,
+        warriorBestPassRate: warrior.fixedAnalysis.rating.overallBestPassRate,
+        classBestPassRate: target.fixedAnalysis.rating.overallBestPassRate,
+        warriorDifficulty: warrior.fixedAnalysis.rating.label,
+        classDifficulty: target.fixedAnalysis.rating.label,
+      })),
+    })]
+  })
+}
+
 function buildReport() {
   const stageWorkbook = loadDesignerDataIntoCatalogs()
   const stageEntries = getRequestedStageEntries(stageWorkbook)
   const sampleConfig = getSampleConfig()
   console.log(`[balance] sample budget: ${cliOptions.budget}`)
 
-  const stages = stageEntries.map(([stageId, manualLabel, stageEntry]) =>
-    analyzeStageEntry(stageId, manualLabel, stageEntry, sampleConfig),
-  )
+  const stages = stageEntries.flatMap(([stageId, manualLabel, stageEntry]) => {
+    const stage = getStageById(stageId)
+    return getAnalysisClassIds(stage).map((classId) =>
+      analyzeStageEntry(stageId, classId, manualLabel, stageEntry, sampleConfig),
+    )
+  })
 
   return {
     generatedAt: new Date().toISOString(),
     stageWorkbook,
     sampleConfig,
     stages,
+    classComparisons: buildTankClassComparisons(stages),
   }
 }
 

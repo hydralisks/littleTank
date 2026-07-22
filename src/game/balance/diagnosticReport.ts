@@ -1,6 +1,10 @@
 import type { DiagnosticScenarioSummary } from './diagnosticScenarioSummary'
+import type { PlayerClassId } from '../encounter/encounterTypes'
 
 interface DiagnosticScenarioReportEntry {
+  stageId: string
+  classId: PlayerClassId
+  buildRuleId: string
   profileId: string
   buildId: string
   passRate: number
@@ -118,7 +122,7 @@ function aggregateSignals(entries: readonly DiagnosticScenarioReportEntry[]) {
     .slice(0, 3)
 }
 
-export function renderDiagnosticScenarioSummariesMarkdown(
+function renderDiagnosticGroupMarkdown(
   title: string,
   entries: readonly DiagnosticScenarioReportEntry[],
 ) {
@@ -142,5 +146,29 @@ export function renderDiagnosticScenarioSummariesMarkdown(
     '| --- | ---: | ---: | ---: | ---: | --- | --- |',
     ...rows.map((row) => `| \`${row.id}\` | ${formatPercent(row.coverage)} | ${formatPercent(row.defeatRate)} | ${formatPercent(row.victoryRate)} | ${formatMetric(row.meanMetricOnDefeat)} | \`${row.confidence}\` | ${actionLabels(row.internalActionIds)} |`),
     '',
+  ].join('\n')
+}
+
+export function renderDiagnosticScenarioSummariesMarkdown(
+  title: string,
+  entries: readonly DiagnosticScenarioReportEntry[],
+) {
+  const groupedEntries = new Map<string, DiagnosticScenarioReportEntry[]>()
+  for (const entry of entries) {
+    const key = `${entry.stageId} / ${entry.classId} / ${entry.buildRuleId}`
+    groupedEntries.set(key, [...(groupedEntries.get(key) ?? []), entry])
+  }
+
+  if (groupedEntries.size === 0) {
+    return [`## ${title}`, '', '暂无诊断样本。', ''].join('\n')
+  }
+
+  return [
+    `## ${title}`,
+    '',
+    ...[...groupedEntries.entries()].flatMap(([key, group]) => [
+      renderDiagnosticGroupMarkdown(`\`${key}\``, group).replace(/^## /, '### '),
+      '',
+    ]),
   ].join('\n')
 }

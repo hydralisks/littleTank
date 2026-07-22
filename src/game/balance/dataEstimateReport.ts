@@ -1,10 +1,13 @@
 import type { BalanceProfileTier } from './difficultyScoring'
+import type { PlayerClassId } from '../encounter/encounterTypes'
 import type { BalanceScenarioDataEstimate, TraceableBalanceScenarioResult } from './balanceSimulator'
 
 export type DataEstimateScenarioMode = 'fixed' | 'learning'
 
 export interface DataEstimateScenarioRow extends BalanceScenarioDataEstimate {
   stageId: string
+  classId: PlayerClassId
+  buildRuleId: string
   mode: DataEstimateScenarioMode
   profileId: string
   profileTier: BalanceProfileTier
@@ -14,6 +17,8 @@ export interface DataEstimateScenarioRow extends BalanceScenarioDataEstimate {
 
 export interface DataEstimateStageSummary extends BalanceScenarioDataEstimate {
   stageId: string
+  classId: PlayerClassId
+  buildRuleId: string
   title: string
   mode: DataEstimateScenarioMode
   profileId: string
@@ -24,6 +29,8 @@ export interface DataEstimateStageSummary extends BalanceScenarioDataEstimate {
 
 export interface DataEstimateStageReport {
   stageId: string
+  classId: PlayerClassId
+  buildRuleId: string
   title: string
   summary: DataEstimateStageSummary
   scenarios: DataEstimateScenarioRow[]
@@ -40,6 +47,8 @@ interface BuildDataEstimateReportInput {
   title: string
   stages: readonly {
     stageId: string
+    classId: PlayerClassId
+    buildRuleId: string
     title: string
     fixedAnalysis?: {
       scenarios?: readonly TraceableBalanceScenarioResult[]
@@ -67,6 +76,8 @@ function formatNumber(value: number) {
 
 function toScenarioRows(
   stageId: string,
+  classId: PlayerClassId,
+  buildRuleId: string,
   mode: DataEstimateScenarioMode,
   scenarios: readonly TraceableBalanceScenarioResult[] = [],
 ): DataEstimateScenarioRow[] {
@@ -77,6 +88,8 @@ function toScenarioRows(
 
     return [{
       stageId,
+      classId,
+      buildRuleId,
       mode,
       profileId: scenario.profileId,
       profileTier: scenario.profileTier,
@@ -103,9 +116,16 @@ function selectReferenceScenario(rows: readonly DataEstimateScenarioRow[]) {
   )[0]
 }
 
-function emptySummary(stageId: string, title: string): DataEstimateStageSummary {
+function emptySummary(
+  stageId: string,
+  classId: PlayerClassId,
+  buildRuleId: string,
+  title: string,
+): DataEstimateStageSummary {
   return {
     stageId,
+    classId,
+    buildRuleId,
     title,
     mode: 'fixed',
     profileId: 'none',
@@ -128,8 +148,14 @@ export function buildDataEstimateReport(input: BuildDataEstimateReportInput): Da
     title: input.title,
     stages: input.stages.map((stage) => {
       const scenarios = [
-        ...toScenarioRows(stage.stageId, 'fixed', stage.fixedAnalysis?.scenarios),
-        ...toScenarioRows(stage.stageId, 'learning', stage.learningAnalysis?.finalAnalysis?.scenarios),
+        ...toScenarioRows(stage.stageId, stage.classId, stage.buildRuleId, 'fixed', stage.fixedAnalysis?.scenarios),
+        ...toScenarioRows(
+          stage.stageId,
+          stage.classId,
+          stage.buildRuleId,
+          'learning',
+          stage.learningAnalysis?.finalAnalysis?.scenarios,
+        ),
       ]
       const reference = selectReferenceScenario(scenarios)
       const summary: DataEstimateStageSummary = reference
@@ -137,10 +163,12 @@ export function buildDataEstimateReport(input: BuildDataEstimateReportInput): Da
             ...reference,
             title: stage.title,
           }
-        : emptySummary(stage.stageId, stage.title)
+        : emptySummary(stage.stageId, stage.classId, stage.buildRuleId, stage.title)
 
       return {
         stageId: stage.stageId,
+        classId: stage.classId,
+        buildRuleId: stage.buildRuleId,
         title: stage.title,
         summary,
         scenarios,
@@ -152,7 +180,7 @@ export function buildDataEstimateReport(input: BuildDataEstimateReportInput): Da
 function renderSummaryRows(report: DataEstimateReport) {
   return report.stages.map((stage) => {
     const summary = stage.summary
-    return `| \`${stage.stageId}\` | ${stage.title} | \`${summary.mode}\` | \`${summary.profileTier}/${summary.profileId}\` | \`${summary.buildId}\` | ${formatPercent(summary.passRate)} | ${formatNumber(summary.averageDurationSec)} | ${formatNumber(summary.playerResourcePerSec)} | ${formatNumber(summary.tankDamageTakenPerSec)} | ${formatNumber(summary.healingAndAbsorbPerSec)} | ${formatNumber(summary.playerSideDamagePerSec)} | ${formatNumber(summary.partyPressurePerSec)} |`
+    return `| \`${stage.stageId} / ${stage.classId} / ${stage.buildRuleId}\` | ${stage.title} | \`${summary.mode}\` | \`${summary.profileTier}/${summary.profileId}\` | \`${summary.buildId}\` | ${formatPercent(summary.passRate)} | ${formatNumber(summary.averageDurationSec)} | ${formatNumber(summary.playerResourcePerSec)} | ${formatNumber(summary.tankDamageTakenPerSec)} | ${formatNumber(summary.healingAndAbsorbPerSec)} | ${formatNumber(summary.playerSideDamagePerSec)} | ${formatNumber(summary.partyPressurePerSec)} |`
   })
 }
 
@@ -202,7 +230,7 @@ export function renderDataEstimateMarkdown(report: DataEstimateReport) {
 
   for (const stage of report.stages) {
     lines.push(
-      `## ${stage.stageId} ${stage.title}`,
+      `## \`${stage.stageId} / ${stage.classId} / ${stage.buildRuleId}\` ${stage.title}`,
       '',
       '| 模式 | profile | build | 样本数 | 通过率 | 平均时长(s) | 资源/秒 | 承伤/秒 | 治疗吸收/秒 | 造成伤害/秒 | 压力/秒 |',
       '| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',

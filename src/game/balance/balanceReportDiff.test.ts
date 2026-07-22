@@ -6,6 +6,8 @@ const previousReport: DiffableBalanceReport = {
   stages: [
     {
       stageId: 'WestFall-1',
+      classId: 'warrior_t',
+      buildRuleId: 'standard_5slot',
       manualLabel: 'easy',
       staticScore: { label: 'easy', score: 24 },
       fixedAnalysis: { rating: { label: 'balanced', overallBestPassRate: 0.6 } },
@@ -13,6 +15,8 @@ const previousReport: DiffableBalanceReport = {
     },
     {
       stageId: 'WestFall-2',
+      classId: 'warrior_t',
+      buildRuleId: 'standard_5slot',
       manualLabel: 'balanced',
       staticScore: { label: 'balanced', score: 36 },
       fixedAnalysis: { rating: { label: 'hard', overallBestPassRate: 0.3 } },
@@ -26,6 +30,8 @@ const currentReport: DiffableBalanceReport = {
   stages: [
     {
       stageId: 'WestFall-1',
+      classId: 'warrior_t',
+      buildRuleId: 'standard_5slot',
       manualLabel: 'easy',
       staticScore: { label: 'balanced', score: 32 },
       fixedAnalysis: { rating: { label: 'easy', overallBestPassRate: 0.8 } },
@@ -33,6 +39,8 @@ const currentReport: DiffableBalanceReport = {
     },
     {
       stageId: 'WestFall-3',
+      classId: 'warrior_t',
+      buildRuleId: 'standard_5slot',
       manualLabel: 'balanced',
       staticScore: { label: 'balanced', score: 40 },
       fixedAnalysis: { rating: { label: 'balanced', overallBestPassRate: 0.55 } },
@@ -47,7 +55,7 @@ describe('balance report diff', () => {
 
     expect(diff.changedStages).toEqual([
       expect.objectContaining({
-        stageId: 'WestFall-1',
+        stageId: 'WestFall-1 / warrior_t / standard_5slot',
         staticLabelDelta: 'easy -> balanced',
         fixedLabelDelta: 'balanced -> easy',
         learningLabelDelta: 'easy -> trivial',
@@ -55,16 +63,16 @@ describe('balance report diff', () => {
         learningPassRateDelta: 0.12,
       }),
     ])
-    expect(diff.addedStageIds).toEqual(['WestFall-3'])
-    expect(diff.removedStageIds).toEqual(['WestFall-2'])
+    expect(diff.addedStageIds).toEqual(['WestFall-3 / warrior_t / standard_5slot'])
+    expect(diff.removedStageIds).toEqual(['WestFall-2 / warrior_t / standard_5slot'])
   })
 
   it('renders planner-readable markdown', () => {
     const markdown = renderBalanceReportDiffMarkdown(summarizeBalanceReportDiff(previousReport, currentReport))
 
     expect(markdown).toContain('# 自动评分差异报告')
-    expect(markdown).toContain('| `WestFall-1` | `easy -> balanced` | `balanced -> easy` | `easy -> trivial` | `+20%` | `+12%` |')
-    expect(markdown).toContain('新增关卡：`WestFall-3`')
-    expect(markdown).toContain('移除关卡：`WestFall-2`')
+    expect(markdown).toContain('| `WestFall-1 / warrior_t / standard_5slot` | `easy -> balanced` | `balanced -> easy` | `easy -> trivial` | `+20%` | `+12%` |')
+    expect(markdown).toContain('新增关卡：`WestFall-3 / warrior_t / standard_5slot`')
+    expect(markdown).toContain('移除关卡：`WestFall-2 / warrior_t / standard_5slot`')
   })
 })

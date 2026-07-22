@@ -9,6 +9,7 @@ describe('delta report renderer', () => {
       stages: [
         {
           classId: 'warrior_t', stageId: 'WestFall-2',
+          buildRuleId: 'standard_5slot',
           title: 'Sentinel Hill',
           analysisType: 'passive',
           baselineVariantId: 'baseline_no_passives',
@@ -57,6 +58,7 @@ describe('delta report renderer', () => {
 
     expect(report).toContain('# Delta Analysis')
     expect(report).toContain('WestFall-2')
+    expect(report).toContain('`WestFall-2 / warrior_t / standard_5slot`')
     expect(report).toContain('野蛮训练')
     expect(report).toContain('low')
     expect(report).toContain('minor_gain')
@@ -69,6 +71,7 @@ describe('delta report renderer', () => {
       stages: [
         {
           classId: 'warrior_t', stageId: 'WestFall-2',
+          buildRuleId: 'standard_5slot',
           title: 'Sentinel Hill',
           analysisType: 'passive',
           baselineVariantId: 'baseline_no_passives',

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import XLSX from 'xlsx'
 import {
   applyEncounterWorkbookOverrides,
+  getStageBuildRuleId,
 } from '../src/game/data/encounterTemplates.ts'
 import {
   applyEnemyWorkbookOverrides,
@@ -42,6 +43,7 @@ import {
   renderStrategyTipsSensitivityMarkdown,
   summarizeStrategyTipDependency,
 } from '../src/game/balance/strategyTipsSensitivity.ts'
+import { getPlayerClassRuntimeDefinition } from '../src/game/playerClasses/playerClassRuntimeRegistry.ts'
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const designerDataDir = path.join(projectRoot, 'public', 'designer-data')
@@ -281,6 +283,7 @@ function parseCliOptions(args) {
   let sample = 'normal'
   let area = null
   let stages = []
+  let classId = 'warrior_t'
   for (const arg of args) {
     if (arg === '--quick') {
       sample = 'quick'
@@ -295,6 +298,8 @@ function parseCliOptions(args) {
       if (value === 'quick' || value === 'normal' || value === 'full') {
         sample = value
       }
+    } else if (arg.startsWith('--class=')) {
+      classId = arg.slice('--class='.length).trim() || 'warrior_t'
     } else if (arg.startsWith('--budget=')) {
       const value = arg.slice('--budget='.length).trim()
       if (value === 'quick' || value === 'normal' || value === 'full') {
@@ -303,7 +308,7 @@ function parseCliOptions(args) {
     }
   }
 
-  return { sample, area, stages }
+  return { sample, area, stages, classId }
 }
 
 function getRequestedChapters() {
@@ -363,7 +368,7 @@ function prependUniqueBuildCandidates(...candidateGroups) {
   return results
 }
 
-function fixedLearningCandidatesFromAnalysis(analysis) {
+function fixedLearningCandidatesFromAnalysis(analysis, classId) {
   const generated = selectLearningBuildCandidatesFromFixedAnalysis(
     analysis.scenarios,
     analysis.analyzedBuilds ?? [],
@@ -380,6 +385,7 @@ function fixedLearningCandidatesFromAnalysis(analysis) {
 
   return analysis.bestBuildsByProfile.map((summary) => ({
     id: summary.buildId,
+    classId,
     build: {
       loadout: summary.loadout,
       passiveTalentIds: summary.passiveTalentIds,
@@ -387,9 +393,9 @@ function fixedLearningCandidatesFromAnalysis(analysis) {
   }))
 }
 
-function createLearningCandidates(stage, mode, fixedCandidates, signals) {
+function createLearningCandidates(stage, classId, mode, fixedCandidates, signals) {
   const tipCandidates = mode === 'baseline'
-    ? generateStrategyTipBuildCandidates(stage, { maxCandidates: 4 })
+    ? generateStrategyTipBuildCandidates(stage, classId, { maxCandidates: 4 })
     : []
   const candidates = prependUniqueBuildCandidates(tipCandidates, fixedCandidates)
 
@@ -417,11 +423,11 @@ function createModeNotes(mode, signals, candidateCount) {
   return [`清空 strategyTips，并排除可识别的提示对齐构筑/战术；候选构筑 ${candidateCount} 个。`]
 }
 
-function runLearningForMode({ stage, fixedCandidates, signals, mode, sampleConfig }) {
+function runLearningForMode({ stage, classId, fixedCandidates, signals, mode, sampleConfig }) {
   const learningStage = mode === 'ignored' || mode === 'violated'
     ? createStageWithoutStrategyTips(stage)
     : stage
-  const buildCandidates = createLearningCandidates(stage, mode, fixedCandidates, signals)
+  const buildCandidates = createLearningCandidates(stage, classId, mode, fixedCandidates, signals)
   const castStrategies = mode === 'violated'
     ? filterViolatedCastStrategies(LEARNING_CAST_STRATEGIES, signals)
     : LEARNING_CAST_STRATEGIES
@@ -430,6 +436,7 @@ function runLearningForMode({ stage, fixedCandidates, signals, mode, sampleConfi
     : LEARNING_TACTICAL_STRATEGIES
   const analysis = runLearningStageBalanceAnalysis({
     stage: learningStage,
+    classId,
     profiles: LEARNING_BALANCE_PROFILES,
     buildCandidates,
     castStrategies,
@@ -445,7 +452,7 @@ function runLearningForMode({ stage, fixedCandidates, signals, mode, sampleConfi
   return createStrategyTipsModeResult(mode, analysis, createModeNotes(mode, signals, buildCandidates.length))
 }
 
-function analyzeStage(stageId, sampleConfig) {
+function analyzeStage(stageId, classId, sampleConfig) {
   const stage = getStageById(stageId)
   if (!stage) {
     throw new Error(`Missing stage: ${stageId}`)
@@ -454,6 +461,7 @@ function analyzeStage(stageId, sampleConfig) {
   console.log(`[strategy-tips] ${stageId}: fixed candidates start`)
   const fixedAnalysis = runTwoPhaseStageBalanceAnalysis({
     stage,
+    classId,
     profiles: BALANCE_PROFILES,
     phaseOneAttemptsPerScenario: sampleConfig.fixedPhaseOneAttempts,
     phaseOneMaxActiveBuilds: sampleConfig.fixedPhaseOneMaxActiveBuilds,
@@ -463,14 +471,14 @@ function analyzeStage(stageId, sampleConfig) {
     maxDurationMs: 120_000,
     collectDiagnostics: false,
   })
-  const fixedCandidates = fixedLearningCandidatesFromAnalysis(fixedAnalysis)
+  const fixedCandidates = fixedLearningCandidatesFromAnalysis(fixedAnalysis, classId)
   const signals = classifyStrategyTipSignals(stage.strategyTips)
 
   console.log(`[strategy-tips] ${stageId}: learning modes start`)
-  const baseline = runLearningForMode({ stage, fixedCandidates, signals, mode: 'baseline', sampleConfig })
-  const lowAttention = runLearningForMode({ stage, fixedCandidates, signals, mode: 'low_attention', sampleConfig })
-  const ignored = runLearningForMode({ stage, fixedCandidates, signals, mode: 'ignored', sampleConfig })
-  const violated = runLearningForMode({ stage, fixedCandidates, signals, mode: 'violated', sampleConfig })
+  const baseline = runLearningForMode({ stage, classId, fixedCandidates, signals, mode: 'baseline', sampleConfig })
+  const lowAttention = runLearningForMode({ stage, classId, fixedCandidates, signals, mode: 'low_attention', sampleConfig })
+  const ignored = runLearningForMode({ stage, classId, fixedCandidates, signals, mode: 'ignored', sampleConfig })
+  const violated = runLearningForMode({ stage, classId, fixedCandidates, signals, mode: 'violated', sampleConfig })
 
   console.log(
     `[strategy-tips] ${stageId}: done baseline=${Math.round(baseline.bestPassRate * 100)}%, ignored=${Math.round(ignored.bestPassRate * 100)}%`,
@@ -478,6 +486,8 @@ function analyzeStage(stageId, sampleConfig) {
 
   return {
     stageId,
+    classId,
+    buildRuleId: getStageBuildRuleId(stage),
     title: stage.title,
     strategyTips: stage.strategyTips ?? '',
     signals,
@@ -496,8 +506,8 @@ function writeChapterReport(chapter, stages, sampleLabel) {
     sampleLabel,
     stages,
   }
-  const markdownPath = path.join(outputDir, chapter.markdown)
-  const jsonPath = path.join(outputDir, chapter.json)
+  const markdownPath = path.join(outputDir, chapter.markdown.replace(/\.md$/, `-${cliOptions.classId}.md`))
+  const jsonPath = path.join(outputDir, chapter.json.replace(/\.json$/, `-${cliOptions.classId}.json`))
 
   fs.writeFileSync(markdownPath, renderStrategyTipsSensitivityMarkdown(report), 'utf8')
   fs.writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8')
@@ -510,13 +520,14 @@ function formatPath(filePath) {
 }
 
 const cliOptions = parseCliOptions(process.argv.slice(2))
+getPlayerClassRuntimeDefinition(cliOptions.classId)
 const sampleConfig = SAMPLE_CONFIGS[cliOptions.sample]
 
 loadStoryDesignerData()
 fs.mkdirSync(outputDir, { recursive: true })
 
 for (const chapter of getRequestedChapters()) {
-  const stages = chapter.stageIds.map((stageId) => analyzeStage(stageId, sampleConfig))
+  const stages = chapter.stageIds.map((stageId) => analyzeStage(stageId, cliOptions.classId, sampleConfig))
   const paths = writeChapterReport(chapter, stages, cliOptions.sample)
   console.log(`[strategy-tips] report written: ${formatPath(paths.markdownPath)}`)
   console.log(`[strategy-tips] compact json written: ${formatPath(paths.jsonPath)}`)

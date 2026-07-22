@@ -1,10 +1,14 @@
 import type { BalanceScenarioResult, DifficultyLabel } from './difficultyScoring'
+import type { PlayerClassId } from '../encounter/encounterTypes'
 import type { BalanceScoringMode, BestBuildProfileSummary } from './balanceSimulator'
+import { compareTankClassTrialResults } from './tankClassBalanceComparison'
 
 export type ManualDifficultyLabel = DifficultyLabel | 'near_impossible / impossible' | 'unrated'
 
 export interface BalanceStageReport {
   stageId: string
+  classId: PlayerClassId
+  buildRuleId: string
   title: string
   manualLabel: ManualDifficultyLabel
   automatedLabel: DifficultyLabel
@@ -22,6 +26,13 @@ export interface BalanceStageReport {
 export interface BalanceReport {
   generatedAt: string
   stages: BalanceStageReport[]
+  classComparisons: ReturnType<typeof compareTankClassTrialResults>[]
+}
+
+export function getBalanceReportStageKey(
+  stage: Pick<BalanceStageReport, 'stageId' | 'classId' | 'buildRuleId'>,
+) {
+  return `${stage.stageId} / ${stage.classId} / ${stage.buildRuleId}`
 }
 
 export const RINGING_DEEPS_MANUAL_BASELINES: Record<string, ManualDifficultyLabel> = {
@@ -144,7 +155,7 @@ export function renderBalanceReportMarkdown(report: BalanceReport) {
 
   for (const stage of report.stages) {
     lines.push(
-      `## ${stage.stageId} - ${stage.title}`,
+      `## \`${getBalanceReportStageKey(stage)}\` - ${stage.title}`,
       '',
       `人工基线：\`${stage.manualLabel}\``,
       '',
@@ -178,6 +189,23 @@ export function renderBalanceReportMarkdown(report: BalanceReport) {
       '| Profile | 档位 | Build | 通关 | 通过率 |',
       '| --- | --- | --- | ---: | ---: |',
       ...stage.scenarios.map(renderScenarioRow),
+      '',
+    )
+  }
+
+  lines.push('## 坦克职业横向比较', '')
+  if (report.classComparisons.length === 0) {
+    lines.push('暂无可比较的新坦克职业。', '')
+  } else {
+    lines.push(
+      '| 职业 | 挑战关卡 | 平均通过率差 | 15个百分点目标 | 三关均优于战士T | 标记 |',
+      '| --- | --- | ---: | --- | --- | --- |',
+      ...report.classComparisons.map((comparison) => {
+        const flags = comparison.stageResults.flatMap((stage) =>
+          stage.flags.map((flag) => `${stage.stageId}:${flag}`),
+        )
+        return `| \`${comparison.classId}\` | ${comparison.stageResults.map((stage) => stage.stageId).join(', ')} | ${formatPercent(comparison.averagePassRateDifference)} | ${comparison.averagePassRateDifferenceWithinTarget ? '通过' : '超出'} | ${comparison.outperformsWarriorOnAllStages ? '是' : '否'} | ${flags.join('<br>') || 'none'} |`
+      }),
       '',
     )
   }

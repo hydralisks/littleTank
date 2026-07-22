@@ -1,5 +1,7 @@
 export interface DiffableBalanceStage {
   stageId: string
+  classId: string
+  buildRuleId: string
   manualLabel?: string
   staticScore?: {
     label?: string
@@ -41,8 +43,12 @@ export interface BalanceReportDiff {
   removedStageIds: string[]
 }
 
+function stageKey(stage: DiffableBalanceStage) {
+  return `${stage.stageId} / ${stage.classId} / ${stage.buildRuleId}`
+}
+
 function stageMap(report: DiffableBalanceReport) {
-  return new Map(report.stages.map((stage) => [stage.stageId, stage]))
+  return new Map(report.stages.map((stage) => [stageKey(stage), stage]))
 }
 
 function labelDelta(previousLabel?: string, currentLabel?: string) {
@@ -107,11 +113,11 @@ export function summarizeBalanceReportDiff(
     currentGeneratedAt: currentReport.generatedAt,
     changedStages: changedStages.sort((left, right) => left.stageId.localeCompare(right.stageId)),
     addedStageIds: currentReport.stages
-      .map((stage) => stage.stageId)
+      .map(stageKey)
       .filter((stageId) => !previousStages.has(stageId))
       .sort(),
     removedStageIds: previousReport.stages
-      .map((stage) => stage.stageId)
+      .map(stageKey)
       .filter((stageId) => !currentStages.has(stageId))
       .sort(),
   }
