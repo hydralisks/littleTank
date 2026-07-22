@@ -19,7 +19,7 @@ import {
 import type { PersistedBuildState } from '../game/encounter/encounterTypes'
 import * as playerClassRuntimeRegistry from '../game/playerClasses/playerClassRuntimeRegistry'
 import { getAvailableClassIdsForStage } from '../game/progression/stageClassAvailability'
-import { parsePlayerBuildWorkbook } from '../game/data/workbookLoader'
+import { parsePlayerBuildWorkbook, parseStageWorkbook } from '../game/data/workbookLoader'
 import { buildMonsterCodexEntries, getEnemyDefinitionIdsForStage } from '../game/data/monsterCodex'
 import { getStageNodeLayout } from './stageSelectMapLayout'
 import { StageSelectScreen } from './StageSelectScreen'
@@ -46,6 +46,11 @@ function createWarriorClassProps(build: PersistedBuildState) {
     campaignUnlockedClassIds: ['warrior_t'],
     onSelectClass: () => undefined,
   }
+}
+
+function applyDesignerStageWorkbooks() {
+  applyStageWorkbookOverrides(parseStageWorkbook(XLSX.readFile('public/designer-data/stage_content.xlsx')))
+  applyStageWorkbookOverrides(parseStageWorkbook(XLSX.readFile('public/designer-data/challenge_stage_content.xlsx')))
 }
 
 describe('StageSelectScreen map layout', () => {
@@ -527,24 +532,7 @@ describe('StageSelectScreen map layout', () => {
   })
 
   it('starts challenge stages with challenge mode and no source labels or filters', async () => {
-    applyStageWorkbookOverrides({
-      areaOverrides: [
-        { areaId: 'harbor', title: 'Harbor' },
-        { areaId: 'RingingDeeps', title: 'Ringing Deeps' },
-      ],
-      stageOverrides: [
-        { stageId: 'harbor-1', areaId: 'harbor', order: 1 },
-        { stageId: 'RingingDeeps-6', areaId: 'RingingDeeps', order: 6 },
-      ],
-      legendOverrides: [],
-    })
-    applyStageWorkbookOverrides({
-      areaOverrides: [{ areaId: 'challenge', title: 'Challenge' }],
-      stageOverrides: [
-        { stageId: 'Challenge-1', areaId: 'challenge', order: 1, title: 'Challenge Test' },
-      ],
-      legendOverrides: [],
-    })
+    applyDesignerStageWorkbooks()
     const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
       url: 'http://localhost/',
     })
@@ -565,7 +553,7 @@ describe('StageSelectScreen map layout', () => {
       root = createRoot(container)
       await act(async () => {
         root!.render(createElement(StageSelectScreen, {
-          defaultSelectedStageId: 'harbor-1',
+          defaultSelectedStageId: 'RingingDeeps-1',
           highestClearedStageIndex: 5,
           maxUnlockedStageIndex: 6,
           partyStageId: 'RingingDeeps-6',
@@ -584,8 +572,9 @@ describe('StageSelectScreen map layout', () => {
 
       expect(container.querySelector('.stage-map')).toBeNull()
       expect(container.querySelector('.challenge-board')).not.toBeNull()
-      expect(container.querySelectorAll('.challenge-card')).toHaveLength(1)
-      expect(container.querySelector('.challenge-card')?.textContent).toContain('Challenge Test')
+      expect(container.querySelectorAll('.challenge-card')).toHaveLength(3)
+      expect(container.querySelector('.challenge-card')?.textContent).toContain('鱼人登陆队')
+      expect(container.querySelector('.challenge-board')?.textContent).not.toContain('烛潮交火')
       expect(container.querySelector('.challenge-filter')).toBeNull()
       expect(container.querySelector('.stage-brief > .stage-brief__challenge-action')).toBeNull()
       expect(container.querySelector('.stage-brief__action-stack')).not.toBeNull()
@@ -598,6 +587,56 @@ describe('StageSelectScreen map layout', () => {
       })
 
       expect(onStartStage).toHaveBeenCalledWith('Challenge-1', 'challenge', 'warrior_t')
+    } finally {
+      if (root) {
+        await act(async () => {
+          root!.unmount()
+        })
+      }
+      setGlobalProperty('window', previousWindow)
+      setGlobalProperty('document', previousDocument)
+      setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', previousIsActEnvironment)
+      dom.window.close()
+    }
+  })
+
+  it('hides challenge mode and falls back to campaign before the first challenge group opens', async () => {
+    applyDesignerStageWorkbooks()
+    const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
+      url: 'http://localhost/',
+    })
+    const previousWindow = globalThis.window
+    const previousDocument = globalThis.document
+    const previousIsActEnvironment = (globalThis as ReactActGlobal).IS_REACT_ACT_ENVIRONMENT
+    setGlobalProperty('window', dom.window)
+    setGlobalProperty('document', dom.window.document)
+    setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', true)
+    let root: Root | null = null
+
+    try {
+      const container = dom.window.document.getElementById('root')
+      if (!container) {
+        throw new Error('Missing root container')
+      }
+      root = createRoot(container)
+      await act(async () => {
+        root!.render(createElement(StageSelectScreen, {
+          defaultMode: 'challenge',
+          defaultSelectedStageId: 'RingingDeeps-1',
+          highestClearedStageIndex: 4,
+          maxUnlockedStageIndex: 5,
+          partyStageId: 'RingingDeeps-1',
+          ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t')),
+          onStartStage: () => undefined,
+        }))
+      })
+
+      const modeButtons = [...container.querySelectorAll('.stage-mode-switch__button')]
+      expect(modeButtons).toHaveLength(1)
+      expect(modeButtons[0]?.textContent).toBe('主线战役')
+      expect(container.querySelector('.stage-map')).not.toBeNull()
+      expect(container.querySelector('.challenge-board')).toBeNull()
+      expect(container.textContent).not.toContain('鱼人登陆队')
     } finally {
       if (root) {
         await act(async () => {
@@ -719,6 +758,7 @@ describe('StageSelectScreen map layout', () => {
   })
 
   it('can open directly in challenge mode after returning from a challenge encounter', async () => {
+    applyDesignerStageWorkbooks()
     const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
       url: 'http://localhost/',
     })
@@ -739,10 +779,10 @@ describe('StageSelectScreen map layout', () => {
       await act(async () => {
         root!.render(createElement(StageSelectScreen, {
           defaultMode: 'challenge',
-          defaultSelectedStageId: 'harbor-1',
+          defaultSelectedStageId: 'RingingDeeps-1',
           highestClearedStageIndex: 5,
           maxUnlockedStageIndex: 6,
-          partyStageId: 'harbor-6',
+          partyStageId: 'RingingDeeps-6',
           ...createWarriorClassProps(getDefaultPersistedBuildForRule('tutorial_5slot', 'warrior_t')),
           onStartStage: () => undefined,
         }))

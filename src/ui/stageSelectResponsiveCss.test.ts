@@ -16,7 +16,7 @@ describe('stage select responsive layout', () => {
       /@media \(max-width: 680px\)[\s\S]*?\.stage-select__layout\s*{[^}]*row-gap:\s*296px;/,
     )
     expect(css).toMatch(
-      /\.stage-map-column\s*>\s*\.stage-class-entry\s*{[^}]*bottom:\s*-36px;/,
+      /\.stage-map-column\s*>\s*\.stage-class-entry\s*{[^}]*bottom:\s*12px;/,
     )
     expect(css).toMatch(
       /@media \(max-width: 680px\)[\s\S]*?\.stage-map-column\s*>\s*\.stage-class-entry\s*{[^}]*bottom:\s*-266px;/,

@@ -53,7 +53,7 @@ import {
   getAvailableClassIdsForStage,
   resolveStageClassId,
 } from '../game/progression/stageClassAvailability'
-import { isChallengeStageOpen } from '../game/progression/classTrialPolicy'
+import { getChallengeGroupForStage, isChallengeStageOpen } from '../game/progression/classTrialPolicy'
 import { getStageNodeLayout } from './stageSelectMapLayout'
 import {
   buildStageSelectBuildRuleModal,
@@ -307,8 +307,18 @@ export function StageSelectScreen({
   const [openBuildPanel, setOpenBuildPanel] = useState<'skills' | 'passives' | null>(null)
   const [isMonsterCodexOpen, setIsMonsterCodexOpen] = useState(false)
   const [selectedConfigHotkey, setSelectedConfigHotkey] = useState<SkillHotkey | null>('1')
-  const [stageSelectMode, setStageSelectMode] = useState<StageSelectMode>(defaultMode)
-  const challengeModeEntries = buildChallengeModeEntries()
+  const challengeModeEntries = buildChallengeModeEntries().filter((entry) => {
+    const group = getChallengeGroupForStage(entry.stageId)
+    return Boolean(
+      group &&
+      campaignStageOrder.includes(group.requiredCampaignStageId) &&
+      isChallengeStageOpen(entry.stageId, highestClearedStageIndex),
+    )
+  })
+  const hasUnlockedChallenges = challengeModeEntries.length > 0
+  const [stageSelectMode, setStageSelectMode] = useState<StageSelectMode>(
+    defaultMode === 'challenge' && hasUnlockedChallenges ? 'challenge' : 'campaign',
+  )
   const fallbackChallengeStageId = campaignStageOrder[0] ?? stageOrder[0]
   const fallbackChallengeStage = getStageById(fallbackChallengeStageId)
   const fallbackChallengeEntry: ChallengeModeEntry = {
@@ -607,21 +617,23 @@ export function StageSelectScreen({
             >
               主线战役
             </button>
-            <button
-              type="button"
-              className={[
-                'stage-mode-switch__button',
-                stageSelectMode === 'challenge' ? 'is-active' : '',
-              ].filter(Boolean).join(' ')}
-              aria-selected={stageSelectMode === 'challenge'}
-              onClick={() => {
-                setStageSelectMode('challenge')
-                setBuildInfoModal('none')
-                setOpenBuildPanel(null)
-              }}
-            >
-              挑战模式
-            </button>
+            {hasUnlockedChallenges ? (
+              <button
+                type="button"
+                className={[
+                  'stage-mode-switch__button',
+                  stageSelectMode === 'challenge' ? 'is-active' : '',
+                ].filter(Boolean).join(' ')}
+                aria-selected={stageSelectMode === 'challenge'}
+                onClick={() => {
+                  setStageSelectMode('challenge')
+                  setBuildInfoModal('none')
+                  setOpenBuildPanel(null)
+                }}
+              >
+                挑战模式
+              </button>
+            ) : null}
           </div>
           {onResetTutorials ? (
             <button type="button" className="stage-select__reset-tutorial" onClick={onResetTutorials}>
@@ -800,7 +812,6 @@ export function StageSelectScreen({
                   const challengeStageId = resolveExistingStageId(challenge.stageId, fallbackChallengeEntry.stageId)
                   const challengeStage = getStageById(challengeStageId)
                   const isSelectedChallenge = challenge.id === selectedChallenge.id
-                  const isOpen = isChallengeStageOpen(challengeStageId, highestClearedStageIndex)
 
                   return (
                     <button
@@ -809,13 +820,8 @@ export function StageSelectScreen({
                       className={[
                         'challenge-card',
                         isSelectedChallenge ? 'is-selected' : '',
-                        isOpen ? '' : 'is-locked',
                       ].filter(Boolean).join(' ')}
-                      disabled={!isOpen}
                       onClick={() => {
-                        if (!isOpen) {
-                          return
-                        }
                         setSelectedChallengeId(challenge.id)
                         setBuildInfoModal('none')
                         setOpenBuildPanel(null)
