@@ -8,7 +8,7 @@ import type { CombatLogEvent } from './encounterTypes'
 
 function createEncounter() {
   const stage = getStageById('harbor-1')
-  return createInitialEncounterState(stage, getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'))
+  return createInitialEncounterState(stage, 'warrior_t', getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'))
 }
 
 function createDamageEvent(id: string, amount: number): CombatLogEvent {

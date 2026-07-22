@@ -312,6 +312,7 @@ export interface BuildNormalizationResult {
 export type SkillLoadout = Record<SkillHotkey, SkillId | null>
 
 export interface PlayerState {
+  classId: PlayerClassId
   hp: number
   maxHp: number
   resource: number
@@ -653,6 +654,7 @@ export type EncounterEvent =
     }
 
 export interface EncounterRuntime {
+  classRuntime: PlayerClassRuntimeState
   periodicPlayerStunRemainingMs: number
   pendingAffixTriggers: PendingAffixTrigger[]
   stageRuleRuntime: EncounterStageRuleRuntime

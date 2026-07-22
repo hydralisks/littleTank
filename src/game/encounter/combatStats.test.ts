@@ -39,6 +39,7 @@ function createState(combatLog: CombatLogEvent[]): EncounterState {
     },
     timeMs: 5200,
     player: {
+      classId: 'warrior_t',
       hp: 90,
       maxHp: 100,
       resource: 0,
@@ -61,6 +62,7 @@ function createState(combatLog: CombatLogEvent[]): EncounterState {
     skills: [],
     passiveTalentIds: [],
     runtime: {
+      classRuntime: {},
       periodicPlayerStunRemainingMs: 0,
       pendingAffixTriggers: [],
       stageRuleRuntime: {},

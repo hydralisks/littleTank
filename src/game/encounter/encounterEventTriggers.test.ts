@@ -39,6 +39,7 @@ function createTriggerState(): EncounterState {
     },
     timeMs: 0,
     player: {
+      classId: 'warrior_t',
       hp: 100,
       maxHp: 100,
       resource: 0,
@@ -61,6 +62,7 @@ function createTriggerState(): EncounterState {
     skills: [],
     passiveTalentIds: [],
     runtime: {
+      classRuntime: {},
       periodicPlayerStunRemainingMs: 0,
       pendingAffixTriggers: [],
       stageRuleRuntime: {},

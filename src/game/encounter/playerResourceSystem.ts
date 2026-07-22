@@ -1,39 +1,20 @@
-import type { PassiveTalentModifiers, PlayerState } from './encounterTypes'
+import { getPlayerClassRuntimeDefinition } from '../playerClasses/playerClassRuntimeRegistry'
+import type { PassiveTalentModifiers, PlayerClassId, PlayerState } from './encounterTypes'
 
-export interface PlayerResourceDefinition {
-  id: string
-  label: string
-  maxResource: number
-  passiveGainPerSecond: number
-  damageTakenGainDivisor: number
-  minimumDamageTakenGain: number
-}
-
-const PLAYER_RESOURCE_DEFINITIONS: Record<string, PlayerResourceDefinition> = {
-  warrior_t: {
-    id: 'rage',
-    label: '怒气',
-    maxResource: 100,
-    passiveGainPerSecond: 3,
-    damageTakenGainDivisor: 5,
-    minimumDamageTakenGain: 4,
-  },
-}
-
-export function getPlayerResourceDefinition(classId = 'warrior_t') {
-  return PLAYER_RESOURCE_DEFINITIONS[classId] ?? PLAYER_RESOURCE_DEFINITIONS.warrior_t
+export function getPlayerResourceDefinition(classId: PlayerClassId) {
+  return getPlayerClassRuntimeDefinition(classId).primaryResource
 }
 
 export function getPassiveResourceGain(
   deltaMs: number,
   modifiers: Pick<PassiveTalentModifiers, 'playerResourceRegenMultiplier'>,
-  classId = 'warrior_t',
+  classId: PlayerClassId,
 ) {
   const definition = getPlayerResourceDefinition(classId)
   return definition.passiveGainPerSecond * modifiers.playerResourceRegenMultiplier * (deltaMs / 1000)
 }
 
-export function getDamageTakenResourceGain(playerDamage: number, classId = 'warrior_t') {
+export function getDamageTakenResourceGain(playerDamage: number, classId: PlayerClassId) {
   if (playerDamage <= 0) {
     return 0
   }

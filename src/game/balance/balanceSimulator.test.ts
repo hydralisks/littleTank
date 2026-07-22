@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { createInitialEncounterState } from '../encounter/encounterFactory'
 import type { EncounterState, PassiveTalentId, PersistedBuildState } from '../encounter/encounterTypes'
 import { getStageById } from '../data/stageTemplates'
-import { getDefaultPersistedBuildForRule } from '../data/playerBuildCatalog'
+import {
+  applyPlayerBuildWorkbookOverrides,
+  getDefaultPersistedBuildForRule,
+  resetPlayerBuildCatalog,
+} from '../data/playerBuildCatalog'
 import { getStageBuildRuleId } from '../data/encounterTemplates'
 import {
   runBalanceScenario,
@@ -87,12 +91,32 @@ const strongProfile: BalanceOperationProfile = {
   decisionIntervalMs: 100,
 }
 
+function registerWarriorTalentForTest(talentId: PassiveTalentId, talentLogicId: string) {
+  applyPlayerBuildWorkbookOverrides({
+    classDefinitions: [],
+    buildRuleDefinitions: [],
+    activeSkillDefinitions: [],
+    activeSkillEffectDefinitions: [],
+    activeStatusDefinitions: [],
+    passiveTalentDefinitions: [{ talentId, classId: 'warrior_t', talentLogicId, tier: 1 }],
+    passiveTalentEffectDefinitions: [],
+    passiveStatusDefinitions: [],
+    defaultActiveBuilds: [],
+    defaultPassiveBuilds: [],
+    iconDefinitions: [],
+  })
+}
+
 function sequenceRandom(values: number[]) {
   let index = 0
   return () => values[Math.min(index++, values.length - 1)] ?? 0
 }
 
 describe('balance simulator', () => {
+  afterEach(() => {
+    resetPlayerBuildCatalog()
+  })
+
   it('runs deterministic attempts and reports pass rate only from outcomes', () => {
     const stage = getStageById('harbor-1')
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
@@ -415,7 +439,7 @@ describe('balance simulator', () => {
   it('can prioritize a high-impact kill target over a generic lost-threat target', () => {
     const stage = getStageById('harbor-1')
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
-    const state = createInitialEncounterState(stage, build)
+    const state = createInitialEncounterState(stage, 'warrior_t', build)
     const lostThreatEnemy = {
       ...state.enemies[0],
       id: 'lost-threat',
@@ -463,7 +487,7 @@ describe('balance simulator', () => {
   it('reduces irregular threat urgency when the policy allows pressure splitting under tank danger', () => {
     const stage = getStageById('harbor-1')
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
-    const state = createInitialEncounterState(stage, build)
+    const state = createInitialEncounterState(stage, 'warrior_t', build)
     const irregularEnemy = {
       ...state.enemies[0],
       threatLogic: 'irregular' as const,
@@ -502,7 +526,7 @@ describe('balance simulator', () => {
   it('prefers matching shadow hoe to the side that currently has wax', () => {
     const stage = getStageById('harbor-1')
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
-    const state = createInitialEncounterState(stage, build)
+    const state = createInitialEncounterState(stage, 'warrior_t', build)
     const candleKing = {
       ...state.enemies[0],
       threatLogic: 'irregular' as const,
@@ -556,7 +580,7 @@ describe('balance simulator', () => {
   it('can plan wax figure to set up the same side for a later shadow hoe', () => {
     const stage = getStageById('harbor-1')
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
-    const state = createInitialEncounterState(stage, build)
+    const state = createInitialEncounterState(stage, 'warrior_t', build)
     const candleKing = {
       ...state.enemies[0],
       threatLogic: 'irregular' as const,
@@ -584,7 +608,7 @@ describe('balance simulator', () => {
   it('does not chase an irregular enemy when its next mechanic should stay on the party', () => {
     const stage = getStageById('harbor-1')
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
-    const state = createInitialEncounterState(stage, build)
+    const state = createInitialEncounterState(stage, 'warrior_t', build)
     const genericLost = {
       ...state.enemies[0],
       id: 'generic-lost',
@@ -789,6 +813,7 @@ describe('balance simulator', () => {
   })
 
   it('does not spend shield wall while shield wall mitigation is already active', () => {
+    registerWarriorTalentForTest('warrior_t_defenders_aegis', 'defenders_aegis')
     const stage = getStageById('harbor-5')
     const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const build: PersistedBuildState = {
@@ -920,6 +945,7 @@ describe('balance simulator', () => {
   })
 
   it('includes external build candidates in two-phase fixed strategy analysis', () => {
+    registerWarriorTalentForTest('warrior_t_reinforced_plates', 'reinforced_plates')
     const stage = getStageById('harbor-1')
     const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const externalBuild: PersistedBuildState = {
@@ -1209,7 +1235,7 @@ describe('balance simulator', () => {
   it('starts each attempt from normal encounter creation when no mutator is supplied', () => {
     const stage = getStageById('harbor-1')
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
-    const state = createInitialEncounterState(stage, build)
+    const state = createInitialEncounterState(stage, 'warrior_t', build)
 
     expect(state.result).toBeNull()
     expect(state.enemies.length).toBeGreaterThan(0)

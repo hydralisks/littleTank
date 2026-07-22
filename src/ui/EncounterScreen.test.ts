@@ -495,6 +495,7 @@ describe('EncounterScreen component keyboard integration', () => {
         root!.render(
           createElement(EncounterScreen, {
             stage,
+            classId: 'warrior_t',
             buildState,
             unlockedPassiveTalentTier: 3,
             unlockedActiveSkillIds: Object.values(buildState.loadout).filter((skillId): skillId is string => Boolean(skillId)),
@@ -627,6 +628,7 @@ describe('EncounterScreen component keyboard integration', () => {
         root!.render(
           createElement(EncounterScreen, {
             stage,
+            classId: 'warrior_t',
             buildState,
             unlockedPassiveTalentTier: 0,
             unlockedActiveSkillIds: Object.values(buildState.loadout).filter((skillId): skillId is string => Boolean(skillId)),
@@ -726,6 +728,7 @@ describe('EncounterScreen component keyboard integration', () => {
         root!.render(
           createElement(EncounterScreen, {
             stage,
+            classId: 'warrior_t',
             buildState,
             unlockedPassiveTalentTier: 0,
             unlockedActiveSkillIds: Object.values(buildState.loadout).filter((skillId): skillId is string => Boolean(skillId)),
@@ -822,6 +825,7 @@ describe('EncounterScreen component keyboard integration', () => {
         root!.render(
           createElement(EncounterScreen, {
             stage,
+            classId: 'warrior_t',
             buildState,
             unlockedPassiveTalentTier: 3,
             unlockedActiveSkillIds: Object.values(buildState.loadout).filter((skillId): skillId is string => Boolean(skillId)),

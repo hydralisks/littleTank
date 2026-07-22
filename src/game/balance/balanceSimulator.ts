@@ -1270,7 +1270,7 @@ export function runBalanceScenario(options: RunBalanceScenarioOptions): Traceabl
     const random = createSeededRandom(`${options.stage.id}:${options.buildId}:${options.profile.id}:${attemptIndex}`)
     const shouldTraceAttempt = Boolean(options.collectTrace && !trace)
     const traceEvents: BalanceTraceEvent[] | undefined = shouldTraceAttempt ? [] : undefined
-    let state = createInitialEncounterState(options.stage, options.build)
+    let state = createInitialEncounterState(options.stage, 'warrior_t', options.build)
     state = options.initialStateMutator ? options.initialStateMutator(state) : state
     const memory = createBalanceAutomationMemory()
     const resourceGainCursor = createResourceGainCursor(state)

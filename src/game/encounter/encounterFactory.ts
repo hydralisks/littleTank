@@ -6,10 +6,12 @@
 import { createEncounterTemplate } from '../data/encounterTemplates'
 import {
   buildSkillsFromLoadout,
+  assertBuildMatchesClass,
   getActiveSkillDefinition,
   getPassiveModifiers,
   getStatusesForTalent,
 } from '../data/skillTemplates'
+import { getPlayerClassRuntimeDefinition } from '../playerClasses/playerClassRuntimeRegistry'
 import { flushEncounterCommands } from './encounterCommandSystem'
 import { createCombatLogEventId, recordCombatLogEvents } from './combatLog'
 import { drainEncounterEvents } from './encounterEventSystems'
@@ -52,6 +54,7 @@ import type {
   EnemyState,
   PassiveTalentId,
   PersistedBuildState,
+  PlayerClassId,
   PlayerState,
   PartyStatusRuntimeEntry,
   SkillId,
@@ -2193,7 +2196,7 @@ function applyDamageTakenResourceGain(
   )
   const resourceGain = Math.min(
     remainingWindowCapacity,
-    getDamageTakenResourceGain(playerDamage),
+    getDamageTakenResourceGain(playerDamage, player.classId),
   )
 
   return {
@@ -3447,7 +3450,13 @@ function getInitialTargetIdByGrid(enemies: EnemyState[]) {
   return firstLivingEnemy[0]?.id ?? null
 }
 
-export function createInitialEncounterState(stage: StageInfo, buildState: PersistedBuildState): EncounterState {
+export function createInitialEncounterState(
+  stage: StageInfo,
+  classId: PlayerClassId,
+  buildState: PersistedBuildState,
+): EncounterState {
+  const classRuntimeDefinition = getPlayerClassRuntimeDefinition(classId)
+  assertBuildMatchesClass(classId, buildState)
   const template = createEncounterTemplate(stage)
   let initialEnemies = template.enemies.map((enemySeed) => {
     const enemy = normalizeEnemy(
@@ -3496,10 +3505,11 @@ export function createInitialEncounterState(stage: StageInfo, buildState: Persis
     stage: template.stage,
     timeMs: 0,
     player: {
+      classId,
       hp: template.playerHp,
       maxHp: template.playerMaxHp,
-      resource: template.playerResource,
-      maxResource: 100,
+      resource: Math.min(template.playerResource, classRuntimeDefinition.primaryResource.maxResource),
+      maxResource: classRuntimeDefinition.primaryResource.maxResource,
       gcdRemainingMs: template.playerGcdRemainingMs,
       currentTargetId,
       mitigation: {
@@ -3532,6 +3542,7 @@ export function createInitialEncounterState(stage: StageInfo, buildState: Persis
     skills: [],
     passiveTalentIds: buildState.passiveTalentIds,
     runtime: {
+      classRuntime: classRuntimeDefinition.initializeRuntime(),
       periodicPlayerStunRemainingMs: 0,
       pendingAffixTriggers: template.pendingAffixTriggers.map(clonePendingAffixTrigger),
       stageRuleRuntime: createStageRuleRuntime(template.stage),
@@ -3623,7 +3634,7 @@ export function tickEncounter(state: EncounterState, deltaMs = TICK_INTERVAL_MS)
     gcdRemainingMs: Math.max(0, commandFlushedState.player.gcdRemainingMs - deltaMs),
     resource: changePlayerResource(
       commandFlushedState.player,
-      getPassiveResourceGain(deltaMs, modifiers),
+      getPassiveResourceGain(deltaMs, modifiers, state.player.classId),
     ).resource,
     mitigation: mitigation && mitigation.remainingMs > 0 ? mitigation : null,
     buffs: tickStatuses(commandFlushedState.player.buffs, deltaMs),

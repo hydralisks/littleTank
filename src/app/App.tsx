@@ -210,6 +210,7 @@ function App() {
     <EncounterScreen
       key={`${stageId}-${encounterInstance}`}
       stage={getStageById(stageId)}
+      classId="warrior_t"
       buildState={persistedBuild}
       unlockedPassiveTalentTier={getPassiveTalentUnlockTierForStage(getStageById(stageId))}
       unlockedActiveSkillIds={getUnlockedActiveSkillIdsForStage(getStageById(stageId))}

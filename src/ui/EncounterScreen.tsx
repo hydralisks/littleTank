@@ -32,6 +32,7 @@ import type {
   EncounterState,
   PassiveTalentId,
   PersistedBuildState,
+  PlayerClassId,
   SkillHotkey,
   SkillId,
   SkillLoadout,
@@ -54,6 +55,7 @@ import { getEncounterTutorialScript } from './tutorialGuide'
 
 interface EncounterScreenProps {
   stage: StageInfo
+  classId: PlayerClassId
   buildState: PersistedBuildState
   unlockedPassiveTalentTier: number
   unlockedActiveSkillIds: readonly SkillId[]
@@ -81,13 +83,14 @@ function buildSkillSlots(skills: EncounterState['skills']): SkillBarSlotView[] {
 
 function canAssignSkillToHotkey(
   buildRuleId: string,
+  classId: PlayerClassId,
   loadout: SkillLoadout,
   hotkey: SkillHotkey,
   skillId: SkillId,
   remainingBuildPoints: number,
   unlockedActiveSkillIds: readonly SkillId[],
 ) {
-  if (!isHotkeyEnabledForRule(buildRuleId, hotkey) || !canUseSkillInRule(buildRuleId, 'warrior_t', skillId, unlockedActiveSkillIds)) {
+  if (!isHotkeyEnabledForRule(buildRuleId, hotkey) || !canUseSkillInRule(buildRuleId, classId, skillId, unlockedActiveSkillIds)) {
     return false
   }
 
@@ -133,6 +136,7 @@ function canTogglePassiveTalent(
 
 export function EncounterScreen({
   stage,
+  classId,
   buildState,
   unlockedPassiveTalentTier,
   unlockedActiveSkillIds,
@@ -142,7 +146,7 @@ export function EncounterScreen({
   onReturnToStageSelect,
   onRetryStage,
 }: EncounterScreenProps) {
-  const [encounter, setEncounter] = useState<EncounterState>(() => createInitialEncounterState(stage, buildState))
+  const [encounter, setEncounter] = useState<EncounterState>(() => createInitialEncounterState(stage, classId, buildState))
   const [openPanel, setOpenPanel] = useState<EncounterScreenPanel>(null)
   const [selectedConfigHotkey, setSelectedConfigHotkey] = useState<SkillHotkey | null>('1')
   const skillLoadout = buildState.loadout
@@ -152,10 +156,10 @@ export function EncounterScreen({
   const buildRuleId = encounter.stage.buildRuleId
   const buildRule = getBuildRuleDefinition(buildRuleId)
   const activeSkills = getActiveSkillCatalog()
-    .filter((skill) => canUseSkillInRule(buildRuleId, 'warrior_t', skill.id, unlockedActiveSkillIds))
+    .filter((skill) => canUseSkillInRule(buildRuleId, classId, skill.id, unlockedActiveSkillIds))
     .sort((left, right) => (left.uiOrder ?? 999) - (right.uiOrder ?? 999) || left.id.localeCompare(right.id))
   const passiveTalents = getPassiveTalentCatalog().filter((talent) =>
-    canUseTalentInRule(buildRuleId, 'warrior_t', talent.id, unlockedPassiveTalentTier)
+    canUseTalentInRule(buildRuleId, classId, talent.id, unlockedPassiveTalentTier)
   )
   const pauseVisible = encounter.runtime.pauseOverlay === 'pause' && !encounter.result
   const tutorialStep =
@@ -269,6 +273,7 @@ export function EncounterScreen({
     if (
       !canAssignSkillToHotkey(
         buildRuleId,
+        classId,
         skillLoadout,
         selectedConfigHotkey,
         skillId,
@@ -293,7 +298,7 @@ export function EncounterScreen({
   }
 
   function handleTogglePassive(talentId: PassiveTalentId) {
-    if (!canUseTalentInRule(buildRuleId, 'warrior_t', talentId, unlockedPassiveTalentTier)) {
+    if (!canUseTalentInRule(buildRuleId, classId, talentId, unlockedPassiveTalentTier)) {
       return
     }
     if (!canTogglePassiveTalent(buildRuleId, talentId, selectedPassiveTalentIds, activePoints)) {
@@ -491,6 +496,7 @@ export function EncounterScreen({
           selectedConfigHotkey
             ? canAssignSkillToHotkey(
                 buildRuleId,
+                classId,
                 skillLoadout,
                 selectedConfigHotkey,
                 skillId,
@@ -513,7 +519,7 @@ export function EncounterScreen({
         onClose={() => setOpenPanel(null)}
         onToggleTalent={handleTogglePassive}
         canToggleTalent={(talentId) =>
-          canUseTalentInRule(buildRuleId, 'warrior_t', talentId, unlockedPassiveTalentTier) &&
+          canUseTalentInRule(buildRuleId, classId, talentId, unlockedPassiveTalentTier) &&
           canTogglePassiveTalent(buildRuleId, talentId, selectedPassiveTalentIds, activePoints)
         }
       />

@@ -16,7 +16,7 @@ import type { CombatLogEvent } from './encounterTypes'
 
 function createEncounter() {
   const stage = getStageById('harbor-1')
-  return createInitialEncounterState(stage, {
+  return createInitialEncounterState(stage, 'warrior_t', {
     ...getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
     loadout: {
       '1': 'warrior_t_shield_slam',
@@ -33,7 +33,7 @@ function createEncounter() {
 
 function createIgnorePainEncounter() {
   const stage = getStageById('harbor-1')
-  return createInitialEncounterState(stage, {
+  return createInitialEncounterState(stage, 'warrior_t', {
     ...getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t'),
     loadout: {
       '1': 'warrior_t_shield_slam',
@@ -70,6 +70,7 @@ function withTemporaryIgnorePainSkill(run: () => void) {
     activeSkillDefinitions: [
       {
         skillId: 'warrior_t_ignore_pain',
+        classId: 'warrior_t',
         skillName: '无视苦痛',
         shortName: '无视',
         resourceCost: 20,

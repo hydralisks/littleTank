@@ -197,7 +197,7 @@ function createInitialEnemyCount(stage: StageInfo, build: BalanceBuildVariant['b
     return 0
   }
 
-  return createInitialEncounterState(stage, build).enemies.length
+  return createInitialEncounterState(stage, 'warrior_t', build).enemies.length
 }
 
 function runExplorationScenarios({
