@@ -204,7 +204,6 @@ const FIELD_MEDIC_STRAIN_STATUS: PlayerBuildStatusDefinition = {
 const DEFAULT_BUILD_RULES: Record<string, BuildRuleDefinition> = {
   tutorial_2slot: {
     buildRuleId: 'tutorial_2slot',
-    classId: 'warrior_t',
     ruleName: 'Build Rule',
     description: 'Tutorial two-slot active build.',
     totalBuildPoints: 10,
@@ -215,7 +214,6 @@ const DEFAULT_BUILD_RULES: Record<string, BuildRuleDefinition> = {
   },
   tutorial_3slot: {
     buildRuleId: 'tutorial_3slot',
-    classId: 'warrior_t',
     ruleName: 'Build Rule',
     description: 'Tutorial three-slot active build.',
     totalBuildPoints: 14,
@@ -226,7 +224,6 @@ const DEFAULT_BUILD_RULES: Record<string, BuildRuleDefinition> = {
   },
   tutorial_4slot: {
     buildRuleId: 'tutorial_4slot',
-    classId: 'warrior_t',
     ruleName: 'Build Rule',
     description: 'Tutorial four-slot active build.',
     totalBuildPoints: 18,
@@ -237,7 +234,6 @@ const DEFAULT_BUILD_RULES: Record<string, BuildRuleDefinition> = {
   },
   tutorial_5slot: {
     buildRuleId: 'tutorial_5slot',
-    classId: 'warrior_t',
     ruleName: '鏁欑▼鍥涳細浜旀妧鑳藉熀纭€鏋勭瓚',
     description: 'Tutorial five-slot active build.',
     totalBuildPoints: 22,
@@ -248,7 +244,6 @@ const DEFAULT_BUILD_RULES: Record<string, BuildRuleDefinition> = {
   },
   standard_5slot: {
     buildRuleId: 'standard_5slot',
-    classId: 'warrior_t',
     ruleName: '鏍囧噯浜旈敭鏋勭瓚',
     description: 'Standard five-slot build.',
     totalBuildPoints: 28,
@@ -259,7 +254,6 @@ const DEFAULT_BUILD_RULES: Record<string, BuildRuleDefinition> = {
   },
   full_8slot: {
     buildRuleId: 'full_8slot',
-    classId: 'warrior_t',
     ruleName: '瀹屾暣鍏敭鏋勭瓚',
     description: 'Designer-facing description.',
     totalBuildPoints: 36,
@@ -2177,7 +2171,6 @@ export function applyPlayerBuildWorkbookOverrides(overrides: PlayerBuildWorkbook
     for (const override of overrides.buildRuleDefinitions) {
       const base = nextRules[override.buildRuleId] ?? {
         buildRuleId: override.buildRuleId,
-        classId: 'warrior_t',
         ruleName: override.buildRuleId,
         description: '',
         totalBuildPoints: 0,
@@ -2189,7 +2182,7 @@ export function applyPlayerBuildWorkbookOverrides(overrides: PlayerBuildWorkbook
 
       nextRules[override.buildRuleId] = {
         ...base,
-        ...(override.classId ? { classId: override.classId } : {}),
+        classId: override.classId,
         ...(override.ruleName ? { ruleName: override.ruleName } : {}),
         ...(override.description ? { description: override.description } : {}),
         ...(typeof override.totalBuildPoints === 'number' ? { totalBuildPoints: override.totalBuildPoints } : {}),

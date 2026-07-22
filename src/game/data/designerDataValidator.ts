@@ -1218,7 +1218,7 @@ export function validateDesignerDataWorkbooks(workbooks: DesignerDataWorkbookMap
     validateCsvReferences(errors, WORKBOOK_NAMES.playerBuild, '职业定义', row, index, 'recommendedBuildRuleIdsCsv', buildRuleIds)
   })
   rows.buildRules.forEach((row, index) => {
-    validateReference(errors, WORKBOOK_NAMES.playerBuild, '构筑规则定义', index, 'classId', requireText(errors, WORKBOOK_NAMES.playerBuild, '构筑规则定义', row, index, 'classId'), classIds)
+    validateReference(errors, WORKBOOK_NAMES.playerBuild, '构筑规则定义', index, 'classId', optionalText(row, 'classId'), classIds)
     validateCsvEnum(errors, WORKBOOK_NAMES.playerBuild, '构筑规则定义', row, index, 'enabledHotkeysCsv', ENUMS.skillHotkey)
     validateEnum(errors, WORKBOOK_NAMES.playerBuild, '构筑规则定义', row, index, 'inheritancePolicy', ENUMS.inheritancePolicy, { required: true })
     validateNumber(errors, WORKBOOK_NAMES.playerBuild, '构筑规则定义', row, index, 'totalBuildPoints', { required: true, min: 0 })

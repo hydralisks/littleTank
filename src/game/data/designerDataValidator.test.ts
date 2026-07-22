@@ -327,6 +327,19 @@ describe('designerDataValidator', () => {
     expect(result.errors).toEqual([])
   })
 
+  it('accepts a blank compatibility classId on shared build rules', () => {
+    const workbooks = createValidWorkbookMap()
+    const ruleRows = XLSX.utils.sheet_to_json<Row>(workbooks.playerBuild.Sheets['构筑规则定义'], { defval: '' })
+    ruleRows[0].classId = ''
+    workbooks.playerBuild.Sheets['构筑规则定义'] = XLSX.utils.json_to_sheet(ruleRows)
+
+    const result = validateDesignerDataWorkbooks(workbooks)
+
+    expect(result.errors).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ sheet: '构筑规则定义', field: 'classId' }),
+    ]))
+  })
+
   it('rejects invalid target rules and invalid auto opening numbers', () => {
     const workbooks = createValidWorkbookMap()
     const skillRows = XLSX.utils.sheet_to_json<Row>(workbooks.enemyData.Sheets['敌人技能'], { defval: '' })

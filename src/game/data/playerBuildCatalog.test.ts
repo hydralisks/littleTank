@@ -115,15 +115,27 @@ describe('playerBuildCatalog class-aware build data', () => {
     expect(playerClass?.roleTag).toBe('tank')
   })
 
-  it('binds standard build rules to warrior_t without demo0 active skill examples', () => {
+  it('keeps standard build rules class-neutral without demo0 active skill examples', () => {
     const standardRule = getBuildRuleDefinition('standard_5slot')
     const defaultBuild = getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')
 
-    expect(standardRule?.classId).toBe('warrior_t')
+    expect(standardRule?.classId).toBeUndefined()
     expect(defaultBuild.loadout['1']).toBe('warrior_t_taunt')
     expect(getActiveSkillDefinition('warrior_t_taunt')?.classId).toBe('warrior_t')
     expect(getActiveSkillDefinition('demo0_taunt')).toBeUndefined()
     expect(getActiveSkillDefinition('taunt')).toBeUndefined()
+  })
+
+  it('clears a legacy built-in class binding when a shared rule override leaves classId blank', () => {
+    applyPlayerBuildWorkbookOverrides({
+      ...emptyPlayerBuildOverrides(),
+      buildRuleDefinitions: [{
+        buildRuleId: 'standard_5slot',
+        classId: undefined,
+      }],
+    })
+
+    expect(getBuildRuleDefinition('standard_5slot')?.classId).toBeUndefined()
   })
 
   it('selects defaults and legal content by explicit class without cross-class fallback', () => {

@@ -216,7 +216,7 @@ function buildPlayerBuildWorkbook() {
     构筑规则定义: [
       {
         buildRuleId: 'tutorial_2slot',
-        classId: 'warrior_t',
+        classId: '',
         ruleName: '教程一：双技能入门',
         description: '只开放 1/2 两个主动键位，强制带嘲讽。',
         totalBuildPoints: 10,
@@ -227,7 +227,7 @@ function buildPlayerBuildWorkbook() {
       },
       {
         buildRuleId: 'standard_5slot',
-        classId: 'warrior_t',
+        classId: '',
         ruleName: '标准五键构筑',
         description: '开放 1/2/3/4/Q 五个键位，主动与被动共享完整点数池。',
         totalBuildPoints: 28,
