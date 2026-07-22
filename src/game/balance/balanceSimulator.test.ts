@@ -122,6 +122,7 @@ describe('balance simulator', () => {
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const result = runBalanceScenario({
       stage,
+      classId: 'warrior_t',
       build,
       buildId: 'default',
       profile: noMistakeProfile,
@@ -132,6 +133,8 @@ describe('balance simulator', () => {
 
     expect(result).toMatchObject({
       stageId: 'harbor-1',
+      classId: 'warrior_t',
+      buildRuleId: getStageBuildRuleId(stage),
       profileId: 'no-mistake',
       profileTier: 'average',
       buildId: 'default',
@@ -145,7 +148,7 @@ describe('balance simulator', () => {
     const stage = getStageById('harbor-5')
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const result = runBalanceScenario({
-      stage,
+      classId: 'warrior_t', stage,
       build,
       buildId: 'default',
       profile: noMistakeProfile,
@@ -162,7 +165,7 @@ describe('balance simulator', () => {
     const stage = getStageById('harbor-1')
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const result = runBalanceScenario({
-      stage,
+      classId: 'warrior_t', stage,
       build,
       buildId: 'default',
       profile: noMistakeProfile,
@@ -187,7 +190,7 @@ describe('balance simulator', () => {
     const stage = getStageById('harbor-1')
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const result = runBalanceScenario({
-      stage,
+      classId: 'warrior_t', stage,
       build,
       buildId: 'default',
       profile: {
@@ -225,7 +228,7 @@ describe('balance simulator', () => {
     const stage = getStageById('harbor-1')
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const result = runBalanceScenario({
-      stage,
+      classId: 'warrior_t', stage,
       build,
       buildId: 'default',
       profile: noMistakeProfile,
@@ -243,7 +246,7 @@ describe('balance simulator', () => {
     const stage = getStageById('harbor-1')
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const defaultResult = runBalanceScenario({
-      stage,
+      classId: 'warrior_t', stage,
       build,
       buildId: 'default',
       profile: noMistakeProfile,
@@ -252,7 +255,7 @@ describe('balance simulator', () => {
       initialStateMutator: highDangerCastDefeatState,
     })
     const diagnosticResult = runBalanceScenario({
-      stage,
+      classId: 'warrior_t', stage,
       build,
       buildId: 'default',
       profile: noMistakeProfile,
@@ -281,8 +284,8 @@ describe('balance simulator', () => {
     const stage = getStageById('harbor-1')
     const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const analysis = runStageBalanceAnalysis({
-      stage,
-      builds: [{ id: 'default', build }],
+      classId: 'warrior_t', stage,
+      builds: [{ classId: 'warrior_t', id: 'default', build }],
       profiles: [noMistakeProfile],
       attemptsPerScenario: 1,
       maxDurationMs: 1000,
@@ -336,7 +339,7 @@ describe('balance simulator', () => {
     }
 
     const result = runBalanceScenario({
-      stage,
+      classId: 'warrior_t', stage,
       build,
       buildId: 'default',
       profile,
@@ -685,7 +688,7 @@ describe('balance simulator', () => {
     }
 
     const result = runBalanceScenario({
-      stage,
+      classId: 'warrior_t', stage,
       build,
       buildId: 'no-stop-tools',
       profile,
@@ -765,7 +768,7 @@ describe('balance simulator', () => {
     }
 
     const result = runBalanceScenario({
-      stage,
+      classId: 'warrior_t', stage,
       build,
       buildId: 'taunt-only',
       profile,
@@ -840,7 +843,7 @@ describe('balance simulator', () => {
     }
 
     const result = runBalanceScenario({
-      stage,
+      classId: 'warrior_t', stage,
       build,
       buildId: 'double-shield-wall',
       profile,
@@ -900,10 +903,10 @@ describe('balance simulator', () => {
     }
 
     const analysis = runStageBalanceAnalysis({
-      stage,
+      classId: 'warrior_t', stage,
       builds: [
-        { id: 'default', build },
-        { id: 'alternate', build: alternateBuild },
+        { classId: 'warrior_t', id: 'default', build },
+        { classId: 'warrior_t', id: 'alternate', build: alternateBuild },
       ],
       profiles: [
         noMistakeProfile,
@@ -928,7 +931,7 @@ describe('balance simulator', () => {
   it('exposes a two-phase build search hint for stage analysis', () => {
     const stage = getStageById('harbor-1')
     const analysis = runTwoPhaseStageBalanceAnalysis({
-      stage,
+      classId: 'warrior_t', stage,
       profiles: [noMistakeProfile],
       attemptsPerScenario: 1,
       phaseOneAttemptsPerScenario: 1,
@@ -953,9 +956,9 @@ describe('balance simulator', () => {
       passiveTalentIds: ['warrior_t_reinforced_plates'],
     }
     const analysis = runTwoPhaseStageBalanceAnalysis({
-      stage,
+      classId: 'warrior_t', stage,
       profiles: [noMistakeProfile],
-      extraBuildCandidates: [{ id: 'manual_playtest_recommended', build: externalBuild }],
+      extraBuildCandidates: [{ classId: 'warrior_t', id: 'manual_playtest_recommended', build: externalBuild }],
       attemptsPerScenario: 1,
       phaseOneAttemptsPerScenario: 1,
       phaseOneMaxActiveBuilds: 1,
@@ -976,9 +979,9 @@ describe('balance simulator', () => {
     const stage = getStageById('harbor-1')
     const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const builds = [
-      { id: 'default', build: defaultBuild },
-      { id: 'shared_good', build: { ...defaultBuild, passiveTalentIds: [] } },
-      { id: 'expert_only', build: { ...defaultBuild, passiveTalentIds: ['expert-only' as PassiveTalentId] } },
+      { classId: 'warrior_t', id: 'default', build: defaultBuild },
+      { classId: 'warrior_t', id: 'shared_good', build: { ...defaultBuild, passiveTalentIds: [] } },
+      { classId: 'warrior_t', id: 'expert_only', build: { ...defaultBuild, passiveTalentIds: ['expert-only' as PassiveTalentId] } },
     ]
 
     const selected = selectTwoPhaseBalanceBuilds(
@@ -1041,8 +1044,8 @@ describe('balance simulator', () => {
         { stageId: stage.id, profileId: 'expert', profileTier: 'expert', buildId: 'zzz_full', attempts: 10, victories: 0, passRate: 0 },
       ],
       [
-        { id: 'aaa_sparse', build: sparseBuild },
-        { id: 'zzz_full', build: fullBuild },
+        { classId: 'warrior_t', id: 'aaa_sparse', build: sparseBuild },
+        { classId: 'warrior_t', id: 'zzz_full', build: fullBuild },
       ],
       1,
     ).map((build) => build.id)
@@ -1067,7 +1070,7 @@ describe('balance simulator', () => {
     const stage = getStageById('harbor-1')
     const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const builds = ['b1', 'b2', 'b3', 'b4', 'b5', 'b6', 'b7', 'b8', 'b9', 'b10'].map((id) => ({
-      id,
+      classId: 'warrior_t', id,
       build: defaultBuild,
     }))
     const passRates = [0.9, 0.89, 0.87, 0.85, 0.77, 0.77, 0.75, 0.5, 0.5, 0.4]
@@ -1094,7 +1097,7 @@ describe('balance simulator', () => {
     const stage = getStageById('harbor-1')
     const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const builds = ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'].map((id) => ({
-      id,
+      classId: 'warrior_t', id,
       build: defaultBuild,
     }))
     const passRates = [0.9, 0.86, 0.83, 0.8, 0.77, 0.74]
@@ -1162,8 +1165,8 @@ describe('balance simulator', () => {
         { stageId: stage.id, profileId: 'fixed-profile', profileTier: 'expert', buildId: 'zzz_passive_heavy', attempts: 10, victories: 0, passRate: 0 },
       ],
       [
-        { id: 'aaa_sparse', build: sparseBuild },
-        { id: 'zzz_passive_heavy', build: passiveHeavyBuild },
+        { classId: 'warrior_t', id: 'aaa_sparse', build: sparseBuild },
+        { classId: 'warrior_t', id: 'zzz_passive_heavy', build: passiveHeavyBuild },
       ],
       {
         minBuildCount: 1,
@@ -1184,10 +1187,10 @@ describe('balance simulator', () => {
     }
 
     const analysis = runStageBalanceAnalysis({
-      stage,
+      classId: 'warrior_t', stage,
       builds: [
-        { id: 'default', build },
-        { id: 'alternate', build: alternateBuild },
+        { classId: 'warrior_t', id: 'default', build },
+        { classId: 'warrior_t', id: 'alternate', build: alternateBuild },
       ],
       profiles: [
         {

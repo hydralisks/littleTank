@@ -51,7 +51,7 @@ describe('manual playtest builds', () => {
 
     const entries = parseManualPlaytestWorkbook(workbook)
     const stage = getStageById("Zul'Aman-6")
-    const candidate = buildManualPlaytestCandidateForStage(entries, stage)
+    const candidate = buildManualPlaytestCandidateForStage(entries, stage, 'warrior_t')
 
     expect(candidate?.id).toBe('manual_playtest_recommended')
     expect(Object.values(candidate?.build.loadout ?? {})).toEqual([

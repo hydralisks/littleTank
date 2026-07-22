@@ -1,5 +1,5 @@
 import type { StageInfo } from '../data/stageTemplates'
-import type { EncounterState } from '../encounter/encounterTypes'
+import type { EncounterState, PlayerClassId } from '../encounter/encounterTypes'
 import { createInitialEncounterState } from '../encounter/encounterFactory'
 import { createEncounterTemplate } from '../data/encounterTemplates'
 import { generateStageBalanceBuilds } from './balanceBuildGenerator'
@@ -42,6 +42,7 @@ export interface LearningScenarioResult extends BalanceScenarioResult {
 
 export interface LearningStageBalanceAnalysis {
   stageId: string
+  classId: PlayerClassId
   learningMode: 'build_and_cast_strategy_search' | 'build_cast_and_tactical_strategy_search'
   phaseOneBuildCount: number
   selectedBuildIds: string[]
@@ -57,6 +58,7 @@ export interface LearningStageBalanceAnalysis {
 
 export interface RunLearningStageBalanceAnalysisOptions {
   stage: StageInfo
+  classId: PlayerClassId
   profiles: BalanceOperationProfile[]
   castStrategies: LearningCastStrategy[]
   tacticalStrategies?: LearningTacticalStrategy[]
@@ -192,16 +194,21 @@ function createStrategyProfile(
   }
 }
 
-function createInitialEnemyCount(stage: StageInfo, build: BalanceBuildVariant['build'] | undefined) {
+function createInitialEnemyCount(
+  stage: StageInfo,
+  classId: PlayerClassId,
+  build: BalanceBuildVariant['build'] | undefined,
+) {
   if (!build) {
     return 0
   }
 
-  return createInitialEncounterState(stage, 'warrior_t', build).enemies.length
+  return createInitialEncounterState(stage, classId, build).enemies.length
 }
 
 function runExplorationScenarios({
   stage,
+  classId,
   builds,
   profiles,
   castStrategies,
@@ -212,6 +219,7 @@ function runExplorationScenarios({
   initialStateMutator,
 }: {
   stage: StageInfo
+  classId: PlayerClassId
   builds: readonly BalanceBuildVariant[]
   profiles: readonly BalanceOperationProfile[]
   castStrategies: readonly LearningCastStrategy[]
@@ -229,6 +237,7 @@ function runExplorationScenarios({
         for (const profile of profiles) {
           const scenario = runBalanceScenario({
             stage,
+            classId,
             build: build.build,
             buildId: build.id,
             profile: createStrategyProfile(profile, castStrategy, tacticalStrategy),
@@ -257,10 +266,16 @@ export function runLearningStageBalanceAnalysis(
 ): LearningStageBalanceAnalysis {
   const phaseOneBuilds = options.buildCandidates && options.buildCandidates.length > 0
     ? options.buildCandidates
-    : generateStageBalanceBuilds(options.stage, {
+    : generateStageBalanceBuilds(options.stage, options.classId, {
       maxActiveBuilds: options.phaseOneMaxActiveBuilds ?? 24,
       maxPassiveVariants: options.phaseOneMaxPassiveVariants ?? 4,
     })
+  const invalidBuild = phaseOneBuilds.find((variant) => variant.classId !== options.classId)
+  if (invalidBuild) {
+    throw new Error(
+      `Balance build ${invalidBuild.id} belongs to ${invalidBuild.classId}, expected ${options.classId}`,
+    )
+  }
   const castStrategies = normalizeCastStrategies(options.castStrategies)
   const stageSkillIds = createEncounterTemplate(options.stage).enemies
     .flatMap((enemy) => enemy.skillCycle.length > 0 ? enemy.skillCycle : enemy.skillIds)
@@ -273,6 +288,7 @@ export function runLearningStageBalanceAnalysis(
   const finalStrategyCount = Math.max(1, Math.floor(options.finalStrategyCount ?? 2))
   const explorationScenarios = runExplorationScenarios({
     stage: options.stage,
+    classId: options.classId,
     builds: phaseOneBuilds,
     profiles: options.profiles,
     castStrategies,
@@ -314,6 +330,7 @@ export function runLearningStageBalanceAnalysis(
   )
   const finalAnalysis = runStageBalanceAnalysis({
     stage: options.stage,
+    classId: options.classId,
     builds: selectedBuilds,
     profiles: finalProfiles,
     attemptsPerScenario: options.attemptsPerScenario,
@@ -347,7 +364,7 @@ export function runLearningStageBalanceAnalysis(
     0,
   )
   const learningExecutionLoad = evaluateLearningExecutionLoad({
-    enemyCount: Math.max(0, createInitialEnemyCount(options.stage, selectedBuilds[0]?.build)),
+    enemyCount: Math.max(0, createInitialEnemyCount(options.stage, options.classId, selectedBuilds[0]?.build)),
     activeSkillCount: selectedActiveSkillCount,
     selectedBuildIds: selectedBuilds.map((build) => build.id),
     selectedCastStrategyIds,
@@ -374,6 +391,7 @@ export function runLearningStageBalanceAnalysis(
 
   return {
     stageId: options.stage.id,
+    classId: options.classId,
     learningMode:
       tacticalStrategies.length > 1
         ? 'build_cast_and_tactical_strategy_search'

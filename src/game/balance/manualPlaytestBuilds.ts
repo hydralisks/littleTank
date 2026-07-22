@@ -12,13 +12,14 @@ import {
   type StageInfo,
 } from '../data/stageTemplates'
 import type { BalanceBuildVariant } from './balanceSimulator'
-import type { PassiveTalentId, SkillId, SkillLoadout } from '../encounter/encounterTypes'
+import type { PassiveTalentId, PlayerClassId, SkillId, SkillLoadout } from '../encounter/encounterTypes'
 
 type CellValue = string | number | boolean | null | undefined
 type SheetRow = Record<string, CellValue>
 
 export interface ManualPlaytestBuildEntry {
   stageId: string
+  classId: PlayerClassId
   manualDifficulty: string
   recommendedActiveSkillNamesCsv: string
   recommendedPassiveTalentNamesCsv: string
@@ -104,6 +105,7 @@ export function parseManualPlaytestWorkbook(workbook: XLSX.WorkBook): ManualPlay
     .filter((row) => row.stageId && readBoolean(row.enabled))
     .map((row) => ({
       stageId: String(row.stageId ?? '').trim(),
+      classId: String(row.classId ?? 'warrior_t').trim() || 'warrior_t',
       manualDifficulty: String(row.manualDifficulty ?? row.recommendedDifficulty ?? 'unrated').trim(),
       recommendedActiveSkillNamesCsv: String(row.recommendedActiveSkillNamesCsv ?? '').trim(),
       recommendedPassiveTalentNamesCsv: String(row.recommendedPassiveTalentNamesCsv ?? '').trim(),
@@ -125,15 +127,17 @@ export function parseManualPlaytestWorkbook(workbook: XLSX.WorkBook): ManualPlay
 export function getManualPlaytestEntryForStage(
   entries: readonly ManualPlaytestBuildEntry[],
   stageId: string,
+  classId: PlayerClassId,
 ) {
-  return entries.find((entry) => entry.stageId === stageId && entry.enabled)
+  return entries.find((entry) => entry.stageId === stageId && entry.classId === classId && entry.enabled)
 }
 
 export function buildManualPlaytestCandidateForStage(
   entries: readonly ManualPlaytestBuildEntry[],
   stage: StageInfo,
+  classId: PlayerClassId,
 ): BalanceBuildVariant | null {
-  const entry = getManualPlaytestEntryForStage(entries, stage.id)
+  const entry = getManualPlaytestEntryForStage(entries, stage.id, classId)
   if (!entry || (entry.recommendedActiveSkillIds.length === 0 && entry.recommendedPassiveTalentIds.length === 0)) {
     return null
   }
@@ -146,7 +150,7 @@ export function buildManualPlaytestCandidateForStage(
   const buildRuleId = getStageBuildRuleId(stage)
   const normalized = normalizePersistedBuildForRule(
     { loadout, passiveTalentIds: entry.recommendedPassiveTalentIds },
-    buildRuleId, 'warrior_t',
+    buildRuleId, classId,
     getPassiveTalentUnlockTierForStage(stage),
     getUnlockedActiveSkillIdsForStage(stage),
     [],
@@ -154,6 +158,7 @@ export function buildManualPlaytestCandidateForStage(
 
   return {
     id: 'manual_playtest_recommended',
+    classId,
     build: normalized,
   }
 }

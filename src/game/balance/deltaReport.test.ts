@@ -8,13 +8,13 @@ describe('delta report renderer', () => {
       generatedAt: '2026-05-30T00:00:00.000Z',
       stages: [
         {
-          stageId: 'WestFall-2',
+          classId: 'warrior_t', stageId: 'WestFall-2',
           title: 'Sentinel Hill',
           analysisType: 'passive',
           baselineVariantId: 'baseline_no_passives',
           scenarios: [
             {
-              stageId: 'WestFall-2',
+              classId: 'warrior_t', stageId: 'WestFall-2',
               baselineVariantId: 'baseline_no_passives',
               variantId: 'baseline_no_passives',
               variantLabel: 'No passives',
@@ -38,7 +38,7 @@ describe('delta report renderer', () => {
           ],
           comparisons: [
             {
-              stageId: 'WestFall-2',
+              classId: 'warrior_t', stageId: 'WestFall-2',
               baselineVariantId: 'baseline_no_passives',
               comparedVariantId: 'passive_warrior_t_barbaric_training',
               comparedVariantLabel: '野蛮训练',
@@ -68,14 +68,14 @@ describe('delta report renderer', () => {
       generatedAt: '2026-05-30T00:00:00.000Z',
       stages: [
         {
-          stageId: 'WestFall-2',
+          classId: 'warrior_t', stageId: 'WestFall-2',
           title: 'Sentinel Hill',
           analysisType: 'passive',
           baselineVariantId: 'baseline_no_passives',
           scenarios: [],
           comparisons: [
             {
-              stageId: 'WestFall-2',
+              classId: 'warrior_t', stageId: 'WestFall-2',
               baselineVariantId: 'baseline_no_passives',
               comparedVariantId: 'strong_combo',
               comparedVariantLabel: '战旗飘扬 + 野蛮训练',
@@ -88,7 +88,7 @@ describe('delta report renderer', () => {
               reasons: ['delta 40 percentage points'],
             },
             {
-              stageId: 'WestFall-2',
+              classId: 'warrior_t', stageId: 'WestFall-2',
               baselineVariantId: 'baseline_no_passives',
               comparedVariantId: 'weak_combo',
               comparedVariantLabel: '瞬断手感',

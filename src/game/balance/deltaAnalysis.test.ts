@@ -25,7 +25,7 @@ beforeAll(() => {
 describe('delta analysis', () => {
   it('creates passive variants while preserving active loadout', () => {
     const stage = getStageById('WestFall-2')
-    const variants = createPassiveDeltaVariants(stage, {
+    const variants = createPassiveDeltaVariants(stage, 'warrior_t', {
       baseBuildId: 'default',
       talentIds: ['warrior_t_raise_banner', 'warrior_t_barbaric_training', 'warrior_t_focused_vigor'],
       includePairs: true,
@@ -42,7 +42,7 @@ describe('delta analysis', () => {
 
   it('accepts an explicit base build for focused delta comparisons', () => {
     const stage = getStageById('WestFall-2')
-    const variants = createPassiveDeltaVariants(stage, {
+    const variants = createPassiveDeltaVariants(stage, 'warrior_t', {
       baseBuild: {
         loadout: {
           '1': 'warrior_t_interrupt',
@@ -69,7 +69,7 @@ describe('delta analysis', () => {
   it('runs a small passive delta analysis with confidence and comparisons', () => {
     const stage = getStageById('WestFall-2')
     const result = runStageDeltaAnalysis({
-      stage,
+      classId: 'warrior_t', stage,
       type: 'passive',
       baseBuildId: 'default',
       talentIds: ['warrior_t_raise_banner', 'warrior_t_barbaric_training'],
@@ -90,6 +90,9 @@ describe('delta analysis', () => {
     })
 
     expect(result.stageId).toBe('WestFall-2')
+    expect(result.classId).toBe('warrior_t')
+    expect(result.scenarios.every((scenario) => scenario.classId === 'warrior_t')).toBe(true)
+    expect(result.comparisons.every((comparison) => comparison.classId === 'warrior_t')).toBe(true)
     expect(result.scenarios.length).toBeGreaterThan(1)
     expect(result.comparisons.length).toBe(result.scenarios.length - 1)
     expect(result.comparisons.every((comparison) => comparison.confidence)).toBe(true)

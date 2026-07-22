@@ -31,9 +31,9 @@ describe('strategy tips sensitivity', () => {
 
   it('filters tip-aligned builds in violated mode without returning an empty candidate list', () => {
     const candidates: BalanceBuildVariant[] = [
-      { id: 'passive', build: { loadout: createLoadout({ '1': 'warrior_t_shield_block' }), passiveTalentIds: ['a', 'b', 'c', 'd'] } },
-      { id: 'active', build: { loadout: createLoadout({ '1': 'warrior_t_shield_wall', '2': 'warrior_t_shield_reflection' }), passiveTalentIds: [] } },
-      { id: 'plain', build: { loadout: createLoadout({ '1': 'warrior_t_revenge' }), passiveTalentIds: [] } },
+      { classId: 'warrior_t', id: 'passive', build: { loadout: createLoadout({ '1': 'warrior_t_shield_block' }), passiveTalentIds: ['a', 'b', 'c', 'd'] } },
+      { classId: 'warrior_t', id: 'active', build: { loadout: createLoadout({ '1': 'warrior_t_shield_wall', '2': 'warrior_t_shield_reflection' }), passiveTalentIds: [] } },
+      { classId: 'warrior_t', id: 'plain', build: { loadout: createLoadout({ '1': 'warrior_t_revenge' }), passiveTalentIds: [] } },
     ]
 
     expect(filterViolatedBuildCandidates(candidates, ['passive_heavy', 'spell_reflect']).map((candidate) => candidate.id)).toEqual(['plain'])

@@ -5,9 +5,11 @@ import {
   canUseSkillInRule,
   canUseTalentInRule,
   getActivePointCost,
+  getActiveSkillDefinition,
   getBuildRuleDefinition,
   getRemainingBuildPoints,
   getDefaultPersistedBuildForRule,
+  getPassiveTalentDefinition,
   normalizePersistedBuildForRule,
   applyPlayerBuildWorkbookOverrides,
   resetPlayerBuildCatalog,
@@ -30,12 +32,30 @@ describe('balance build generator', () => {
     resetPlayerBuildCatalog()
     applyStageWorkbookOverrides({ areaOverrides: [], stageOverrides: [], legendOverrides: [] })
   })
+  it('generates only builds owned by the requested class', () => {
+    const stage = getStageById('harbor-4')
+    const variants = generateStageBalanceBuilds(stage, 'warrior_t', {
+      maxActiveBuilds: 4,
+      maxPassiveVariants: 2,
+    })
+
+    expect(variants.length).toBeGreaterThan(0)
+    expect(variants.every((variant) => variant.classId === 'warrior_t')).toBe(true)
+    for (const variant of variants) {
+      expect(Object.values(variant.build.loadout).filter(Boolean).every(
+        (skillId) => getActiveSkillDefinition(skillId!)?.classId === 'warrior_t',
+      )).toBe(true)
+      expect(variant.build.passiveTalentIds.every(
+        (talentId) => getPassiveTalentDefinition(talentId)?.classId === 'warrior_t',
+      )).toBe(true)
+    }
+  })
   it('includes the normalized default build first', () => {
     const stage = getStageById('harbor-4')
     const buildRuleId = getStageBuildRuleId(stage)
     const unlockedSkillIds = getUnlockedActiveSkillIdsForStage(stage)
     const passiveTier = getPassiveTalentUnlockTierForStage(stage)
-    const builds = generateStageBalanceBuilds(stage, {
+    const builds = generateStageBalanceBuilds(stage, 'warrior_t', {
       maxActiveBuilds: 8,
       maxPassiveVariants: 4,
     })
@@ -58,7 +78,7 @@ describe('balance build generator', () => {
     const rule = getBuildRuleDefinition(buildRuleId)
     const unlockedSkillIds = getUnlockedActiveSkillIdsForStage(stage)
     const passiveTier = getPassiveTalentUnlockTierForStage(stage)
-    const builds = generateStageBalanceBuilds(stage, {
+    const builds = generateStageBalanceBuilds(stage, 'warrior_t', {
       maxActiveBuilds: 20,
       maxPassiveVariants: 8,
     })
@@ -87,7 +107,7 @@ describe('balance build generator', () => {
 
   it('keeps active-only candidates before passive talents unlock', () => {
     const stage = getStageById('harbor-3')
-    const builds = generateStageBalanceBuilds(stage, {
+    const builds = generateStageBalanceBuilds(stage, 'warrior_t', {
       maxActiveBuilds: 12,
       maxPassiveVariants: 4,
     })
@@ -99,7 +119,7 @@ describe('balance build generator', () => {
 
   it('deduplicates builds by stable normalized signature', () => {
     const stage = getStageById('harbor-6')
-    const builds = generateStageBalanceBuilds(stage, {
+    const builds = generateStageBalanceBuilds(stage, 'warrior_t', {
       maxActiveBuilds: 30,
       maxPassiveVariants: 8,
     })
@@ -110,7 +130,7 @@ describe('balance build generator', () => {
 
   it('respects active and passive generation caps while preserving default', () => {
     const stage = getStageById('harbor-6')
-    const builds = generateStageBalanceBuilds(stage, {
+    const builds = generateStageBalanceBuilds(stage, 'warrior_t', {
       maxActiveBuilds: 3,
       maxPassiveVariants: 2,
     })
@@ -122,7 +142,7 @@ describe('balance build generator', () => {
   it('keeps late uiOrder passive pairs in the capped search space', () => {
     applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(XLSX.readFile('public/designer-data/player_build.xlsx')))
     const stage = getStageById('harbor-6')
-    const builds = generateStageBalanceBuilds(stage, {
+    const builds = generateStageBalanceBuilds(stage, 'warrior_t', {
       maxActiveBuilds: 10,
       maxPassiveVariants: 3,
     })
@@ -140,7 +160,7 @@ describe('balance build generator', () => {
     applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(XLSX.readFile('public/designer-data/player_build.xlsx')))
     const stage = getStageById('WestFall-6')
     const buildRuleId = getStageBuildRuleId(stage)
-    const builds = generateStageBalanceBuilds(stage, {
+    const builds = generateStageBalanceBuilds(stage, 'warrior_t', {
       maxActiveBuilds: 18,
       maxPassiveVariants: 3,
     })
@@ -161,7 +181,7 @@ describe('balance build generator', () => {
     applyStageWorkbookOverrides(parseStageWorkbook(XLSX.readFile('public/designer-data/stage_content.xlsx')))
     applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(XLSX.readFile('public/designer-data/player_build.xlsx')))
     const stage = getStageById('WestFall-6')
-    const candidates = generateStrategyTipBuildCandidates(stage, { maxCandidates: 6 })
+    const candidates = generateStrategyTipBuildCandidates(stage, 'warrior_t', { maxCandidates: 6 })
 
     expect(candidates.length).toBeGreaterThan(0)
     expect(

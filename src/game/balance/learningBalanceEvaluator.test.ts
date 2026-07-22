@@ -81,7 +81,7 @@ describe('learning balance evaluator', () => {
     ]
 
     const analysis = runLearningStageBalanceAnalysis({
-      stage,
+      classId: 'warrior_t', stage,
       profiles: [smokeProfile],
       castStrategies: strategies,
       phaseOneAttemptsPerScenario: 1,
@@ -141,7 +141,7 @@ describe('learning balance evaluator', () => {
     ]
 
     const analysis = runLearningStageBalanceAnalysis({
-      stage,
+      classId: 'warrior_t', stage,
       profiles: [smokeProfile],
       castStrategies,
       tacticalStrategies,
@@ -168,7 +168,7 @@ describe('learning balance evaluator', () => {
     const stage = getStageById('harbor-1')
     const buildCandidates = [
       {
-        id: 'external_candidate',
+        classId: 'warrior_t', id: 'external_candidate',
         build: {
           loadout: {
             '1': 'warrior_t_taunt',
@@ -186,7 +186,7 @@ describe('learning balance evaluator', () => {
     ]
 
     const analysis = runLearningStageBalanceAnalysis({
-      stage,
+      classId: 'warrior_t', stage,
       profiles: [smokeProfile],
       buildCandidates,
       castStrategies: [{ id: 'broad', profileOverrides: { endCastStopWindowMs: 1000 } }],
@@ -210,7 +210,7 @@ describe('learning balance evaluator', () => {
     const stage = getStageById('harbor-1')
     const buildCandidates = [
       {
-        id: 'external_candidate',
+        classId: 'warrior_t', id: 'external_candidate',
         build: {
           loadout: {
             '1': 'warrior_t_taunt',
@@ -228,7 +228,7 @@ describe('learning balance evaluator', () => {
     ]
 
     const analysis = runLearningStageBalanceAnalysis({
-      stage,
+      classId: 'warrior_t', stage,
       profiles: [smokeProfile],
       buildCandidates,
       castStrategies: [{ id: 'broad', profileOverrides: { endCastStopWindowMs: 1000 } }],

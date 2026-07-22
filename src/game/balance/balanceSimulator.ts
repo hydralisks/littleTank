@@ -15,16 +15,23 @@ import type {
   EncounterState,
   EnemyState,
   PersistedBuildState,
+  PlayerClassId,
   SkillId,
   SkillState,
 } from '../encounter/encounterTypes'
+import { getPlayerClassRuntimeDefinition } from '../playerClasses/playerClassRuntimeRegistry'
 import {
   classifyDifficultyFromPassRates,
   type BalanceProfileTier,
   type BalanceScenarioResult,
   type DifficultyRating,
 } from './difficultyScoring'
-import { generateStageBalanceBuilds, getBuildSignature } from './balanceBuildGenerator'
+import {
+  generateStageBalanceBuilds,
+  getBuildSignature,
+  type BalanceBuildVariant,
+} from './balanceBuildGenerator'
+export type { BalanceBuildVariant } from './balanceBuildGenerator'
 import {
   estimateEnemyCycleThreat,
   estimateEnemySkillImpact,
@@ -58,11 +65,6 @@ export interface BalanceOperationProfile {
   mechanicChainPlan?: 'none' | 'wax_party_then_hoe_party' | 'wax_tank_then_hoe_tank'
   minimumTargetStickMs?: number
   preemptiveDefenseHorizonMs?: number
-}
-
-export interface BalanceBuildVariant {
-  id: string
-  build: PersistedBuildState
 }
 
 export type BalanceScoringMode = 'best_build_per_profile'
@@ -105,6 +107,8 @@ export interface BalanceScenarioDataEstimate {
 }
 
 export interface TraceableBalanceScenarioResult extends BalanceScenarioResult {
+  classId: PlayerClassId
+  buildRuleId: string
   trace?: BalanceAttemptTrace
   combatLogTrace?: CombatLogEvent[]
   dataEstimate?: BalanceScenarioDataEstimate
@@ -113,6 +117,7 @@ export interface TraceableBalanceScenarioResult extends BalanceScenarioResult {
 
 export interface RunBalanceScenarioOptions {
   stage: StageInfo
+  classId: PlayerClassId
   build: PersistedBuildState
   buildId: string
   profile: BalanceOperationProfile
@@ -126,6 +131,8 @@ export interface RunBalanceScenarioOptions {
 
 export interface StageBalanceAnalysis {
   stageId: string
+  classId: PlayerClassId
+  buildRuleId: string
   scenarios: TraceableBalanceScenarioResult[]
   rating: DifficultyRating
   scoringMode: BalanceScoringMode
@@ -138,6 +145,7 @@ export interface StageBalanceAnalysis {
 
 export interface RunStageBalanceAnalysisOptions {
   stage: StageInfo
+  classId: PlayerClassId
   builds: BalanceBuildVariant[]
   profiles: BalanceOperationProfile[]
   attemptsPerScenario: number
@@ -1257,6 +1265,27 @@ function runAutomatedDecision(
   return skillState
 }
 
+type PlayerClassAiHandler = typeof runAutomatedDecision
+
+const PLAYER_CLASS_AI_HANDLERS: Record<string, PlayerClassAiHandler> = {
+  warrior_t_default: runAutomatedDecision,
+}
+
+function runPlayerClassAutomatedDecision(
+  state: EncounterState,
+  profile: BalanceOperationProfile,
+  random: () => number,
+  memory: BalanceAutomationMemory,
+  traceEvents?: BalanceTraceEvent[],
+) {
+  const strategyId = getPlayerClassRuntimeDefinition(state.player.classId).aiStrategyId
+  const handler = PLAYER_CLASS_AI_HANDLERS[strategyId]
+  if (!handler) {
+    throw new Error(`Player class AI strategy is not registered: ${strategyId}`)
+  }
+  return handler(state, profile, random, memory, traceEvents)
+}
+
 export function runBalanceScenario(options: RunBalanceScenarioOptions): TraceableBalanceScenarioResult {
   const attempts = Math.max(0, Math.floor(options.attempts))
   let victories = 0
@@ -1267,10 +1296,12 @@ export function runBalanceScenario(options: RunBalanceScenarioOptions): Traceabl
   const dataEstimateTotals = createDataEstimateTotals()
 
   for (let attemptIndex = 0; attemptIndex < attempts; attemptIndex += 1) {
-    const random = createSeededRandom(`${options.stage.id}:${options.buildId}:${options.profile.id}:${attemptIndex}`)
+    const random = createSeededRandom(
+      `${options.stage.id}:${options.classId}:${options.buildId}:${options.profile.id}:${attemptIndex}`,
+    )
     const shouldTraceAttempt = Boolean(options.collectTrace && !trace)
     const traceEvents: BalanceTraceEvent[] | undefined = shouldTraceAttempt ? [] : undefined
-    let state = createInitialEncounterState(options.stage, 'warrior_t', options.build)
+    let state = createInitialEncounterState(options.stage, options.classId, options.build)
     state = options.initialStateMutator ? options.initialStateMutator(state) : state
     const memory = createBalanceAutomationMemory()
     const resourceGainCursor = createResourceGainCursor(state)
@@ -1287,7 +1318,7 @@ export function runBalanceScenario(options: RunBalanceScenarioOptions): Traceabl
 
       if (decisionElapsedMs >= options.profile.decisionIntervalMs) {
         previousState = state
-        state = runAutomatedDecision(state, options.profile, random, memory, traceEvents)
+        state = runPlayerClassAutomatedDecision(state, options.profile, random, memory, traceEvents)
         attemptResourceGain += estimatePositiveResourceGain(previousState, state, resourceGainCursor)
         decisionElapsedMs = 0
       }
@@ -1325,6 +1356,8 @@ export function runBalanceScenario(options: RunBalanceScenarioOptions): Traceabl
 
   return {
     stageId: options.stage.id,
+    classId: options.classId,
+    buildRuleId: getStageBuildRuleId(options.stage),
     profileId: options.profile.id,
     profileTier: options.profile.tier,
     buildId: options.buildId,
@@ -1390,10 +1423,17 @@ function getBuildRemainingPoints(stage: StageInfo, builds: readonly BalanceBuild
 }
 
 export function runStageBalanceAnalysis(options: RunStageBalanceAnalysisOptions): StageBalanceAnalysis {
+  const invalidBuild = options.builds.find((variant) => variant.classId !== options.classId)
+  if (invalidBuild) {
+    throw new Error(
+      `Balance build ${invalidBuild.id} belongs to ${invalidBuild.classId}, expected ${options.classId}`,
+    )
+  }
   const scenarios = options.builds.flatMap((buildVariant) =>
     options.profiles.map((profile) =>
       runBalanceScenario({
         stage: options.stage,
+        classId: options.classId,
         build: buildVariant.build,
         buildId: buildVariant.id,
         profile,
@@ -1409,6 +1449,8 @@ export function runStageBalanceAnalysis(options: RunStageBalanceAnalysisOptions)
 
   return {
     stageId: options.stage.id,
+    classId: options.classId,
+    buildRuleId: getStageBuildRuleId(options.stage),
     scenarios,
     rating: classifyDifficultyFromPassRates(scenarios, {
       buildRemainingPoints: getBuildRemainingPoints(options.stage, options.builds),
@@ -1606,7 +1648,7 @@ export function runTwoPhaseStageBalanceAnalysis(
 ): StageBalanceAnalysis {
   const phaseOneBuilds = prependUniqueBuildVariants(
     options.extraBuildCandidates,
-    generateStageBalanceBuilds(options.stage, {
+    generateStageBalanceBuilds(options.stage, options.classId, {
       maxActiveBuilds: options.phaseOneMaxActiveBuilds ?? 18,
       maxPassiveVariants: options.phaseOneMaxPassiveVariants ?? 3,
     }),
@@ -1614,6 +1656,7 @@ export function runTwoPhaseStageBalanceAnalysis(
   const finalBuildCount = Math.max(1, Math.floor(options.finalBuildCount ?? 6))
   const phaseOneAnalysis = runStageBalanceAnalysis({
     stage: options.stage,
+    classId: options.classId,
     builds: phaseOneBuilds,
     profiles: options.profiles,
     attemptsPerScenario: options.phaseOneAttemptsPerScenario,
@@ -1628,6 +1671,7 @@ export function runTwoPhaseStageBalanceAnalysis(
   )
   const finalAnalysis = runStageBalanceAnalysis({
     stage: options.stage,
+    classId: options.classId,
     builds: selectedBuilds,
     profiles: options.profiles,
     attemptsPerScenario: options.attemptsPerScenario,

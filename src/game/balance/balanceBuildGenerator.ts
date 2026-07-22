@@ -1,5 +1,11 @@
 import type { StageInfo } from '../data/stageTemplates'
-import type { PassiveTalentId, PersistedBuildState, SkillId, SkillLoadout } from '../encounter/encounterTypes'
+import type {
+  PassiveTalentId,
+  PersistedBuildState,
+  PlayerClassId,
+  SkillId,
+  SkillLoadout,
+} from '../encounter/encounterTypes'
 import { getStageBuildRuleId } from '../data/encounterTemplates'
 import {
   SKILL_HOTKEYS,
@@ -18,6 +24,12 @@ import { getPassiveTalentUnlockTierForStage, getUnlockedActiveSkillIdsForStage }
 export interface BalanceBuildGenerationOptions {
   maxActiveBuilds?: number
   maxPassiveVariants?: number
+}
+
+export interface BalanceBuildVariant {
+  id: string
+  classId: PlayerClassId
+  build: PersistedBuildState
 }
 
 export interface StrategyTipBuildCandidateOptions {
@@ -40,8 +52,8 @@ export function getBuildSignature(build: PersistedBuildState) {
   return `${activePart}|${passivePart}`
 }
 
-function createEmptyLoadoutFromRule(buildRuleId: string): SkillLoadout {
-  const template = getDefaultPersistedBuildForRule(buildRuleId, 'warrior_t').loadout
+function createEmptyLoadoutFromRule(buildRuleId: string, classId: PlayerClassId): SkillLoadout {
+  const template = getDefaultPersistedBuildForRule(buildRuleId, classId).loadout
   const nextLoadout = { ...template }
   for (const hotkey of Object.keys(nextLoadout) as (keyof SkillLoadout)[]) {
     nextLoadout[hotkey] = null
@@ -49,7 +61,11 @@ function createEmptyLoadoutFromRule(buildRuleId: string): SkillLoadout {
   return nextLoadout
 }
 
-function getOrderedLegalActiveSkillIds(buildRuleId: string, unlockedSkillIds: readonly SkillId[]) {
+function getOrderedLegalActiveSkillIds(
+  buildRuleId: string,
+  classId: PlayerClassId,
+  unlockedSkillIds: readonly SkillId[],
+) {
   const unlocked = [...new Set(unlockedSkillIds)]
   const unlockedSet = new Set(unlocked)
   const catalog = getActiveSkillCatalog()
@@ -59,14 +75,18 @@ function getOrderedLegalActiveSkillIds(buildRuleId: string, unlockedSkillIds: re
   }
 
   return unlocked
-    .filter((skillId) => unlockedSet.has(skillId) && canUseSkillInRule(buildRuleId, 'warrior_t', skillId, unlocked))
+    .filter((skillId) => unlockedSet.has(skillId) && canUseSkillInRule(buildRuleId, classId, skillId, unlocked))
     .sort((left, right) => (catalogOrder.get(left) ?? 99999) - (catalogOrder.get(right) ?? 99999) || left.localeCompare(right))
 }
 
-function getOrderedLegalPassiveTalentIds(buildRuleId: string, maxUnlockedTier: number) {
+function getOrderedLegalPassiveTalentIds(
+  buildRuleId: string,
+  classId: PlayerClassId,
+  maxUnlockedTier: number,
+) {
   return getPassiveTalentCatalog()
     .map((talent) => talent.id)
-    .filter((talentId) => canUseTalentInRule(buildRuleId, 'warrior_t', talentId, maxUnlockedTier))
+    .filter((talentId) => canUseTalentInRule(buildRuleId, classId, talentId, maxUnlockedTier))
 }
 
 function getPassiveTalentSearchScore(talentId: PassiveTalentId) {
@@ -104,11 +124,12 @@ function getPassiveVariantSearchScore(passiveTalentIds: readonly PassiveTalentId
 
 function generatePassiveVariants(
   buildRuleId: string,
+  classId: PlayerClassId,
   loadout: SkillLoadout,
   maxUnlockedTier: number,
   maxPassiveVariants: number,
 ): PassiveTalentId[][] {
-  const legalTalentIds = getOrderedLegalPassiveTalentIds(buildRuleId, maxUnlockedTier)
+  const legalTalentIds = getOrderedLegalPassiveTalentIds(buildRuleId, classId, maxUnlockedTier)
   const variantsBySignature = new Map<string, PassiveTalentId[]>([['', []]])
 
   const canAffordVariant = (passiveTalentIds: PassiveTalentId[]) =>
@@ -246,6 +267,7 @@ function getStrategyTipBuildScore(buildRuleId: string, build: PersistedBuildStat
 
 export function generateStrategyTipBuildCandidates(
   stage: StageInfo,
+  classId: PlayerClassId,
   options: StrategyTipBuildCandidateOptions = {},
 ) {
   if (!shouldPreferPassiveHeavyBuildCandidates(stage)) {
@@ -256,7 +278,7 @@ export function generateStrategyTipBuildCandidates(
   const maxActiveSkillCount = Math.max(0, Math.floor(options.maxActiveSkillCount ?? 2))
   const minPassiveTalentCount = Math.max(1, Math.floor(options.minPassiveTalentCount ?? 4))
   const buildRuleId = getStageBuildRuleId(stage)
-  const candidates = generateStageBalanceBuilds(stage, {
+  const candidates = generateStageBalanceBuilds(stage, classId, {
     maxActiveBuilds: options.maxActiveBuilds ?? 18,
     maxPassiveVariants: options.maxPassiveVariants ?? 3,
   })
@@ -274,7 +296,11 @@ export function generateStrategyTipBuildCandidates(
     .slice(0, maxCandidates)
 }
 
-export function generateStageBalanceBuilds(stage: StageInfo, options: BalanceBuildGenerationOptions = {}) {
+export function generateStageBalanceBuilds(
+  stage: StageInfo,
+  classId: PlayerClassId,
+  options: BalanceBuildGenerationOptions = {},
+) {
   const maxActiveBuilds = Math.max(0, Math.floor(options.maxActiveBuilds ?? 20))
   const maxPassiveVariants = Math.max(1, Math.floor(options.maxPassiveVariants ?? 8))
 
@@ -284,15 +310,15 @@ export function generateStageBalanceBuilds(stage: StageInfo, options: BalanceBui
   const unlockedSkillIds = getUnlockedActiveSkillIdsForStage(stage)
   const passiveTier = getPassiveTalentUnlockTierForStage(stage)
   const normalizedDefault = normalizePersistedBuildForRule(
-    getDefaultPersistedBuildForRule(buildRuleId, 'warrior_t'),
-    buildRuleId, 'warrior_t',
+    getDefaultPersistedBuildForRule(buildRuleId, classId),
+    buildRuleId, classId,
     passiveTier,
     unlockedSkillIds,
     stage.unlockedActiveSkillIds,
   ).build
 
-  const results: Array<{ id: string; build: PersistedBuildState }> = [
-    { id: 'default', build: normalizedDefault },
+  const results: BalanceBuildVariant[] = [
+    { id: 'default', classId, build: normalizedDefault },
   ]
 
   const seen = new Set<string>([getBuildSignature(normalizedDefault)])
@@ -301,8 +327,8 @@ export function generateStageBalanceBuilds(stage: StageInfo, options: BalanceBui
     return results
   }
 
-  const legalSkillIds = getOrderedLegalActiveSkillIds(buildRuleId, unlockedSkillIds)
-  const emptyLoadout = createEmptyLoadoutFromRule(buildRuleId)
+  const legalSkillIds = getOrderedLegalActiveSkillIds(buildRuleId, classId, unlockedSkillIds)
+  const emptyLoadout = createEmptyLoadoutFromRule(buildRuleId, classId)
   const enabledHotkeys = rule.enabledHotkeys
 
   let generatedActiveCount = 0
@@ -320,7 +346,7 @@ export function generateStageBalanceBuilds(stage: StageInfo, options: BalanceBui
 
       const normalized = normalizePersistedBuildForRule(
         { loadout, passiveTalentIds: [] },
-        buildRuleId, 'warrior_t',
+        buildRuleId, classId,
         passiveTier,
         unlockedSkillIds,
         stage.unlockedActiveSkillIds,
@@ -328,11 +354,17 @@ export function generateStageBalanceBuilds(stage: StageInfo, options: BalanceBui
 
       generatedActiveCount += 1
 
-      const passiveVariants = generatePassiveVariants(buildRuleId, normalized.loadout, passiveTier, maxPassiveVariants)
+      const passiveVariants = generatePassiveVariants(
+        buildRuleId,
+        classId,
+        normalized.loadout,
+        passiveTier,
+        maxPassiveVariants,
+      )
       for (let passiveIndex = 0; passiveIndex < passiveVariants.length; passiveIndex += 1) {
         const normalizedWithPassives = normalizePersistedBuildForRule(
           { loadout: normalized.loadout, passiveTalentIds: passiveVariants[passiveIndex] },
-          buildRuleId, 'warrior_t',
+          buildRuleId, classId,
           passiveTier,
           unlockedSkillIds,
           stage.unlockedActiveSkillIds,
@@ -345,6 +377,7 @@ export function generateStageBalanceBuilds(stage: StageInfo, options: BalanceBui
         seen.add(variantSignature)
         results.push({
           id: `generated_${generatedActiveCount}_${passiveIndex}`,
+          classId,
           build: normalizedWithPassives,
         })
       }

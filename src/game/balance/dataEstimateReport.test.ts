@@ -16,7 +16,7 @@ describe('data estimate report', () => {
           fixedAnalysis: {
             scenarios: [
               {
-                stageId: 'RingingDeeps-1',
+                classId: 'warrior_t', buildRuleId: 'standard_5slot', stageId: 'RingingDeeps-1',
                 profileId: 'average',
                 profileTier: 'average',
                 buildId: 'default',
@@ -39,7 +39,7 @@ describe('data estimate report', () => {
             finalAnalysis: {
               scenarios: [
                 {
-                  stageId: 'RingingDeeps-1',
+                  classId: 'warrior_t', buildRuleId: 'standard_5slot', stageId: 'RingingDeeps-1',
                   profileId: 'learning',
                   profileTier: 'average',
                   buildId: 'learned',

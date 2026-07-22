@@ -7,7 +7,12 @@ import {
   normalizePersistedBuildForRule,
 } from '../data/playerBuildCatalog'
 import { getPassiveTalentUnlockTierForStage, getUnlockedActiveSkillIdsForStage } from '../data/stageTemplates'
-import type { PassiveTalentId, PersistedBuildState, SkillLoadout } from '../encounter/encounterTypes'
+import type {
+  PassiveTalentId,
+  PersistedBuildState,
+  PlayerClassId,
+  SkillLoadout,
+} from '../encounter/encounterTypes'
 import { generateStageBalanceBuilds } from './balanceBuildGenerator'
 import {
   type BalanceBuildVariant,
@@ -24,6 +29,7 @@ export type DeltaAnalysisType = 'passive' | 'build'
 
 export interface DeltaVariant {
   id: string
+  classId: PlayerClassId
   label: string
   kind: 'baseline' | 'add_passive' | 'passive_combo' | 'custom_build'
   build: PersistedBuildState
@@ -31,6 +37,7 @@ export interface DeltaVariant {
 
 export interface DeltaScenarioResult {
   stageId: string
+  classId: PlayerClassId
   baselineVariantId: string
   variantId: string
   variantLabel: string
@@ -45,6 +52,7 @@ export interface DeltaScenarioResult {
 
 export interface DeltaComparison {
   stageId: string
+  classId: PlayerClassId
   baselineVariantId: string
   comparedVariantId: string
   comparedVariantLabel: string
@@ -59,6 +67,7 @@ export interface DeltaComparison {
 
 export interface StageDeltaAnalysis {
   stageId: string
+  classId: PlayerClassId
   title: string
   analysisType: DeltaAnalysisType
   baselineVariantId: string
@@ -75,6 +84,7 @@ export interface CreatePassiveDeltaVariantsOptions {
 
 export interface RunStageDeltaAnalysisOptions extends CreatePassiveDeltaVariantsOptions {
   stage: StageInfo
+  classId: PlayerClassId
   type: DeltaAnalysisType
   profile: BalanceOperationProfile
   attemptsPerScenario: number
@@ -102,49 +112,55 @@ function buildSignature(build: PersistedBuildState) {
   return `${loadoutPart}|${passivePart}`
 }
 
-function getNormalizedDefaultBuild(stage: StageInfo) {
+function getNormalizedDefaultBuild(stage: StageInfo, classId: PlayerClassId) {
   const buildRuleId = getStageBuildRuleId(stage)
   const passiveTier = getPassiveTalentUnlockTierForStage(stage)
   const unlockedSkillIds = getUnlockedActiveSkillIdsForStage(stage)
 
   return normalizePersistedBuildForRule(
-    getDefaultPersistedBuildForRule(buildRuleId, 'warrior_t'),
-    buildRuleId, 'warrior_t',
+    getDefaultPersistedBuildForRule(buildRuleId, classId),
+    buildRuleId, classId,
     passiveTier,
     unlockedSkillIds,
     stage.unlockedActiveSkillIds,
   ).build
 }
 
-function resolveBaseBuild(stage: StageInfo, baseBuildId?: string): PersistedBuildState {
+function resolveBaseBuild(stage: StageInfo, classId: PlayerClassId, baseBuildId?: string): PersistedBuildState {
   if (!baseBuildId || baseBuildId === 'default' || baseBuildId === 'best') {
-    return getNormalizedDefaultBuild(stage)
+    return getNormalizedDefaultBuild(stage, classId)
   }
 
-  const generated = generateStageBalanceBuilds(stage, { maxActiveBuilds: 24, maxPassiveVariants: 8 })
-  return generated.find((variant) => variant.id === baseBuildId)?.build ?? getNormalizedDefaultBuild(stage)
+  const generated = generateStageBalanceBuilds(stage, classId, { maxActiveBuilds: 24, maxPassiveVariants: 8 })
+  return generated.find((variant) => variant.id === baseBuildId)?.build ?? getNormalizedDefaultBuild(stage, classId)
 }
 
-function resolveRequestedBaseBuild(stage: StageInfo, options: CreatePassiveDeltaVariantsOptions): PersistedBuildState {
-  return options.baseBuild ? normalizeBuild(stage, options.baseBuild) : resolveBaseBuild(stage, options.baseBuildId)
+function resolveRequestedBaseBuild(
+  stage: StageInfo,
+  classId: PlayerClassId,
+  options: CreatePassiveDeltaVariantsOptions,
+): PersistedBuildState {
+  return options.baseBuild
+    ? normalizeBuild(stage, classId, options.baseBuild)
+    : resolveBaseBuild(stage, classId, options.baseBuildId)
 }
 
-function normalizeBuild(stage: StageInfo, build: PersistedBuildState) {
+function normalizeBuild(stage: StageInfo, classId: PlayerClassId, build: PersistedBuildState) {
   const buildRuleId = getStageBuildRuleId(stage)
   return normalizePersistedBuildForRule(
     build,
-    buildRuleId, 'warrior_t',
+    buildRuleId, classId,
     getPassiveTalentUnlockTierForStage(stage),
     getUnlockedActiveSkillIdsForStage(stage),
     stage.unlockedActiveSkillIds,
   ).build
 }
 
-function legalTalentIds(stage: StageInfo, requested?: PassiveTalentId[]) {
+function legalTalentIds(stage: StageInfo, classId: PlayerClassId, requested?: PassiveTalentId[]) {
   const buildRuleId = getStageBuildRuleId(stage)
   const passiveTier = getPassiveTalentUnlockTierForStage(stage)
   const source = requested && requested.length > 0 ? requested : FALLBACK_TALENTS
-  return source.filter((talentId) => canUseTalentInRule(buildRuleId, 'warrior_t', talentId, passiveTier))
+  return source.filter((talentId) => canUseTalentInRule(buildRuleId, classId, talentId, passiveTier))
 }
 
 function talentLabel(talentIds: readonly PassiveTalentId[]) {
@@ -158,17 +174,19 @@ function talentLabel(talentIds: readonly PassiveTalentId[]) {
 
 export function createPassiveDeltaVariants(
   stage: StageInfo,
+  classId: PlayerClassId,
   options: CreatePassiveDeltaVariantsOptions = {},
 ): DeltaVariant[] {
-  const baseBuild = resolveRequestedBaseBuild(stage, options)
-  const activeOnlyBase = normalizeBuild(stage, {
+  const baseBuild = resolveRequestedBaseBuild(stage, classId, options)
+  const activeOnlyBase = normalizeBuild(stage, classId, {
     loadout: baseBuild.loadout,
     passiveTalentIds: [],
   })
-  const talentIds = legalTalentIds(stage, options.talentIds)
+  const talentIds = legalTalentIds(stage, classId, options.talentIds)
   const variants: DeltaVariant[] = [
     {
       id: 'baseline_no_passives',
+      classId,
       label: 'No passives',
       kind: 'baseline',
       build: activeOnlyBase,
@@ -176,13 +194,14 @@ export function createPassiveDeltaVariants(
   ]
 
   for (const talentId of talentIds) {
-    const build = normalizeBuild(stage, {
+    const build = normalizeBuild(stage, classId, {
       loadout: activeOnlyBase.loadout,
       passiveTalentIds: [talentId],
     })
     if (build.passiveTalentIds.includes(talentId)) {
       variants.push({
         id: `passive_${talentId}`,
+        classId,
         label: talentLabel([talentId]),
         kind: 'add_passive',
         build,
@@ -194,13 +213,14 @@ export function createPassiveDeltaVariants(
     for (let left = 0; left < talentIds.length; left += 1) {
       for (let right = left + 1; right < talentIds.length; right += 1) {
         const pair = [talentIds[left], talentIds[right]]
-        const build = normalizeBuild(stage, {
+        const build = normalizeBuild(stage, classId, {
           loadout: activeOnlyBase.loadout,
           passiveTalentIds: pair,
         })
         if (pair.every((talentId) => build.passiveTalentIds.includes(talentId))) {
           variants.push({
             id: `passive_${pair.join('+')}`,
+            classId,
             label: talentLabel(pair),
             kind: 'passive_combo',
             build,
@@ -224,14 +244,16 @@ export function createPassiveDeltaVariants(
 function toBuildVariants(variants: readonly DeltaVariant[]): BalanceBuildVariant[] {
   return variants.map((variant) => ({
     id: variant.id,
+    classId: variant.classId,
     build: variant.build,
   }))
 }
 
 export function runStageDeltaAnalysis(options: RunStageDeltaAnalysisOptions): StageDeltaAnalysis {
-  const variants = createPassiveDeltaVariants(options.stage, options)
+  const variants = createPassiveDeltaVariants(options.stage, options.classId, options)
   const analysis = runStageBalanceAnalysis({
     stage: options.stage,
+    classId: options.classId,
     builds: toBuildVariants(variants),
     profiles: [options.profile],
     attemptsPerScenario: options.attemptsPerScenario,
@@ -251,6 +273,7 @@ export function runStageDeltaAnalysis(options: RunStageDeltaAnalysisOptions): St
     }
     return {
       stageId: scenario.stageId,
+      classId: options.classId,
       baselineVariantId: baseline.id,
       variantId: variant.id,
       variantLabel: variant.label,
@@ -275,6 +298,7 @@ export function runStageDeltaAnalysis(options: RunStageDeltaAnalysisOptions): St
       })
       return {
         stageId: scenario.stageId,
+        classId: options.classId,
         baselineVariantId: baseline.id,
         comparedVariantId: scenario.variantId,
         comparedVariantLabel: scenario.variantLabel,
@@ -290,6 +314,7 @@ export function runStageDeltaAnalysis(options: RunStageDeltaAnalysisOptions): St
 
   return {
     stageId: options.stage.id,
+    classId: options.classId,
     title: options.stage.title,
     analysisType: options.type,
     baselineVariantId: baseline.id,
