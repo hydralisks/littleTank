@@ -632,6 +632,7 @@ export function StageSelectScreen({
 
         <section className="stage-select__layout">
           {stageSelectMode === 'campaign' ? (
+          <div className="stage-map-column">
           <div className="stage-map" aria-label="关卡地图">
             <div className="stage-map__terrain stage-map__terrain--sea" />
             <div className="stage-map__terrain stage-map__terrain--harbor-main" />
@@ -773,6 +774,7 @@ export function StageSelectScreen({
               )
             })}
 
+          </div>
             <StageClassEntryControl
               classes={classEntryOptions}
               selectedClassId={effectiveClassId ?? selectedClassId}

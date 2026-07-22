@@ -1503,6 +1503,7 @@
     radial-gradient(circle at 84% 18%, rgba(255, 125, 102, 0.12), transparent 24%),
     linear-gradient(180deg, rgba(255, 213, 79, 0.05), transparent 18%),
     rgba(8, 11, 15, 0.98);
+  overflow: visible;
 }
 
 .stage-select__hero {
@@ -1579,6 +1580,12 @@
   grid-template-columns: minmax(0, 1fr) 360px;
   gap: 18px;
   align-items: stretch;
+}
+
+.stage-map-column {
+  position: relative;
+  min-height: 560px;
+  height: 100%;
 }
 
 .stage-map {
@@ -1917,6 +1924,10 @@
   align-items: center;
   gap: 18px;
   transform: translateX(-120px);
+}
+
+.stage-map-column > .stage-class-entry {
+  bottom: -36px;
 }
 
 .stage-class-entry .stage-map__enter-action {
@@ -3100,6 +3111,15 @@ button.stage-class-entry__slot.is-selected {
 }
 
 @media (max-width: 1280px) {
+  .encounter-shell:has(.stage-select) {
+    align-items: flex-start;
+  }
+
+  .stage-select {
+    aspect-ratio: auto;
+    grid-template-rows: auto auto;
+  }
+
   .encounter-header {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -3120,6 +3140,10 @@ button.stage-class-entry__slot.is-selected {
   .stage-map {
     min-height: 500px;
     aspect-ratio: auto;
+  }
+
+  .stage-map-column {
+    min-height: 500px;
   }
 
   .challenge-board {
@@ -3396,7 +3420,18 @@ button.stage-class-entry__slot.is-selected {
 }
 
 @media (max-width: 680px) {
-  .stage-map,
+  .stage-select__layout {
+    row-gap: 296px;
+  }
+
+  .stage-map {
+    min-height: 780px;
+  }
+
+  .stage-map-column {
+    min-height: 780px;
+  }
+
   .challenge-board {
     min-height: 780px;
     padding-bottom: 280px;
@@ -3408,6 +3443,10 @@ button.stage-class-entry__slot.is-selected {
     flex-direction: column-reverse;
     gap: 8px;
     transform: translateX(-50%);
+  }
+
+  .stage-map-column > .stage-class-entry {
+    bottom: -266px;
   }
 }
 

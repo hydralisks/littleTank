@@ -350,9 +350,10 @@ describe('StageSelectScreen map layout', () => {
         }))
       })
 
-      const mapAction = container.querySelector('.stage-map > .stage-class-entry .stage-map__enter-action') as HTMLElement | null
+      const mapAction = container.querySelector('.stage-map-column > .stage-class-entry .stage-map__enter-action') as HTMLElement | null
       const selectedArrow = container.querySelector('.stage-map > .stage-map__selected-arrow') as HTMLElement | null
       expect(mapAction).not.toBeNull()
+      expect(container.querySelector('.stage-map > .stage-class-entry')).toBeNull()
       expect(container.querySelector('.stage-brief > .stage-brief__action')).toBeNull()
       expect(selectedArrow?.style.getPropertyValue('--arrow-from-x')).toBe('50%')
       expect(selectedArrow?.style.getPropertyValue('--arrow-to-x')).toBe('10%')
