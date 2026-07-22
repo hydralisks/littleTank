@@ -43,6 +43,65 @@ function emptyPlayerBuildOverrides() {
   }
 }
 
+function applyTestBearBuildOverrides() {
+  applyPlayerBuildWorkbookOverrides({
+    ...emptyPlayerBuildOverrides(),
+    classDefinitions: [{
+      classId: 'druid_bear_t',
+      className: '熊T',
+      roleTag: 'tank',
+      classDescription: 'Test bear tank.',
+      recommendedBuildRuleIds: ['standard_5slot'],
+      enabled: true,
+    }],
+    activeSkillDefinitions: [{
+      skillId: 'druid_bear_t_growl',
+      classId: 'druid_bear_t',
+      skillName: '低吼',
+      shortName: '低吼',
+      description: 'Test taunt.',
+      iconId: 'taunt',
+      pointCost: 4,
+      resourceCost: 0,
+      cooldownMs: 8_000,
+      gcdMs: 800,
+      targetingType: 'currentEnemy',
+      skillLogicId: 'taunt_single',
+      castStopMode: 'none',
+      canAffectSkull: true,
+      enabled: true,
+    }],
+    passiveTalentDefinitions: [{
+      talentId: 'druid_bear_t_thick_hide',
+      classId: 'druid_bear_t',
+      talentName: '厚皮',
+      category: 'player',
+      cost: 2,
+      description: 'Test passive.',
+      iconId: 'vitalReserve',
+      talentLogicId: 'player_max_hp_up',
+      tier: 1,
+      enabled: true,
+    }],
+    defaultActiveBuilds: [{
+      presetId: 'standard_5slot',
+      buildRuleId: 'standard_5slot',
+      classId: 'druid_bear_t',
+      hotkey: '1',
+      skillId: 'druid_bear_t_growl',
+      priority: 1,
+    }],
+    defaultPassiveBuilds: [{
+      presetId: 'standard_5slot',
+      buildRuleId: 'standard_5slot',
+      classId: 'druid_bear_t',
+      talentId: 'druid_bear_t_thick_hide',
+      selected: true,
+      priority: 1,
+    }],
+  })
+}
+
 describe('playerBuildCatalog class-aware build data', () => {
   afterEach(() => {
     resetPlayerBuildCatalog()
@@ -58,13 +117,60 @@ describe('playerBuildCatalog class-aware build data', () => {
 
   it('binds standard build rules to warrior_t without demo0 active skill examples', () => {
     const standardRule = getBuildRuleDefinition('standard_5slot')
-    const defaultBuild = getDefaultPersistedBuildForRule('standard_5slot')
+    const defaultBuild = getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')
 
     expect(standardRule?.classId).toBe('warrior_t')
     expect(defaultBuild.loadout['1']).toBe('warrior_t_taunt')
     expect(getActiveSkillDefinition('warrior_t_taunt')?.classId).toBe('warrior_t')
     expect(getActiveSkillDefinition('demo0_taunt')).toBeUndefined()
     expect(getActiveSkillDefinition('taunt')).toBeUndefined()
+  })
+
+  it('selects defaults and legal content by explicit class without cross-class fallback', () => {
+    applyTestBearBuildOverrides()
+
+    expect(getDefaultPersistedBuildForRule('standard_5slot', 'druid_bear_t')).toMatchObject({
+      loadout: { '1': 'druid_bear_t_growl' },
+      passiveTalentIds: ['druid_bear_t_thick_hide'],
+    })
+    expect(canUseSkillInRule(
+      'standard_5slot',
+      'druid_bear_t',
+      'warrior_t_taunt',
+      ['warrior_t_taunt', 'druid_bear_t_growl'],
+    )).toBe(false)
+    expect(() => getDefaultPersistedBuildForRule('standard_5slot', 'dk_blood_t')).toThrowError(
+      'Missing default active build for class dk_blood_t and rule standard_5slot',
+    )
+  })
+
+  it('removes skills and talents owned by another class during normalization', () => {
+    applyTestBearBuildOverrides()
+
+    const normalized = normalizePersistedBuildForRule(
+      {
+        loadout: {
+          '1': 'warrior_t_taunt',
+          '2': 'druid_bear_t_growl',
+          '3': null,
+          '4': null,
+          Q: null,
+          E: null,
+          R: null,
+          F: null,
+        },
+        passiveTalentIds: ['warrior_t_vital_reserve', 'druid_bear_t_thick_hide'],
+      },
+      'standard_5slot',
+      'druid_bear_t',
+      1,
+      ['warrior_t_taunt', 'druid_bear_t_growl'],
+    )
+
+    expect(Object.values(normalized.build.loadout).filter(Boolean)).toEqual(['druid_bear_t_growl'])
+    expect(normalized.build.passiveTalentIds).toEqual(['druid_bear_t_thick_hide'])
+    expect(normalized.warnings.some((warning) => warning.code === 'removed_skill')).toBe(true)
+    expect(normalized.warnings.some((warning) => warning.code === 'removed_talent')).toBe(true)
   })
 
   it('does not load demo0 active skill examples from the current designer workbook', () => {
@@ -148,7 +254,7 @@ describe('playerBuildCatalog class-aware build data', () => {
   })
 
   it('applies warrior_t talent registry modifiers and skill template mutations', () => {
-    const build = getDefaultPersistedBuildForRule('standard_5slot')
+    const build = getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')
     const passiveTalentIds = ['warrior_t_snap_interrupt', 'warrior_t_vital_reserve']
 
     expect(getPassiveTalentDefinition('warrior_t_snap_interrupt')?.classId).toBe('warrior_t')
@@ -295,11 +401,11 @@ describe('playerBuildCatalog class-aware build data', () => {
       buildRuleId: 'xlsx_deprecated_columns_rule',
       enabledHotkeys: ['1', '2', '3', '4', 'Q'],
     })
-    expect(canUseSkillInRule('xlsx_deprecated_columns_rule', 'warrior_t_shield_slam', [
+    expect(canUseSkillInRule('xlsx_deprecated_columns_rule', 'warrior_t', 'warrior_t_shield_slam', [
       'warrior_t_taunt',
       'warrior_t_shield_slam',
     ])).toBe(true)
-    expect(canUseTalentInRule('xlsx_deprecated_columns_rule', 'warrior_t_snap_interrupt', 2)).toBe(true)
+    expect(canUseTalentInRule('xlsx_deprecated_columns_rule', 'warrior_t', 'warrior_t_snap_interrupt', 2)).toBe(true)
   })
 
   it('unlocks tier 0 passive talents only after the third stage is complete', () => {
@@ -363,19 +469,19 @@ describe('playerBuildCatalog class-aware build data', () => {
   })
 
   it('blocks and normalizes passive talents above the unlocked tier', () => {
-    const sourceBuild = getDefaultPersistedBuildForRule('standard_5slot')
+    const sourceBuild = getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')
     const lockedTierTalent = 'warrior_t_snap_interrupt'
 
     expect(getPassiveTalentDefinition(lockedTierTalent)?.tier).toBeGreaterThan(1)
-    expect(canUseTalentInRule('standard_5slot', lockedTierTalent, 1)).toBe(false)
-    expect(canUseTalentInRule('standard_5slot', lockedTierTalent, 2)).toBe(true)
+    expect(canUseTalentInRule('standard_5slot', 'warrior_t', lockedTierTalent, 1)).toBe(false)
+    expect(canUseTalentInRule('standard_5slot', 'warrior_t', lockedTierTalent, 2)).toBe(true)
 
     const normalized = normalizePersistedBuildForRule(
       {
         ...sourceBuild,
         passiveTalentIds: ['warrior_t_vital_reserve', lockedTierTalent],
       },
-      'standard_5slot',
+      'standard_5slot', 'warrior_t',
       1,
     )
 
@@ -403,7 +509,7 @@ describe('playerBuildCatalog class-aware build data', () => {
 
     try {
       const visibleTalents = getPassiveTalentCatalog()
-        .filter((talent) => canUseTalentInRule('standard_5slot', talent.id, getPassiveTalentUnlockTierForStage(getStageById('RingingDeeps-6'))))
+        .filter((talent) => canUseTalentInRule('standard_5slot', 'warrior_t', talent.id, getPassiveTalentUnlockTierForStage(getStageById('RingingDeeps-6'))))
         .filter((talent) => talent.classId === 'warrior_t')
 
       expect(visibleTalents.map((talent) => talent.id)).toEqual([
@@ -450,9 +556,9 @@ describe('playerBuildCatalog class-aware build data', () => {
       'warrior_t_shield_block',
       'warrior_t_shield_slam',
     ])
-    expect(canUseSkillInRule('standard_5slot', 'warrior_t_shield_reflection', midland4Skills)).toBe(false)
-    expect(canUseSkillInRule('standard_5slot', 'warrior_t_shield_slam', midland4Skills)).toBe(true)
-    expect(canUseSkillInRule('full_8slot', 'warrior_t_avatar', midland4Skills)).toBe(false)
+    expect(canUseSkillInRule('standard_5slot', 'warrior_t', 'warrior_t_shield_reflection', midland4Skills)).toBe(false)
+    expect(canUseSkillInRule('standard_5slot', 'warrior_t', 'warrior_t_shield_slam', midland4Skills)).toBe(true)
+    expect(canUseSkillInRule('full_8slot', 'warrior_t', 'warrior_t_avatar', midland4Skills)).toBe(false)
 
     const normalized = normalizePersistedBuildForRule(
       {
@@ -468,7 +574,7 @@ describe('playerBuildCatalog class-aware build data', () => {
         },
         passiveTalentIds: [],
       },
-      'full_8slot',
+      'full_8slot', 'warrior_t',
       Infinity,
       midland4Skills,
     )
@@ -493,7 +599,7 @@ describe('playerBuildCatalog class-aware build data', () => {
         },
         passiveTalentIds: [],
       },
-      'tutorial_2slot',
+      'tutorial_2slot', 'warrior_t',
       Infinity,
       ['warrior_t_taunt', 'warrior_t_interrupt'],
       ['warrior_t_interrupt'],
@@ -520,7 +626,7 @@ describe('playerBuildCatalog class-aware build data', () => {
         },
         passiveTalentIds: [],
       },
-      'tutorial_3slot',
+      'tutorial_3slot', 'warrior_t',
       Infinity,
       ['warrior_t_taunt', 'warrior_t_interrupt', 'warrior_t_stun'],
       ['warrior_t_stun'],
@@ -545,7 +651,7 @@ describe('playerBuildCatalog class-aware build data', () => {
         },
         passiveTalentIds: [],
       },
-      'standard_5slot',
+      'standard_5slot', 'warrior_t',
       Infinity,
       [
         'warrior_t_taunt',
@@ -577,7 +683,7 @@ describe('playerBuildCatalog class-aware build data', () => {
         },
         passiveTalentIds: ['warrior_t_vital_reserve', 'warrior_t_snap_interrupt'],
       },
-      'tutorial_3slot',
+      'tutorial_3slot', 'warrior_t',
       Infinity,
       ['warrior_t_taunt', 'warrior_t_interrupt', 'warrior_t_stun'],
       ['warrior_t_stun'],

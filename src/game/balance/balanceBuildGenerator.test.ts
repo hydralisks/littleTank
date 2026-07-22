@@ -43,8 +43,8 @@ describe('balance build generator', () => {
     expect(builds[0].id).toBe('default')
     expect(builds[0].build).toEqual(
       normalizePersistedBuildForRule(
-        getDefaultPersistedBuildForRule(buildRuleId),
-        buildRuleId,
+        getDefaultPersistedBuildForRule(buildRuleId, 'warrior_t'),
+        buildRuleId, 'warrior_t',
         passiveTier,
         unlockedSkillIds,
         stage.unlockedActiveSkillIds,
@@ -76,11 +76,11 @@ describe('balance build generator', () => {
 
       for (const [hotkey, skillId] of activeSkills) {
         expect(rule!.enabledHotkeys).toContain(hotkey)
-        expect(canUseSkillInRule(buildRuleId, skillId!, unlockedSkillIds)).toBe(true)
+        expect(canUseSkillInRule(buildRuleId, 'warrior_t', skillId!, unlockedSkillIds)).toBe(true)
       }
 
       for (const talentId of variant.build.passiveTalentIds) {
-        expect(canUseTalentInRule(buildRuleId, talentId, passiveTier)).toBe(true)
+        expect(canUseTalentInRule(buildRuleId, 'warrior_t', talentId, passiveTier)).toBe(true)
       }
     }
   })

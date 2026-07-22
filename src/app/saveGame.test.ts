@@ -28,7 +28,7 @@ describe('saveGame', () => {
 
   it('round-trips progression and build state in localStorage', () => {
     const storage = createStorage()
-    const build = getDefaultPersistedBuildForRule('tutorial_3slot')
+    const build = getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t')
 
     saveSaveGame({
       highestClearedStageIndex: 1,
@@ -61,7 +61,7 @@ describe('saveGame', () => {
 
   it('normalizes old saves without tutorial state', () => {
     const storage = createStorage()
-    const build = getDefaultPersistedBuildForRule('tutorial_2slot')
+    const build = getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t')
 
     storage.setItem(getSaveStorageKey('old-save'), JSON.stringify({
       highestClearedStageIndex: 0,
@@ -86,7 +86,7 @@ describe('saveGame', () => {
 
   it('uses separate keys for different package namespaces', () => {
     const storage = createStorage()
-    const build = getDefaultPersistedBuildForRule('tutorial_2slot')
+    const build = getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t')
 
     saveSaveGame({
       highestClearedStageIndex: 0,

@@ -166,7 +166,7 @@ function canAssignSkillToHotkey(
   remainingBuildPoints: number,
   unlockedActiveSkillIds: readonly SkillId[],
 ) {
-  if (!isHotkeyEnabledForRule(buildRuleId, hotkey) || !canUseSkillInRule(buildRuleId, skillId, unlockedActiveSkillIds)) {
+  if (!isHotkeyEnabledForRule(buildRuleId, hotkey) || !canUseSkillInRule(buildRuleId, 'warrior_t', skillId, unlockedActiveSkillIds)) {
     return false
   }
 
@@ -317,7 +317,7 @@ export function StageSelectScreen({
   const unlockedActiveSkillIds = getUnlockedActiveSkillIdsForStage(selectedStage)
   const buildPreview = normalizePersistedBuildForRule(
     persistedBuild,
-    selectedBuildRuleId,
+    selectedBuildRuleId, 'warrior_t',
     getPassiveTalentUnlockTierForStage(selectedStage),
     unlockedActiveSkillIds,
   )
@@ -342,11 +342,11 @@ export function StageSelectScreen({
   const skillLoadout = buildPreview.build.loadout
   const selectedPassiveTalentIds = buildPreview.build.passiveTalentIds
   const activeSkills = getActiveSkillCatalog()
-    .filter((skill) => canUseSkillInRule(selectedBuildRuleId, skill.id, unlockedActiveSkillIds))
+    .filter((skill) => canUseSkillInRule(selectedBuildRuleId, 'warrior_t', skill.id, unlockedActiveSkillIds))
     .sort((left, right) => (left.uiOrder ?? 999) - (right.uiOrder ?? 999) || left.id.localeCompare(right.id))
   const unlockedPassiveTalentTier = getPassiveTalentUnlockTierForStage(selectedStage)
   const passiveTalents = getPassiveTalentCatalog().filter((talent) =>
-    canUseTalentInRule(selectedBuildRuleId, talent.id, unlockedPassiveTalentTier)
+    canUseTalentInRule(selectedBuildRuleId, 'warrior_t', talent.id, unlockedPassiveTalentTier)
   )
   const activePoints = getActivePointCost(skillLoadout)
   const passivePoints = getPassivePointCost(selectedPassiveTalentIds)
@@ -472,7 +472,7 @@ export function StageSelectScreen({
   }
 
   function handleTogglePassive(talentId: PassiveTalentId) {
-    if (!canUseTalentInRule(selectedBuildRuleId, talentId, unlockedPassiveTalentTier)) {
+    if (!canUseTalentInRule(selectedBuildRuleId, 'warrior_t', talentId, unlockedPassiveTalentTier)) {
       return
     }
     if (!canTogglePassiveTalent(selectedBuildRuleId, talentId, selectedPassiveTalentIds, activePoints)) {
@@ -1067,7 +1067,7 @@ export function StageSelectScreen({
         onClose={closeBuildPanel}
         onToggleTalent={handleTogglePassive}
         canToggleTalent={(talentId) =>
-          canUseTalentInRule(selectedBuildRuleId, talentId, unlockedPassiveTalentTier) &&
+          canUseTalentInRule(selectedBuildRuleId, 'warrior_t', talentId, unlockedPassiveTalentTier) &&
           canTogglePassiveTalent(selectedBuildRuleId, talentId, selectedPassiveTalentIds, activePoints)
         }
       />

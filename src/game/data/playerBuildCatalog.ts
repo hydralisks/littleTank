@@ -12,6 +12,7 @@
   PassiveTalentId,
   PassiveTalentModifiers,
   PersistedBuildState,
+  PlayerClassId,
   PlayerClassDefinition,
   PlayerBuildStatusDefinition,
   SkillHotkey,
@@ -22,6 +23,7 @@
 } from '../encounter/encounterTypes'
 import { applySkillTemplateMutation } from './playerSkillLogicRegistry'
 import { applyPassiveTalentLogic } from './playerTalentLogicRegistry'
+import { WARRIOR_T_CLASS_ID } from '../playerClasses/playerClassRuntimeRegistry'
 
 export const SKILL_HOTKEYS: SkillHotkey[] = ['1', '2', '3', '4', 'Q', 'E', 'R', 'F']
 export const ACTIVE_SKILL_POINT_COST = 4
@@ -1487,8 +1489,12 @@ function getTalentPointCost(talentId: PassiveTalentId) {
   return passiveTalentsById[talentId]?.cost ?? 0
 }
 
-function getRuleOrFallback(buildRuleId: string) {
-  return buildRulesById[buildRuleId] ?? buildRulesById.standard_5slot ?? Object.values(buildRulesById)[0]
+function getRequiredBuildRule(buildRuleId: string) {
+  const rule = buildRulesById[buildRuleId]
+  if (!rule?.enabled) {
+    throw new Error(`Unknown build rule: ${buildRuleId}`)
+  }
+  return rule
 }
 
 function getActivePresetPriority(buildRuleId: string, hotkey: SkillHotkey, skillId: SkillId | null) {
@@ -1513,10 +1519,11 @@ function createWarning(code: BuildConflictWarning['code'], message: string): Bui
 
 function isSkillAllowedByRule(
   buildRuleId: string,
+  classId: PlayerClassId,
   skillId: SkillId,
   unlockedActiveSkillIds?: readonly SkillId[],
 ) {
-  const rule = getRuleOrFallback(buildRuleId)
+  getRequiredBuildRule(buildRuleId)
   const skill = activeSkillsById[skillId]
 
   if (!skill?.enabled) {
@@ -1525,15 +1532,20 @@ function isSkillAllowedByRule(
   if (unlockedActiveSkillIds && !unlockedActiveSkillIds.includes(skillId)) {
     return false
   }
-  if (rule.classId && skill.classId && rule.classId !== skill.classId) {
+  if (skill.classId !== classId) {
     return false
   }
 
   return true
 }
 
-function isTalentAllowedByRule(buildRuleId: string, talentId: PassiveTalentId, maxUnlockedTier = Infinity) {
-  const rule = getRuleOrFallback(buildRuleId)
+function isTalentAllowedByRule(
+  buildRuleId: string,
+  classId: PlayerClassId,
+  talentId: PassiveTalentId,
+  maxUnlockedTier = Infinity,
+) {
+  getRequiredBuildRule(buildRuleId)
   const talent = passiveTalentsById[talentId]
 
   if (!talent?.enabled) {
@@ -1542,7 +1554,7 @@ function isTalentAllowedByRule(buildRuleId: string, talentId: PassiveTalentId, m
   if (talent.tier > maxUnlockedTier) {
     return false
   }
-  if (rule.classId && talent.classId && rule.classId !== talent.classId) {
+  if (talent.classId !== classId) {
     return false
   }
 
@@ -1551,23 +1563,20 @@ function isTalentAllowedByRule(buildRuleId: string, talentId: PassiveTalentId, m
 
 export function canUseSkillInRule(
   buildRuleId: string,
+  classId: PlayerClassId,
   skillId: SkillId,
   unlockedActiveSkillIds?: readonly SkillId[],
 ) {
-  return isSkillAllowedByRule(buildRuleId, skillId, unlockedActiveSkillIds)
+  return isSkillAllowedByRule(buildRuleId, classId, skillId, unlockedActiveSkillIds)
 }
 
-export function canUseTalentInRule(buildRuleId: string, talentId: PassiveTalentId, maxUnlockedTier = Infinity) {
-  return isTalentAllowedByRule(buildRuleId, talentId, maxUnlockedTier)
-}
-
-function getDefaultPresetIdForRule(buildRuleId: string) {
-  const rule = getRuleOrFallback(buildRuleId)
-  if (defaultActiveBuilds.some((entry) => entry.buildRuleId === buildRuleId)) {
-    return buildRuleId
-  }
-
-  return rule.classId ?? 'default'
+export function canUseTalentInRule(
+  buildRuleId: string,
+  classId: PlayerClassId,
+  talentId: PassiveTalentId,
+  maxUnlockedTier = Infinity,
+) {
+  return isTalentAllowedByRule(buildRuleId, classId, talentId, maxUnlockedTier)
 }
 
 export function getBuildRuleDefinition(buildRuleId: string) {
@@ -1690,36 +1699,49 @@ export function getIconAssetKey(iconId: string) {
   return iconDefinitions.find((entry) => entry.iconId === iconId && entry.enabled)?.assetKey
 }
 
-export function getDefaultPersistedBuildForRule(buildRuleId: string): PersistedBuildState {
-  const presetId = getDefaultPresetIdForRule(buildRuleId)
-  const rule = getRuleOrFallback(buildRuleId)
+function getDefaultActiveEntries(buildRuleId: string, classId: PlayerClassId) {
+  const exact = defaultActiveBuilds.filter(
+    (entry) => entry.buildRuleId === buildRuleId && entry.classId === classId,
+  )
+  const classDefault = defaultActiveBuilds.filter(
+    (entry) => !entry.buildRuleId && entry.classId === classId,
+  )
+  return (exact.length > 0 ? exact : classDefault).sort((left, right) => left.priority - right.priority)
+}
+
+export function getDefaultPersistedBuildForRule(
+  buildRuleId: string,
+  classId: PlayerClassId,
+): PersistedBuildState {
+  getRequiredBuildRule(buildRuleId)
+  const activeEntries = getDefaultActiveEntries(buildRuleId, classId)
+  if (activeEntries.length === 0) {
+    throw new Error(`Missing default active build for class ${classId} and rule ${buildRuleId}`)
+  }
   const loadout = createEmptyLoadout()
 
-  for (const entry of defaultActiveBuilds
-    .filter((preset) =>
-      preset.buildRuleId
-        ? preset.buildRuleId === presetId
-        : (preset.classId ?? 'default') === presetId || (preset.classId ?? 'default') === (rule.classId ?? 'default'),
-    )
-    .sort((left, right) => left.priority - right.priority)) {
+  for (const entry of activeEntries) {
     loadout[entry.hotkey] = entry.skillId
   }
 
-  const passiveTalentIds = defaultPassiveBuilds
-    .filter((preset) =>
-      preset.selected &&
-      (preset.buildRuleId
-        ? preset.buildRuleId === presetId
-        : (preset.classId ?? 'default') === presetId || (preset.classId ?? 'default') === (rule.classId ?? 'default')),
-    )
+  const exactPassives = defaultPassiveBuilds.filter(
+    (entry) => entry.selected && entry.buildRuleId === buildRuleId && entry.classId === classId,
+  )
+  const classPassives = defaultPassiveBuilds.filter(
+    (entry) => entry.selected && !entry.buildRuleId && entry.classId === classId,
+  )
+  const passiveTalentIds = (exactPassives.length > 0 ? exactPassives : classPassives)
     .sort((left, right) => left.priority - right.priority)
     .map((entry) => entry.talentId)
 
   return { loadout, passiveTalentIds }
 }
 
-export const defaultSkillLoadout = getDefaultPersistedBuildForRule('standard_5slot').loadout
-export const defaultSelectedPassiveTalentIds = getDefaultPersistedBuildForRule('standard_5slot').passiveTalentIds
+export const defaultSkillLoadout = getDefaultPersistedBuildForRule('standard_5slot', WARRIOR_T_CLASS_ID).loadout
+export const defaultSelectedPassiveTalentIds = getDefaultPersistedBuildForRule(
+  'standard_5slot',
+  WARRIOR_T_CLASS_ID,
+).passiveTalentIds
 
 const emptyModifiers: PassiveTalentModifiers = {
   playerMaxHpBonus: 0,
@@ -1809,7 +1831,7 @@ export function getActivePointCost(loadout: SkillLoadout) {
 }
 
 export function getTotalBuildPoints(buildRuleId: string, selectedPassiveTalentIds: PassiveTalentId[]) {
-  return getRuleOrFallback(buildRuleId).totalBuildPoints + getPassiveModifiers(selectedPassiveTalentIds).bonusBuildPoints
+  return getRequiredBuildRule(buildRuleId).totalBuildPoints + getPassiveModifiers(selectedPassiveTalentIds).bonusBuildPoints
 }
 
 export function getRemainingBuildPoints(
@@ -1823,27 +1845,28 @@ export function getRemainingBuildPoints(
 }
 
 export function isHotkeyEnabledForRule(buildRuleId: string, hotkey: SkillHotkey) {
-  return getRuleOrFallback(buildRuleId).enabledHotkeys.includes(hotkey)
+  return getRequiredBuildRule(buildRuleId).enabledHotkeys.includes(hotkey)
 }
 
 export function normalizePersistedBuildForRule(
   previousBuild: PersistedBuildState | null | undefined,
   buildRuleId: string,
+  classId: PlayerClassId,
   maxUnlockedPassiveTalentTier = Infinity,
   unlockedActiveSkillIds?: readonly SkillId[],
   newlyUnlockedActiveSkillIds: readonly SkillId[] = [],
 ): BuildNormalizationResult {
-  const rule = getRuleOrFallback(buildRuleId)
+  const rule = getRequiredBuildRule(buildRuleId)
   if (rule.inheritancePolicy === 'reset_to_default') {
     return {
-      build: getDefaultPersistedBuildForRule(buildRuleId),
+      build: getDefaultPersistedBuildForRule(buildRuleId, classId),
       warnings: [createWarning('reset_default', `This stage uses ${rule.ruleName}; the build was reset to the rule default.`)],
     }
   }
 
   const warnings: BuildConflictWarning[] = []
   const nextLoadout = createEmptyLoadout()
-  const sourceBuild = previousBuild ?? getDefaultPersistedBuildForRule(buildRuleId)
+  const sourceBuild = previousBuild ?? getDefaultPersistedBuildForRule(buildRuleId, classId)
   const seenSkills = new Set<SkillId>()
 
   for (const hotkey of SKILL_HOTKEYS) {
@@ -1856,7 +1879,7 @@ export function normalizePersistedBuildForRule(
       warnings.push(createWarning('cleared_hotkey', `Hotkey ${hotkey} is not enabled for this stage.`))
       continue
     }
-    if (!isSkillAllowedByRule(buildRuleId, skillId, unlockedActiveSkillIds)) {
+    if (!isSkillAllowedByRule(buildRuleId, classId, skillId, unlockedActiveSkillIds)) {
       warnings.push(createWarning('removed_skill', `Skill ${activeSkillsById[skillId]?.name ?? skillId} is not allowed by this stage build rule.`))
       continue
     }
@@ -1873,7 +1896,7 @@ export function normalizePersistedBuildForRule(
     if (array.indexOf(talentId) !== index) {
       return false
     }
-    if (!isTalentAllowedByRule(buildRuleId, talentId, maxUnlockedPassiveTalentTier)) {
+    if (!isTalentAllowedByRule(buildRuleId, classId, talentId, maxUnlockedPassiveTalentTier)) {
       warnings.push(createWarning('removed_talent', `Talent ${passiveTalentsById[talentId]?.name ?? talentId} is not allowed by this stage build rule.`))
       return false
     }
@@ -1904,7 +1927,7 @@ export function normalizePersistedBuildForRule(
   const usableNewSkillIds = newlyUnlockedActiveSkillIds.filter((skillId, index, array) =>
     array.indexOf(skillId) === index &&
     !seenSkills.has(skillId) &&
-    isSkillAllowedByRule(buildRuleId, skillId, unlockedActiveSkillIds)
+    isSkillAllowedByRule(buildRuleId, classId, skillId, unlockedActiveSkillIds)
   )
   const autoPlacedNewSkillIds = new Set<SkillId>()
 
@@ -2023,7 +2046,7 @@ export function normalizePersistedBuildForRule(
 
   if (!SKILL_HOTKEYS.some((hotkey) => nextLoadout[hotkey])) {
     return {
-      build: getDefaultPersistedBuildForRule(buildRuleId),
+      build: getDefaultPersistedBuildForRule(buildRuleId, classId),
       warnings: [
         ...warnings,
         createWarning('reset_default', `The inherited build cannot be used in this stage; it was reset to the ${rule.ruleName} default.`),
@@ -2037,6 +2060,20 @@ export function normalizePersistedBuildForRule(
       passiveTalentIds: nextPassiveTalentIds,
     },
     warnings,
+  }
+}
+
+export function assertBuildMatchesClass(classId: PlayerClassId, build: PersistedBuildState) {
+  for (const skillId of Object.values(build.loadout)) {
+    if (skillId && activeSkillsById[skillId]?.classId !== classId) {
+      throw new Error(`Build for ${classId} contains skill owned by another class: ${skillId}`)
+    }
+  }
+
+  for (const talentId of build.passiveTalentIds) {
+    if (passiveTalentsById[talentId]?.classId !== classId) {
+      throw new Error(`Build for ${classId} contains talent owned by another class: ${talentId}`)
+    }
   }
 }
 

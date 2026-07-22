@@ -44,13 +44,13 @@ import type { CombatTarget, DamageSourceThreatSource, EncounterState } from './e
 
 function createHarborEncounter() {
   const stage = getStageById('harbor-1')
-  const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+  const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
   return createInitialEncounterState(stage, build)
 }
 
 function createHarborEncounterWithStandardBuild() {
   const stage = getStageById('harbor-1')
-  const build = getDefaultPersistedBuildForRule('standard_5slot')
+  const build = getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')
   return createInitialEncounterState(stage, build)
 }
 
@@ -58,7 +58,7 @@ function createHarborEncounterWithBuildOverride(
   loadoutOverrides: Partial<ReturnType<typeof getDefaultPersistedBuildForRule>['loadout']>,
 ) {
   const stage = getStageById('harbor-1')
-  const baseBuild = getDefaultPersistedBuildForRule('standard_5slot')
+  const baseBuild = getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')
   return createInitialEncounterState(stage, {
     ...baseBuild,
     loadout: {
@@ -72,7 +72,7 @@ function createWestFallEncounterWithBuildOverride(
   loadoutOverrides: Partial<ReturnType<typeof getDefaultPersistedBuildForRule>['loadout']>,
 ) {
   const stage = getStageById('WestFall-1')
-  const baseBuild = getDefaultPersistedBuildForRule('standard_5slot')
+  const baseBuild = getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')
   return createInitialEncounterState(stage, {
     ...baseBuild,
     loadout: {
@@ -355,7 +355,7 @@ describe('encounterFactory hand-cast flow', () => {
     try {
       const first = createInitialEncounterState(
         getStageById('RingingDeeps-1'),
-        getDefaultPersistedBuildForRule(getStageBuildRuleId(getStageById('RingingDeeps-1'))),
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(getStageById('RingingDeeps-1')), 'warrior_t'),
       )
       expect(first.stage.playerMaxHp).toBe(50)
       expect(first.player.maxHp).toBe(75)
@@ -368,14 +368,14 @@ describe('encounterFactory hand-cast flow', () => {
 
       const second = createInitialEncounterState(
         getStageById('RingingDeeps-2'),
-        getDefaultPersistedBuildForRule(getStageBuildRuleId(getStageById('RingingDeeps-2'))),
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(getStageById('RingingDeeps-2')), 'warrior_t'),
       )
       expect(second.enemies.map((enemy) => enemy.definitionId)).toEqual(['kobold_apprentice', 'kobold_apprentice'])
       expect(second.enemies.every((enemy) => enemy.skillCycle[0] === 'flame_missiles')).toBe(true)
 
       const third = createInitialEncounterState(
         getStageById('RingingDeeps-3'),
-        getDefaultPersistedBuildForRule(getStageBuildRuleId(getStageById('RingingDeeps-3'))),
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(getStageById('RingingDeeps-3')), 'warrior_t'),
       )
       expect(third.stage.playerMaxHp).toBe(80)
       expect(third.player.maxHp).toBe(120)
@@ -470,7 +470,7 @@ describe('encounterFactory hand-cast flow', () => {
         const stage = getStageById(entry.stageId)
         const encounter = createInitialEncounterState(
           stage,
-          getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+          getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
         )
 
         expect(getStageBuildRuleId(stage)).toBe(entry.buildRuleId)
@@ -517,7 +517,7 @@ describe('encounterFactory hand-cast flow', () => {
       })
 
       const stage = getStageById('harbor-1')
-      const baseBuild = getDefaultPersistedBuildForRule('standard_5slot')
+      const baseBuild = getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')
       const encounter = createInitialEncounterState(stage, {
         ...baseBuild,
         passiveTalentIds: [],
@@ -620,7 +620,7 @@ describe('encounterFactory hand-cast flow', () => {
       })
 
       const encounter = stripStageSpecialRules(createInitialEncounterState(getStageById('harbor-1'), {
-        ...getDefaultPersistedBuildForRule('standard_5slot'),
+        ...getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t'),
         passiveTalentIds: ['warrior_t_barbaric_training'],
       }))
       const configured = {
@@ -751,7 +751,7 @@ describe('encounterFactory hand-cast flow', () => {
       })
 
       const stage = getStageById('harbor-1')
-      const baseBuild = getDefaultPersistedBuildForRule('standard_5slot')
+      const baseBuild = getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')
       const encounter = createInitialEncounterState(stage, {
         ...baseBuild,
         passiveTalentIds: [],
@@ -812,7 +812,7 @@ describe('encounterFactory hand-cast flow', () => {
 
       const stage = getStageById('harbor-3')
       const encounter = createInitialEncounterState(stage, {
-        ...getDefaultPersistedBuildForRule('standard_5slot'),
+        ...getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t'),
         passiveTalentIds: [],
       })
 
@@ -3517,7 +3517,7 @@ describe('encounterFactory hand-cast flow', () => {
 
     try {
       const stage = getStageById('WestFall-5')
-      const baseBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+      const baseBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
       const baseEncounter = stripStageSpecialRules(createInitialEncounterState(stage, {
         ...baseBuild,
         loadout: {
@@ -4739,7 +4739,7 @@ describe('encounterFactory hand-cast flow', () => {
       const stage = getStageById("Zul'Aman-1")
       const base = stripStageSpecialRules(createInitialEncounterState(
         stage,
-        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
       ))
       const berserker = base.enemies.find((enemy) => enemy.definitionId === 'troll_berserker')
       const berserkerStatusDefinition = getEnemyStatusDefinition('berserker!')
@@ -4820,7 +4820,7 @@ describe('encounterFactory hand-cast flow', () => {
         const stage = getStageById(stageId)
         const base = stripStageSpecialRules(createInitialEncounterState(
           stage,
-          getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+          getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
         ))
         const caster = base.enemies.find((enemy) => enemy.definitionId === casterDefinitionId)
         const lockedTarget = lockedTargetDefinitionId
@@ -5887,7 +5887,7 @@ describe('encounterFactory hand-cast flow', () => {
       const encounter = createInitialEncounterState(
         stage,
         {
-          ...getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+          ...getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
           loadout: {
             '1': 'warrior_t_taunt',
             '2': 'warrior_t_interrupt',
@@ -5946,7 +5946,7 @@ describe('encounterFactory hand-cast flow', () => {
       const stage = getStageById('WestFall-1')
       const base = stripStageSpecialRules(createInitialEncounterState(
         stage,
-        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
       ))
       const isolatedBase = {
         ...base,
@@ -6119,7 +6119,7 @@ describe('encounterFactory hand-cast flow', () => {
       const stage = getStageById('WestFall-2')
       const base = stripStageSpecialRules(createInitialEncounterState(
         stage,
-        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
       ))
       const markedDefinition = getEnemyStatusDefinition('marked')
       const upgradedDefinition = getEnemyStatusDefinition('murlocUpgraded')
@@ -6241,7 +6241,7 @@ describe('encounterFactory hand-cast flow', () => {
         ...stripStageSpecialRules(createInitialEncounterState(
           stage,
           {
-            ...getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+            ...getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
             loadout: {
               '1': 'warrior_t_rallying_cry',
               '2': 'warrior_t_revenge',
@@ -6416,7 +6416,7 @@ describe('encounterFactory hand-cast flow', () => {
       const stage = getStageById('WestFall-6')
       const base = stripStageSpecialRules(createInitialEncounterState(
         stage,
-        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
       ))
       const isolatedBase = {
         ...base,
@@ -6561,7 +6561,7 @@ describe('encounterFactory hand-cast flow', () => {
       const stage = getStageById('WestFall-1')
       const base = stripStageSpecialRules(createInitialEncounterState(
         stage,
-        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
       ))
       const target = base.enemies[0]
       if (!target) {
@@ -6844,7 +6844,7 @@ describe('encounterFactory hand-cast flow', () => {
       const stage = getStageById('WestFall-1')
       const base = stripStageSpecialRules(createInitialEncounterState(
         stage,
-        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
       ))
       const firstEnemy = base.enemies[0]
       const secondEnemy = base.enemies[1]
@@ -7232,7 +7232,7 @@ describe('encounterFactory hand-cast flow', () => {
       const stage = getStageById('WestFall-3')
       const base = stripStageSpecialRules(createInitialEncounterState(
         stage,
-        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
       ))
       const warleader = base.enemies.find((enemy) => enemy.definitionId === 'murloc_warleader')
       const injuredBlowgiller = base.enemies.find((enemy) => enemy.definitionId === 'murloc_blowgiller')
@@ -8186,7 +8186,7 @@ describe('encounterFactory hand-cast flow', () => {
     const encounter = createInitialEncounterState(
       getStageById('harbor-1'),
       {
-        ...getDefaultPersistedBuildForRule('standard_5slot'),
+        ...getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t'),
         passiveTalentIds: ['warrior_t_pressure_valve'],
       },
     )
@@ -8199,7 +8199,7 @@ describe('encounterFactory hand-cast flow', () => {
 
   it('keeps buildRuleId and stage special rules when creating an encounter', () => {
     const stage = getStageById('harbor-1')
-    const encounter = createInitialEncounterState(stage, getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)))
+    const encounter = createInitialEncounterState(stage, getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'))
 
     expect(encounter.stage.buildRuleId).toBe('tutorial_2slot')
     expect(encounter.stage.specialRules.map((rule) => rule.ruleLogicId)).toContain('opening_pressure_shift')
@@ -8222,8 +8222,8 @@ describe('encounterFactory hand-cast flow', () => {
   it('periodic_reinforcement grants an enrage-song status after its timer elapses', () => {
     const stage = getStageById('midland-2')
     const encounter = {
-      ...createInitialEncounterState(stage, getDefaultPersistedBuildForRule('standard_5slot')),
-      enemies: createInitialEncounterState(stage, getDefaultPersistedBuildForRule('standard_5slot')).enemies.map(
+      ...createInitialEncounterState(stage, getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')),
+      enemies: createInitialEncounterState(stage, getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')).enemies.map(
         (enemy, index) =>
           index === 0
             ? {
@@ -8251,7 +8251,7 @@ describe('encounterFactory hand-cast flow', () => {
 
   it('player_control_tax only applies while the player is controlled', () => {
     const stage = getStageById('highland-4')
-    const encounter = createInitialEncounterState(stage, getDefaultPersistedBuildForRule('full_8slot'))
+    const encounter = createInitialEncounterState(stage, getDefaultPersistedBuildForRule('full_8slot', 'warrior_t'))
     const baseline = stripStageSpecialRules(encounter)
     const controlledEncounter = {
       ...encounter,
@@ -8283,7 +8283,7 @@ describe('encounterFactory hand-cast flow', () => {
 
   it('treats negative-duration control statuses as active for stage rules', () => {
     const stage = getStageById('highland-4')
-    const encounter = createInitialEncounterState(stage, getDefaultPersistedBuildForRule('full_8slot'))
+    const encounter = createInitialEncounterState(stage, getDefaultPersistedBuildForRule('full_8slot', 'warrior_t'))
     const controlledEncounter = {
       ...encounter,
       player: {
@@ -8711,7 +8711,7 @@ describe('encounterFactory hand-cast flow', () => {
       const stage = getStageById('Challenge-6')
       const base = createInitialEncounterState(
         stage,
-        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
       )
       const enemy = base.enemies[0]
 
@@ -8848,7 +8848,7 @@ describe('encounterFactory hand-cast flow', () => {
       const stage = getStageById('Challenge-6')
       const base = createInitialEncounterState(
         stage,
-        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+        getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
       )
       const targetEnemyId = base.enemies[0]?.id
 
@@ -9536,7 +9536,7 @@ describe('encounterFactory hand-cast flow', () => {
   ) {
     applyDesignerPlayerBuildWorkbook()
     const stage = getStageById('harbor-1')
-    const baseBuild = getDefaultPersistedBuildForRule('full_8slot')
+    const baseBuild = getDefaultPersistedBuildForRule('full_8slot', 'warrior_t')
 
     return createInitialEncounterState(stage, {
       ...baseBuild,
@@ -9639,7 +9639,7 @@ describe('encounterFactory hand-cast flow', () => {
       'warrior_t_reinforced_plates',
       'warrior_t_raise_banner',
     ])
-    const build = getDefaultPersistedBuildForRule('full_8slot')
+    const build = getDefaultPersistedBuildForRule('full_8slot', 'warrior_t')
     const reapplied = applyBuildConfiguration(encounter, build.loadout, [
       'warrior_t_reinforced_plates',
       'warrior_t_raise_banner',

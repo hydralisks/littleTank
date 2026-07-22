@@ -95,7 +95,7 @@ function sequenceRandom(values: number[]) {
 describe('balance simulator', () => {
   it('runs deterministic attempts and reports pass rate only from outcomes', () => {
     const stage = getStageById('harbor-1')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const result = runBalanceScenario({
       stage,
       build,
@@ -119,7 +119,7 @@ describe('balance simulator', () => {
 
   it('does not include hp or pressure ratios in scenario results', () => {
     const stage = getStageById('harbor-5')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const result = runBalanceScenario({
       stage,
       build,
@@ -136,7 +136,7 @@ describe('balance simulator', () => {
 
   it('collects compact data estimate metrics for each scenario without full combat trace', () => {
     const stage = getStageById('harbor-1')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const result = runBalanceScenario({
       stage,
       build,
@@ -161,7 +161,7 @@ describe('balance simulator', () => {
 
   it('does not count the same processed resource event repeatedly across automation decisions', () => {
     const stage = getStageById('harbor-1')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const result = runBalanceScenario({
       stage,
       build,
@@ -199,7 +199,7 @@ describe('balance simulator', () => {
 
   it('optionally collects a minimal trace for calibration', () => {
     const stage = getStageById('harbor-1')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const result = runBalanceScenario({
       stage,
       build,
@@ -217,7 +217,7 @@ describe('balance simulator', () => {
 
   it('optionally collects a diagnostic summary for internal evaluation', () => {
     const stage = getStageById('harbor-1')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const defaultResult = runBalanceScenario({
       stage,
       build,
@@ -255,7 +255,7 @@ describe('balance simulator', () => {
 
   it('passes diagnostic collection through stage balance analysis when requested', () => {
     const stage = getStageById('harbor-1')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const analysis = runStageBalanceAnalysis({
       stage,
       builds: [{ id: 'default', build }],
@@ -291,7 +291,7 @@ describe('balance simulator', () => {
 
   it('keeps planned cast reactions stable for the same cast instead of re-sampling each decision', () => {
     const stage = getStageById('harbor-1')
-    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const build: PersistedBuildState = {
       ...defaultBuild,
       loadout: {
@@ -414,7 +414,7 @@ describe('balance simulator', () => {
 
   it('can prioritize a high-impact kill target over a generic lost-threat target', () => {
     const stage = getStageById('harbor-1')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const state = createInitialEncounterState(stage, build)
     const lostThreatEnemy = {
       ...state.enemies[0],
@@ -462,7 +462,7 @@ describe('balance simulator', () => {
 
   it('reduces irregular threat urgency when the policy allows pressure splitting under tank danger', () => {
     const stage = getStageById('harbor-1')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const state = createInitialEncounterState(stage, build)
     const irregularEnemy = {
       ...state.enemies[0],
@@ -501,7 +501,7 @@ describe('balance simulator', () => {
 
   it('prefers matching shadow hoe to the side that currently has wax', () => {
     const stage = getStageById('harbor-1')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const state = createInitialEncounterState(stage, build)
     const candleKing = {
       ...state.enemies[0],
@@ -555,7 +555,7 @@ describe('balance simulator', () => {
 
   it('can plan wax figure to set up the same side for a later shadow hoe', () => {
     const stage = getStageById('harbor-1')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const state = createInitialEncounterState(stage, build)
     const candleKing = {
       ...state.enemies[0],
@@ -583,7 +583,7 @@ describe('balance simulator', () => {
 
   it('does not chase an irregular enemy when its next mechanic should stay on the party', () => {
     const stage = getStageById('harbor-1')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const state = createInitialEncounterState(stage, build)
     const genericLost = {
       ...state.enemies[0],
@@ -636,7 +636,7 @@ describe('balance simulator', () => {
 
   it('does not immediately undo a planned cast target selection during the same decision tick', () => {
     const stage = getStageById('harbor-1')
-    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const build: PersistedBuildState = {
       ...defaultBuild,
       loadout: {
@@ -713,7 +713,7 @@ describe('balance simulator', () => {
 
   it('does not churn target selection when no stop skill is actually available', () => {
     const stage = getStageById('harbor-1')
-    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const build: PersistedBuildState = {
       ...defaultBuild,
       loadout: {
@@ -790,7 +790,7 @@ describe('balance simulator', () => {
 
   it('does not spend shield wall while shield wall mitigation is already active', () => {
     const stage = getStageById('harbor-5')
-    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const build: PersistedBuildState = {
       ...defaultBuild,
       loadout: {
@@ -868,7 +868,7 @@ describe('balance simulator', () => {
 
   it('evaluates several operation profiles and build variants for a stage', () => {
     const stage = getStageById('harbor-1')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const alternateBuild: PersistedBuildState = {
       ...build,
       passiveTalentIds: [],
@@ -921,7 +921,7 @@ describe('balance simulator', () => {
 
   it('includes external build candidates in two-phase fixed strategy analysis', () => {
     const stage = getStageById('harbor-1')
-    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const externalBuild: PersistedBuildState = {
       ...defaultBuild,
       passiveTalentIds: ['warrior_t_reinforced_plates'],
@@ -948,7 +948,7 @@ describe('balance simulator', () => {
 
   it('selects final two-phase builds by shared aggregate performance instead of profile-specific winners', () => {
     const stage = getStageById('harbor-1')
-    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const builds = [
       { id: 'default', build: defaultBuild },
       { id: 'shared_good', build: { ...defaultBuild, passiveTalentIds: [] } },
@@ -973,7 +973,7 @@ describe('balance simulator', () => {
 
   it('prefers more complete builds when phase-one pass rates tie', () => {
     const stage = getStageById('harbor-1')
-    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const sparseBuild: PersistedBuildState = {
       ...defaultBuild,
       loadout: {
@@ -1039,7 +1039,7 @@ describe('balance simulator', () => {
 
   it('cuts learning build candidates at a clear pass-rate gap before the maximum count', () => {
     const stage = getStageById('harbor-1')
-    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const builds = ['b1', 'b2', 'b3', 'b4', 'b5', 'b6', 'b7', 'b8', 'b9', 'b10'].map((id) => ({
       id,
       build: defaultBuild,
@@ -1066,7 +1066,7 @@ describe('balance simulator', () => {
 
   it('keeps up to the configured maximum when learning build pass rates do not clearly break away', () => {
     const stage = getStageById('harbor-1')
-    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const builds = ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'].map((id) => ({
       id,
       build: defaultBuild,
@@ -1093,7 +1093,7 @@ describe('balance simulator', () => {
 
   it('keeps more complete passive-heavy builds for learning when fixed pass rates tie', () => {
     const stage = getStageById('harbor-1')
-    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const defaultBuild = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const sparseBuild: PersistedBuildState = {
       ...defaultBuild,
       loadout: {
@@ -1151,7 +1151,7 @@ describe('balance simulator', () => {
 
   it('summarizes best build per profile by highest pass rate', () => {
     const stage = getStageById('harbor-1')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const alternateBuild: PersistedBuildState = {
       ...build,
       passiveTalentIds: [],
@@ -1208,7 +1208,7 @@ describe('balance simulator', () => {
 
   it('starts each attempt from normal encounter creation when no mutator is supplied', () => {
     const stage = getStageById('harbor-1')
-    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage))
+    const build = getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t')
     const state = createInitialEncounterState(stage, build)
 
     expect(state.result).toBeNull()

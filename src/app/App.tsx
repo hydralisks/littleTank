@@ -41,7 +41,7 @@ function App() {
     loadedSave?.highestClearedStageIndex ?? INITIAL_HIGHEST_CLEARED_STAGE_INDEX,
   )
   const [persistedBuild, setPersistedBuild] = useState(() =>
-    loadedSave?.build ?? getDefaultPersistedBuildForRule(getStageBuildRuleId(getStageById(initialStageId))),
+    loadedSave?.build ?? getDefaultPersistedBuildForRule(getStageBuildRuleId(getStageById(initialStageId)), 'warrior_t'),
   )
   const [tutorialState, setTutorialState] = useState<TutorialSaveState>(() =>
     loadedSave?.tutorial ?? createEmptyTutorialSaveState(),
@@ -81,7 +81,7 @@ function App() {
     )
     const normalizedBuild = normalizePersistedBuildForRule(
       persistedBuild,
-      getStageBuildRuleId(nextStage),
+      getStageBuildRuleId(nextStage), 'warrior_t',
       getPassiveTalentUnlockTierForStage(nextStage),
       getUnlockedActiveSkillIdsForStage(nextStage),
       shouldAutoEquipNewSkills ? newlyUnlockedSkillIds : [],

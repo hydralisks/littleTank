@@ -146,7 +146,7 @@ export function buildManualPlaytestCandidateForStage(
   const buildRuleId = getStageBuildRuleId(stage)
   const normalized = normalizePersistedBuildForRule(
     { loadout, passiveTalentIds: entry.recommendedPassiveTalentIds },
-    buildRuleId,
+    buildRuleId, 'warrior_t',
     getPassiveTalentUnlockTierForStage(stage),
     getUnlockedActiveSkillIdsForStage(stage),
     [],

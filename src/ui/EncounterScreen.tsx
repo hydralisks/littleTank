@@ -87,7 +87,7 @@ function canAssignSkillToHotkey(
   remainingBuildPoints: number,
   unlockedActiveSkillIds: readonly SkillId[],
 ) {
-  if (!isHotkeyEnabledForRule(buildRuleId, hotkey) || !canUseSkillInRule(buildRuleId, skillId, unlockedActiveSkillIds)) {
+  if (!isHotkeyEnabledForRule(buildRuleId, hotkey) || !canUseSkillInRule(buildRuleId, 'warrior_t', skillId, unlockedActiveSkillIds)) {
     return false
   }
 
@@ -152,10 +152,10 @@ export function EncounterScreen({
   const buildRuleId = encounter.stage.buildRuleId
   const buildRule = getBuildRuleDefinition(buildRuleId)
   const activeSkills = getActiveSkillCatalog()
-    .filter((skill) => canUseSkillInRule(buildRuleId, skill.id, unlockedActiveSkillIds))
+    .filter((skill) => canUseSkillInRule(buildRuleId, 'warrior_t', skill.id, unlockedActiveSkillIds))
     .sort((left, right) => (left.uiOrder ?? 999) - (right.uiOrder ?? 999) || left.id.localeCompare(right.id))
   const passiveTalents = getPassiveTalentCatalog().filter((talent) =>
-    canUseTalentInRule(buildRuleId, talent.id, unlockedPassiveTalentTier)
+    canUseTalentInRule(buildRuleId, 'warrior_t', talent.id, unlockedPassiveTalentTier)
   )
   const pauseVisible = encounter.runtime.pauseOverlay === 'pause' && !encounter.result
   const tutorialStep =
@@ -293,7 +293,7 @@ export function EncounterScreen({
   }
 
   function handleTogglePassive(talentId: PassiveTalentId) {
-    if (!canUseTalentInRule(buildRuleId, talentId, unlockedPassiveTalentTier)) {
+    if (!canUseTalentInRule(buildRuleId, 'warrior_t', talentId, unlockedPassiveTalentTier)) {
       return
     }
     if (!canTogglePassiveTalent(buildRuleId, talentId, selectedPassiveTalentIds, activePoints)) {
@@ -513,7 +513,7 @@ export function EncounterScreen({
         onClose={() => setOpenPanel(null)}
         onToggleTalent={handleTogglePassive}
         canToggleTalent={(talentId) =>
-          canUseTalentInRule(buildRuleId, talentId, unlockedPassiveTalentTier) &&
+          canUseTalentInRule(buildRuleId, 'warrior_t', talentId, unlockedPassiveTalentTier) &&
           canTogglePassiveTalent(buildRuleId, talentId, selectedPassiveTalentIds, activePoints)
         }
       />

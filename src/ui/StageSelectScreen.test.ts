@@ -124,7 +124,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 3,
           maxUnlockedStageIndex: 7,
           partyStageId: 'RingingDeeps-5',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot'),
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t'),
           onStartStage: () => undefined,
         }))
       })
@@ -167,7 +167,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 1,
           partyStageId: 'harbor-1',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot'),
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t'),
           onStartStage,
         }))
       })
@@ -263,7 +263,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 0,
           partyStageId: 'TestArea-1',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot'),
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t'),
           onStartStage: () => undefined,
         }))
       })
@@ -319,7 +319,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 0,
           partyStageId: 'harbor-1',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot'),
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t'),
           onStartStage: () => undefined,
         }))
       })
@@ -384,7 +384,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 5,
           maxUnlockedStageIndex: 6,
           partyStageId: 'harbor-6',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot'),
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot', 'warrior_t'),
           onStartStage,
         }))
       })
@@ -505,7 +505,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 2,
           partyStageId: 'RingingDeeps-1',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot'),
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot', 'warrior_t'),
           onStartStage: vi.fn(),
         }))
       })
@@ -558,7 +558,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 5,
           maxUnlockedStageIndex: 6,
           partyStageId: 'harbor-6',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot'),
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot', 'warrior_t'),
           onStartStage: () => undefined,
         }))
       })
@@ -604,7 +604,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 0,
           partyStageId: 'harbor-1',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot'),
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t'),
           onStartStage: () => undefined,
           onBuildChange: () => undefined,
         }))
@@ -672,7 +672,7 @@ describe('StageSelectScreen map layout', () => {
       }
       root = createRoot(container)
       const persistedBuild: PersistedBuildState = {
-        ...getDefaultPersistedBuildForRule('tutorial_5slot'),
+        ...getDefaultPersistedBuildForRule('tutorial_5slot', 'warrior_t'),
         passiveTalentIds: [],
       }
 
@@ -793,7 +793,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 0,
           partyStageId: 'RingingDeeps-2',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot'),
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t'),
           onStartStage: () => undefined,
           onBuildChange: () => undefined,
         }))
@@ -871,7 +871,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 0,
           partyStageId: 'RingingDeeps-2',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot'),
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t'),
           stageSelectTutorialSeenStageIds: ['RingingDeeps-2'],
           onStartStage: () => undefined,
           onBuildChange: () => undefined,
@@ -926,7 +926,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 0,
           partyStageId: 'RingingDeeps-2',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot'),
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t'),
           onStartStage: () => undefined,
           onBuildChange: () => undefined,
         }))
@@ -989,7 +989,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 3,
           maxUnlockedStageIndex: 3,
           partyStageId: 'harbor-4',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot'),
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_5slot', 'warrior_t'),
           seenEnemyDefinitionIds,
           onStartStage: () => undefined,
         }))
@@ -1043,7 +1043,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 0,
           maxUnlockedStageIndex: 2,
           partyStageId: 'harbor-3',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot'),
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t'),
           seenEnemyDefinitionIds: [getEnemyDefinitionIdsForStage('harbor-2')[0]],
           onStartStage: () => undefined,
         }))
@@ -1089,7 +1089,7 @@ describe('StageSelectScreen map layout', () => {
           highestClearedStageIndex: 1,
           maxUnlockedStageIndex: 2,
           partyStageId: 'harbor-3',
-          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot'),
+          persistedBuild: getDefaultPersistedBuildForRule('tutorial_3slot', 'warrior_t'),
           seenEnemyDefinitionIds,
           monsterCodexTutorialSeen: false,
           onMonsterCodexTutorialComplete,

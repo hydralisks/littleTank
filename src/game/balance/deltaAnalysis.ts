@@ -108,8 +108,8 @@ function getNormalizedDefaultBuild(stage: StageInfo) {
   const unlockedSkillIds = getUnlockedActiveSkillIdsForStage(stage)
 
   return normalizePersistedBuildForRule(
-    getDefaultPersistedBuildForRule(buildRuleId),
-    buildRuleId,
+    getDefaultPersistedBuildForRule(buildRuleId, 'warrior_t'),
+    buildRuleId, 'warrior_t',
     passiveTier,
     unlockedSkillIds,
     stage.unlockedActiveSkillIds,
@@ -133,7 +133,7 @@ function normalizeBuild(stage: StageInfo, build: PersistedBuildState) {
   const buildRuleId = getStageBuildRuleId(stage)
   return normalizePersistedBuildForRule(
     build,
-    buildRuleId,
+    buildRuleId, 'warrior_t',
     getPassiveTalentUnlockTierForStage(stage),
     getUnlockedActiveSkillIdsForStage(stage),
     stage.unlockedActiveSkillIds,
@@ -144,7 +144,7 @@ function legalTalentIds(stage: StageInfo, requested?: PassiveTalentId[]) {
   const buildRuleId = getStageBuildRuleId(stage)
   const passiveTier = getPassiveTalentUnlockTierForStage(stage)
   const source = requested && requested.length > 0 ? requested : FALLBACK_TALENTS
-  return source.filter((talentId) => canUseTalentInRule(buildRuleId, talentId, passiveTier))
+  return source.filter((talentId) => canUseTalentInRule(buildRuleId, 'warrior_t', talentId, passiveTier))
 }
 
 function talentLabel(talentIds: readonly PassiveTalentId[]) {

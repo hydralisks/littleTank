@@ -473,7 +473,7 @@ describe('EncounterScreen component keyboard integration', () => {
     const onRetryStage = vi.fn()
     const onAdvanceStage = vi.fn()
     const stage = getStageById('harbor-1')
-    const buildState = getDefaultPersistedBuildForRule('standard_5slot')
+    const buildState = getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')
     let root: Root | null = null
 
     vi.useFakeTimers()
@@ -605,7 +605,7 @@ describe('EncounterScreen component keyboard integration', () => {
     const previousEvent = globalThis.Event
     const previousIS_REACT_ACT_ENVIRONMENT = globalWithReactAct.IS_REACT_ACT_ENVIRONMENT
     const stage = makeRingingDeepsStage(1)
-    const buildState = getDefaultPersistedBuildForRule('tutorial_2slot')
+    const buildState = getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t')
     let root: Root | null = null
 
     vi.useFakeTimers()
@@ -706,7 +706,7 @@ describe('EncounterScreen component keyboard integration', () => {
     const previousEvent = globalThis.Event
     const previousIS_REACT_ACT_ENVIRONMENT = globalWithReactAct.IS_REACT_ACT_ENVIRONMENT
     const stage = makeRingingDeepsStage(1)
-    const buildState = getDefaultPersistedBuildForRule('tutorial_2slot')
+    const buildState = getDefaultPersistedBuildForRule('tutorial_2slot', 'warrior_t')
     let root: Root | null = null
 
     setGlobalProperty('window', window as typeof globalThis.window)
@@ -801,7 +801,7 @@ describe('EncounterScreen component keyboard integration', () => {
     const onRetryStage = vi.fn()
     const onAdvanceStage = vi.fn()
     const stage = getStageById('harbor-1')
-    const buildState = getDefaultPersistedBuildForRule('standard_5slot')
+    const buildState = getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')
     let root: Root | null = null
 
     vi.useFakeTimers()

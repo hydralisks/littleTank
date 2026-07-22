@@ -17,7 +17,7 @@ import type { CombatLogEvent } from './encounterTypes'
 function createEncounter() {
   const stage = getStageById('harbor-1')
   return createInitialEncounterState(stage, {
-    ...getDefaultPersistedBuildForRule(getStageBuildRuleId(stage)),
+    ...getDefaultPersistedBuildForRule(getStageBuildRuleId(stage), 'warrior_t'),
     loadout: {
       '1': 'warrior_t_shield_slam',
       '2': 'warrior_t_rallying_cry',
@@ -34,7 +34,7 @@ function createEncounter() {
 function createIgnorePainEncounter() {
   const stage = getStageById('harbor-1')
   return createInitialEncounterState(stage, {
-    ...getDefaultPersistedBuildForRule('standard_5slot'),
+    ...getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t'),
     loadout: {
       '1': 'warrior_t_shield_slam',
       '2': null,

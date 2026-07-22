@@ -565,7 +565,7 @@ function buildChallengeRecommendedBuildCandidate(row, stage) {
 
   const normalized = normalizePersistedBuildForRule(
     { loadout, passiveTalentIds },
-    row.buildRuleId ? String(row.buildRuleId) : 'standard_5slot',
+    row.buildRuleId ? String(row.buildRuleId) : 'standard_5slot', 'warrior_t',
     getPassiveTalentUnlockTierForStage(stage),
     getUnlockedActiveSkillIdsForStage(stage),
     [],
