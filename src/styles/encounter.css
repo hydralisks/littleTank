@@ -1908,6 +1908,88 @@
   box-shadow: none;
 }
 
+.stage-class-entry {
+  position: absolute;
+  left: 50%;
+  bottom: 5.6%;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  transform: translateX(-120px);
+}
+
+.stage-class-entry .stage-map__enter-action {
+  position: static;
+  width: 240px;
+  min-width: 240px;
+  height: 82px;
+  min-height: 82px;
+  padding: 0 18px;
+  transform: none;
+}
+
+.stage-class-entry .stage-map__enter-action:hover {
+  transform: translateY(-1px);
+}
+
+.stage-class-entry .stage-map__enter-action:disabled:hover {
+  transform: none;
+}
+
+.stage-class-entry__grid {
+  display: grid;
+  grid-template-rows: repeat(3, 50px);
+  grid-template-columns: repeat(4, 50px);
+  grid-auto-flow: column;
+  gap: 7px;
+  width: 221px;
+  height: 164px;
+}
+
+.stage-class-entry__slot {
+  position: relative;
+  width: 50px;
+  height: 50px;
+}
+
+button.stage-class-entry__slot {
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  border-radius: 8px;
+  background: #1f5f76;
+  color: #f7f1df;
+  cursor: pointer;
+}
+
+button.stage-class-entry__slot > svg:first-child {
+  width: 34px;
+  height: 34px;
+}
+
+button.stage-class-entry__slot.is-selected {
+  border-color: #ffd54f;
+  box-shadow: 0 0 0 2px rgba(255, 213, 79, 0.26);
+}
+
+.stage-class-entry__check {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 22px;
+  height: 22px;
+  padding: 2px;
+  border-radius: 50%;
+  background: #137a43;
+  color: #f4fff7;
+  stroke-width: 4;
+}
+
+.stage-class-entry__slot.is-empty {
+  visibility: hidden;
+}
+
 .challenge-board {
   position: relative;
   min-height: 560px;
@@ -3310,6 +3392,22 @@
   .monster-codex__stats,
   .monster-codex__skill dl {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .stage-map,
+  .challenge-board {
+    min-height: 780px;
+    padding-bottom: 280px;
+  }
+
+  .stage-class-entry {
+    left: 50%;
+    bottom: 12px;
+    flex-direction: column-reverse;
+    gap: 8px;
+    transform: translateX(-50%);
   }
 }
 

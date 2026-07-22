@@ -21,6 +21,7 @@
     "test:desktop-data": "node scripts/buildDesktopDataPack.smoke.mjs"
   },
   "dependencies": {
+    "lucide-react": "^1.25.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "xlsx": "^0.18.5"
