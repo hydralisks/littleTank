@@ -15,15 +15,15 @@
     },
     {
       "name": "player_build.xlsx",
-      "sha256": "54ffa8846839b19948f63a72aff3f44289cb1c87be0f51745d2a09a9a6946305"
+      "sha256": "2d3a1e03f921b711291968da1c9b272c1ef3d91c0baba24e052392ba555570b3"
     },
     {
       "name": "challenge_stage_content.xlsx",
-      "sha256": "87dbf835ae65a3d0a85664ec532f258e90277a269cf1d6b87c478fe12e39084a"
+      "sha256": "893913e118bc7363d492ef2afd655f13db7900246efe83a0dba5cd0804db9a1e"
     },
     {
       "name": "challenge_encounter_balance.xlsx",
-      "sha256": "90052fabb0d5a47fa0fc26db25159d649f5b367582d01b57805046b17839b1be"
+      "sha256": "1928789c4be680e1be68166b5b2e4b7262c73a17b7b042ff9a9bd2329a9fa6dd"
     }
   ],
   "encryptedPack": "game-data.ltpkg"
