@@ -1,6 +1,7 @@
 import type { PlayerClassId, PlayerClassRuntimeState } from '../encounter/encounterTypes'
 
 export const WARRIOR_T_CLASS_ID: PlayerClassId = 'warrior_t'
+export const DRUID_BEAR_T_CLASS_ID: PlayerClassId = 'druid_bear_t'
 
 export interface PlayerPrimaryResourceDefinition {
   id: string
@@ -33,6 +34,21 @@ const PLAYER_CLASS_RUNTIME_DEFINITIONS: Record<PlayerClassId, PlayerClassRuntime
       passiveGainPerSecond: 3,
       damageTakenGainDivisor: 5,
       minimumDamageTakenGain: 4,
+    },
+    initializeRuntime: () => ({}),
+  },
+  druid_bear_t: {
+    classId: DRUID_BEAR_T_CLASS_ID,
+    selectionOrder: 1,
+    buttonIconKey: 'paw-print',
+    aiStrategyId: 'druid_bear_t_default',
+    primaryResource: {
+      id: 'rage',
+      label: '怒气',
+      maxResource: 100,
+      passiveGainPerSecond: 0,
+      damageTakenGainDivisor: 0,
+      minimumDamageTakenGain: 0,
     },
     initializeRuntime: () => ({}),
   },
