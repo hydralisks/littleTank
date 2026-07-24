@@ -1779,6 +1779,9 @@ const emptyModifiers: PassiveTalentModifiers = {
   shockwaveUsesMatrix3x3: false,
   thunderstruckDamageMultiplier: 1,
   thunderstruckThreatMultiplierOverride: null,
+  bearPhysicalDamageReduction: 0,
+  bearThreatMultiplier: 1,
+  bearControlDurationMultiplier: 1,
 }
 
 export function getPassiveModifiers(selectedPassiveTalentIds: PassiveTalentId[]) {

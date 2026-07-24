@@ -9,7 +9,9 @@ import {
   assertBuildMatchesClass,
   getActiveSkillDefinition,
   getPassiveModifiers,
+  getPlayerBuildStatusDefinition,
   getStatusesForTalent,
+  getTalentEffectsForTalent,
 } from '../data/skillTemplates'
 import { getPlayerClassRuntimeDefinition } from '../playerClasses/playerClassRuntimeRegistry'
 import { flushEncounterCommands } from './encounterCommandSystem'
@@ -35,7 +37,7 @@ import {
   getDamageTakenResourceGain,
   getPassiveResourceGain,
 } from './playerResourceSystem'
-import { resolvePlayerSkillRuntime } from './playerSkillRuntimeRegistry'
+import { applyBearRageGain, resolvePlayerSkillRuntime } from './playerSkillRuntimeRegistry'
 import {
   createInitialStageRuleRuntimeEntry,
   getStageRuleLogicHandler,
@@ -73,6 +75,14 @@ const PARTY_AMBIENT_SOURCE_ID = 'party_ambient_random'
 const DAMAGE_TAKEN_RESOURCE_WINDOW_MS = 1_000
 const DAMAGE_TAKEN_RESOURCE_WINDOW_CAP = 10
 const NON_GCD_SELF_COOLDOWN_MS = 500
+
+function getBearTalentValue(
+  talentId: PassiveTalentId,
+  field: 'valueA' | 'valueB',
+  fallback: number,
+) {
+  return getTalentEffectsForTalent(talentId).find((effect) => typeof effect[field] === 'number')?.[field] ?? fallback
+}
 
 const VICTORY_CHATTER = [
   '牧师：哇这 boss 给我蓝都熬空了。',
@@ -1704,14 +1714,29 @@ function applyDamageSources(state: EncounterState, deltaMs: number) {
   }
 }
 
-function appendOrReplacePlayerDebuff(player: PlayerState, status: StatusEffect) {
+function appendOrReplacePlayerDebuff(
+  player: PlayerState,
+  status: StatusEffect,
+  passiveTalentIds: PassiveTalentId[] = [],
+) {
+  const controlDurationMultiplier = getPassiveModifiers(passiveTalentIds).bearControlDurationMultiplier
+  const isControl = status.id === 'stunned' || status.effectLogicId === 'stunned' || status.effectLogicId === 'slowDown_status'
+  const nextStatus = isControl && controlDurationMultiplier < 1
+    ? {
+        ...status,
+        remainingMs: Math.round(status.remainingMs * controlDurationMultiplier),
+        totalMs: typeof status.totalMs === 'number'
+          ? Math.round(status.totalMs * controlDurationMultiplier)
+          : status.totalMs,
+      }
+    : status
   return applyPlayerDebuffOnApplyEffects({
     ...player,
     debuffs:
-      (status.maxStacks ?? 1) > 1
-        ? appendOrStackStatusList(player.debuffs, status)
-        : replaceStatusList(player.debuffs, status),
-  }, status)
+      (nextStatus.maxStacks ?? 1) > 1
+        ? appendOrStackStatusList(player.debuffs, nextStatus)
+        : replaceStatusList(player.debuffs, nextStatus),
+  }, nextStatus)
 }
 
 function getPlayerBuffDamageMultiplier(player: PlayerState, damageType: EnemySkillDamageType) {
@@ -1909,6 +1934,7 @@ interface PlayerAbsorbConsumption {
   statusId: string
   label: string
   amount: number
+  fullyConsumed: boolean
 }
 
 function applyPlayerDamageWithAbsorbResult(
@@ -1939,6 +1965,7 @@ function applyPlayerDamageWithAbsorbResult(
         statusId: status.id,
         label: status.label,
         amount: absorbedAmount,
+        fullyConsumed: absorbRemaining <= 0 && status.remainingMs > 0,
       })
     }
 
@@ -1984,6 +2011,7 @@ function createAbsorbConsumedEvents(
     target: { kind: 'tank', id: 'tank', name: '坦克' },
     ability: { kind: 'status', id: entry.statusId, name: entry.label },
     amount: entry.amount,
+    fullyConsumed: entry.fullyConsumed,
   }))
 }
 
@@ -2079,6 +2107,149 @@ function applyPlayerDebuffOnApplyEffects(player: PlayerState, status: StatusEffe
   }
 
   return player
+}
+
+function getPlayerMitigationDamageMultiplier(player: PlayerState, damageType: EnemySkillDamageType) {
+  const mitigation = player.mitigation
+  if (!mitigation) return 1
+  if (typeof mitigation.damageReductionRatio === 'number') {
+    return mitigation.damageReductionTypes?.includes(damageType)
+      ? 1 - mitigation.damageReductionRatio
+      : 1
+  }
+  return 0.62
+}
+
+function getBearTalentPlayerDamageMultiplier(
+  passiveTalentIds: PassiveTalentId[],
+  damageType: EnemySkillDamageType,
+) {
+  const modifiers = getPassiveModifiers(passiveTalentIds)
+  return damageType === 'physical'
+    ? 1 - modifiers.bearPhysicalDamageReduction
+    : 1
+}
+
+function countElapsedStatusTicks(status: StatusEffect, deltaMs: number, fallbackIntervalMs: number) {
+  const interval = status.tickIntervalMs ?? fallbackIntervalMs
+  const total = status.totalMs ?? status.remainingMs
+  const elapsedBefore = Math.max(0, total - status.remainingMs)
+  const elapsedAfter = Math.min(total, elapsedBefore + deltaMs)
+  return Math.max(0, Math.floor(elapsedAfter / interval) - Math.floor(elapsedBefore / interval))
+}
+
+function applyBearPlayerBuffContinuousEffects(
+  player: PlayerState,
+  party: EncounterState['party'],
+  activeStatusSource: PlayerState,
+  enemies: EnemyState[],
+  passiveTalentIds: PassiveTalentId[],
+  deltaMs: number,
+) {
+  if (deltaMs <= 0) return { player, party, effectivePlayerHealing: 0 }
+  let nextPlayer = player
+  let nextParty = party
+  let effectivePlayerHealing = 0
+  const healingMultiplier = getPlayerHealingReceivedMultiplier(activeStatusSource)
+  for (const status of activeStatusSource.buffs) {
+    if (!isStatusActive(status)) continue
+    const elapsedTicks = countElapsedStatusTicks(status, deltaMs, 2000)
+    if (elapsedTicks <= 0) continue
+    const ratio = status.id === 'druid_bear_t_lunar_beam' ? 0.03 : status.id === 'druid_bear_t_frenzied_regeneration' ? 0.06 : status.id === 'druid_bear_t_regrowth' ? 0.03 : 0
+    if (ratio <= 0) continue
+    const amount = nextPlayer.maxHp * ratio * elapsedTicks * healingMultiplier
+    const previousHp = nextPlayer.hp
+    const nextHp = clampSuppressedHealing(
+      previousHp,
+      previousHp + amount,
+      nextPlayer.maxHp,
+      isPlayerHealingSuppressedByMurlocWatch(enemies),
+    )
+    effectivePlayerHealing += Math.max(0, nextHp - previousHp)
+    nextPlayer = { ...nextPlayer, hp: nextHp }
+
+    const regrowthPartyHealing = status.id === 'druid_bear_t_regrowth' && passiveTalentIds.includes('druid_bear_t_regrowth_of_the_pack')
+      ? nextPlayer.maxHp * ratio * elapsedTicks * getBearTalentValue('druid_bear_t_regrowth_of_the_pack', 'valueA', 0.25)
+      : 0
+    const regenerativeBondHealing = status.id === 'druid_bear_t_frenzied_regeneration' &&
+      passiveTalentIds.includes('druid_bear_t_regenerative_bond') &&
+      status.remainingMs <= deltaMs
+      ? getBearTalentValue('druid_bear_t_regenerative_bond', 'valueA', 5)
+      : 0
+    const rawPartyHealing = regrowthPartyHealing + regenerativeBondHealing
+    if (rawPartyHealing > 0) {
+      const previousPartyHp = nextParty.hp
+      const nextPartyHp = clampSuppressedHealing(
+        previousPartyHp,
+        previousPartyHp + rawPartyHealing * getPartyHealingReceivedMultiplier(nextParty),
+        nextParty.maxHp,
+        isPartyHealingSuppressedByMurlocWatch(enemies),
+      )
+      nextParty = reducePartyPressureByEffectiveHealing(
+        { ...nextParty, hp: nextPartyHp },
+        Math.max(0, nextPartyHp - previousPartyHp),
+      )
+    }
+  }
+  return { player: nextPlayer, party: nextParty, effectivePlayerHealing }
+}
+
+function applyBearEnemyDotEffects(enemies: EnemyState[], activeStatusSource: EnemyState[], deltaMs: number) {
+  return enemies.map((enemy) => {
+    let hp = enemy.hp
+    const sourceEnemy = activeStatusSource.find((entry) => entry.id === enemy.id)
+    for (const status of sourceEnemy?.statuses ?? []) {
+      if (status.id !== 'druid_bear_t_moonfire' || !isStatusActive(status)) continue
+      const elapsedTicks = countElapsedStatusTicks(status, deltaMs, 3000)
+      hp = Math.max(0, hp - elapsedTicks * getStatusValue(status, 'valueA', 6))
+    }
+    return { ...enemy, hp }
+  })
+}
+
+function getBearMaxHpBuffMultiplier(player: PlayerState) {
+  return player.buffs
+    .filter((entry) => ['druid_bear_t_survival_instincts', 'druid_bear_t_lunar_beam', 'druid_bear_t_incarnation_ursoc', 'druid_bear_t_wild_recovery'].includes(entry.id) && isStatusActive(entry))
+    .reduce((multiplier, entry) => multiplier * (1 + (entry.valueA ?? 0)), 1)
+}
+
+function applyBearWildRecoveryBuff(player: PlayerState) {
+  const maxHpBonus = getBearTalentValue('druid_bear_t_wild_recovery', 'valueA', 0.1)
+  const status = createPlayerBuildStatusEffect('druid_bear_t_wild_recovery')
+  if (!status || player.buffs.some((entry) => entry.id === status.id && isStatusActive(entry))) return player
+  const nextMaxHp = Math.round(player.maxHp * (1 + maxHpBonus))
+  return {
+    ...player,
+    hp: player.maxHp > 0 ? (player.hp / player.maxHp) * nextMaxHp : nextMaxHp,
+    maxHp: nextMaxHp,
+    buffs: [...player.buffs.filter((entry) => entry.id !== status.id), { ...status, valueA: maxHpBonus }],
+  }
+}
+
+function syncExpiredBearMaxHpBuffs(previous: PlayerState, current: PlayerState) {
+  const previousMultiplier = getBearMaxHpBuffMultiplier(previous)
+  const currentMultiplier = getBearMaxHpBuffMultiplier(current)
+  if (previousMultiplier === currentMultiplier || previous.maxHp <= 0) return current
+  const nextMaxHp = Math.round((previous.maxHp / previousMultiplier) * currentMultiplier)
+  return {
+    ...current,
+    hp: (current.hp / current.maxHp) * nextMaxHp,
+    maxHp: nextMaxHp,
+  }
+}
+
+function applyBearBarkskinDispel(previous: PlayerState, current: PlayerState, passiveTalentIds: PassiveTalentId[]) {
+  const expired = previous.buffs.some((status) => status.id === 'druid_bear_t_barkskin' && isStatusActive(status)) &&
+    !current.buffs.some((status) => status.id === 'druid_bear_t_barkskin' && isStatusActive(status))
+  if (!expired || !passiveTalentIds.includes('druid_bear_t_bark_dispelling')) return current
+  return {
+    ...current,
+    debuffs: current.debuffs.filter((status) => {
+      const playerDefinition = getPlayerBuildStatusDefinition(status.id)
+      const enemyDefinition = getEnemyStatusDefinition(status.id)
+      return !(playerDefinition?.dispellable || enemyDefinition?.isDispellable)
+    }),
+  }
 }
 
 function getEnemyOutgoingDamageMultiplier(enemy: EnemyState) {
@@ -2439,7 +2610,7 @@ function triggerPendingAffixes(
           }),
         }
       } else {
-        nextPlayer = appendOrReplacePlayerDebuff(nextPlayer, status)
+        nextPlayer = appendOrReplacePlayerDebuff(nextPlayer, status, state.passiveTalentIds)
       }
       continue
     }
@@ -2663,7 +2834,8 @@ function resolveCompletedCast(
     getEnemyOutgoingDamageMultiplier(currentEnemy) *
     getEnemyMagicDamageMultiplier(currentEnemy, skillDefinition.damageType)
   const damageTakenMultiplier =
-    (player.mitigation ? 0.62 : 1) *
+    getPlayerMitigationDamageMultiplier(player, skillDefinition.damageType) *
+    getBearTalentPlayerDamageMultiplier(passiveTalentIds, skillDefinition.damageType) *
     modifiers.playerDamageTakenMultiplier *
     tuning.enemyDamageMultiplier *
     enemyOutgoingDamageMultiplier *
@@ -2796,6 +2968,23 @@ function resolveCompletedCast(
       )
       const dealtDamage = Math.max(0, previousPlayerHp - nextPlayer.hp)
       if (dealtDamage > 0) {
+        const sleeper = nextPlayer.buffs.find((status) => status.id === 'druid_bear_t_rage_of_the_sleeper' && isStatusActive(status))
+        if (sleeper) {
+          const retaliationDamage = dealtDamage * getStatusValue(sleeper, 'valueB', 0.25)
+          nextEnemies = nextEnemies.map((enemy, index) => index === enemyIndex
+            ? cleanupDeadEnemy(applyThreatGain({ ...enemy, hp: Math.max(0, enemy.hp - retaliationDamage) }, retaliationDamage * 5))
+            : enemy)
+          combatLogEvents.push({
+            id: `${occurredAtMs}:damage:${currentEnemy.id}:druid_bear_t_rage_of_the_sleeper:retaliation`,
+            occurredAtMs,
+            type: 'damage',
+            source: { kind: 'player', id: 'player', name: '玩家' },
+            target: { kind: 'enemy', id: currentEnemy.id, name: currentEnemy.name },
+            ability: { kind: 'playerSkill', id: 'druid_bear_t_rage_of_the_sleeper', name: '沉睡者之怒' },
+            amount: retaliationDamage,
+            damageType: 'physical',
+          })
+        }
         nextPlayer = applySpearBreachToTankHit(
           currentEnemy,
           nextPlayer,
@@ -2906,7 +3095,7 @@ function resolveCompletedCast(
       nextPlayer =
         status.effectLogicId === 'Murk-Eye_status'
           ? applyMurkEyePlayerEffect(nextPlayer, nextEnemies)
-          : applyPlayerDebuffImmediateEffects(appendOrReplacePlayerDebuff(nextPlayer, status))
+          : applyPlayerDebuffImmediateEffects(appendOrReplacePlayerDebuff(nextPlayer, status, passiveTalentIds))
       combatLogEvents.push(
         ...createPlayerStatusImmediateEvents(
           occurredAtMs,
@@ -3114,7 +3303,7 @@ export function getSkillActivationBlockReason(state: EncounterState, skillId: Sk
     return '战斗已暂停，无法继续施放技能。'
   }
 
-  if (playerHasDebuff(state.player, 'stunned')) {
+  if (playerHasDebuff(state.player, 'stunned') && skillId !== 'druid_bear_t_berserk') {
     return '玩家当前处于眩晕状态，无法施放技能。'
   }
 
@@ -3274,7 +3463,8 @@ function getPassivePartyStatuses(passiveTalentIds: PassiveTalentId[]) {
     getStatusesForTalent(talentId)
       .filter(
         (definition) =>
-          definition.statusCategory === 'partyBuff' || definition.statusCategory === 'partyDebuff',
+          (definition.statusCategory === 'partyBuff' || definition.statusCategory === 'partyDebuff') &&
+          !['druid_bear_t_pack_presence', 'druid_bear_t_ursoc_shelter'].includes(definition.statusId),
       )
       .map((definition) => createPlayerBuildStatusEffect(definition.statusId))
       .filter((status): status is StatusEffect => Boolean(status)),
@@ -3353,7 +3543,72 @@ export function applyBuildConfiguration(
   })
 }
 
+function syncBearConditionalTalentStatuses(state: EncounterState): EncounterState {
+  const hasMoonfire = state.enemies.some((enemy) =>
+    enemy.hp > 0 && enemy.statuses.some((status) => status.id === 'druid_bear_t_moonfire' && isStatusActive(status)),
+  )
+  const moonlit = createPlayerBuildStatusEffect('druid_bear_t_moonlit_resolve')
+  const hasPackPresence = state.player.mitigation?.id === 'druid_bear_t_ironfur' &&
+    (state.player.mitigation.stacks ?? 0) >= 2
+  const packPresence = createPlayerBuildStatusEffect('druid_bear_t_pack_presence')
+  const guardianThreshold = getBearTalentValue('druid_bear_t_guardian_of_the_grove', 'valueB', 0.8)
+  const hasGuardian = state.player.maxHp > 0 && state.player.hp / state.player.maxHp > guardianThreshold
+  const guardian = createPlayerBuildStatusEffect('druid_bear_t_guardian_of_the_grove')
+  return {
+    ...state,
+    player: {
+      ...state.player,
+      buffs: [
+        ...state.player.buffs.filter((status) => status.id !== 'druid_bear_t_moonlit_resolve'),
+        ...(hasMoonfire && state.passiveTalentIds.includes('druid_bear_t_moonlit_resolve') && moonlit
+          ? [{ ...moonlit, damageReductionRatio: getBearTalentValue('druid_bear_t_moonlit_resolve', 'valueA', 0.05), damageReductionTypes: ['physical', 'magic'] as EnemySkillDamageType[] }]
+          : []),
+      ],
+    },
+    party: {
+      ...state.party,
+      statuses: [
+        ...state.party.statuses.filter((status) => !['druid_bear_t_pack_presence', 'druid_bear_t_guardian_of_the_grove'].includes(status.id)),
+        ...(hasPackPresence && state.passiveTalentIds.includes('druid_bear_t_pack_presence') && packPresence
+          ? [{ ...packPresence, damageTakenMultiplierBonus: -getBearTalentValue('druid_bear_t_pack_presence', 'valueA', 0.08) }]
+          : []),
+        ...(hasGuardian && state.passiveTalentIds.includes('druid_bear_t_guardian_of_the_grove') && guardian
+          ? [{ ...guardian, damageTakenMultiplierBonus: -getBearTalentValue('druid_bear_t_guardian_of_the_grove', 'valueA', 0.06) }]
+          : []),
+      ],
+    },
+  }
+}
+
+function applyBearLastStand(state: EncounterState): EncounterState {
+  if (
+    state.player.hp > 0 ||
+    !state.passiveTalentIds.includes('druid_bear_t_last_bear_stand') ||
+    (state.runtime.classRuntime.lastBearStandUsed ?? 0) > 0
+  ) {
+    return state
+  }
+  const ironfur = createPlayerBuildStatusEffect('druid_bear_t_ironfur', 8000)
+  return {
+    ...state,
+    player: {
+      ...state.player,
+      hp: 1,
+      mitigation: ironfur
+        ? { ...ironfur, stacks: 1, maxStacks: 3, damageReductionRatio: 0.15, damageReductionTypes: ['physical'] }
+        : state.player.mitigation,
+    },
+    runtime: {
+      ...state.runtime,
+      classRuntime: { ...state.runtime.classRuntime, lastBearStandUsed: 1 },
+    },
+    result: null,
+  }
+}
+
 function finalizeEncounterState(state: EncounterState): EncounterState {
+  state = applyBearLastStand(state)
+  state = syncBearConditionalTalentStatuses(state)
   const immediatePlayer = applyPlayerDebuffImmediateEffects(state.player)
   const immediateParty = applyPartyStatusImmediateEffects(state.party)
   const nextPlayer = {
@@ -3640,6 +3895,52 @@ export function tickEncounter(state: EncounterState, deltaMs = TICK_INTERVAL_MS)
     buffs: tickStatuses(commandFlushedState.player.buffs, deltaMs),
     debuffs: tickStatuses(commandFlushedState.player.debuffs, deltaMs),
   }
+  const previousMitigation = commandFlushedState.player.mitigation
+  let nextClassRuntime = {
+    ...commandFlushedState.runtime.classRuntime,
+    wildRecoveryCooldownMs: Math.max(
+      0,
+      (commandFlushedState.runtime.classRuntime.wildRecoveryCooldownMs ?? 0) - deltaMs,
+    ),
+  }
+  const bearPeriodicHealing = applyBearPlayerBuffContinuousEffects(
+    nextPlayer,
+    commandFlushedState.party,
+    commandFlushedState.player,
+    commandFlushedState.enemies,
+    commandFlushedState.passiveTalentIds,
+    deltaMs,
+  )
+  nextPlayer = bearPeriodicHealing.player
+  nextPlayer = syncExpiredBearMaxHpBuffs(commandFlushedState.player, nextPlayer)
+  nextPlayer = applyBearBarkskinDispel(commandFlushedState.player, nextPlayer, commandFlushedState.passiveTalentIds)
+  if (
+    bearPeriodicHealing.effectivePlayerHealing > 0 &&
+    commandFlushedState.passiveTalentIds.includes('druid_bear_t_wild_recovery') &&
+    nextClassRuntime.wildRecoveryCooldownMs <= 0
+  ) {
+    nextPlayer = applyBearWildRecoveryBuff(nextPlayer)
+    nextClassRuntime = {
+      ...nextClassRuntime,
+      wildRecoveryCooldownMs: getBearTalentValue('druid_bear_t_wild_recovery', 'valueB', 10) * 1000,
+    }
+  }
+  if (
+    previousMitigation?.id === 'druid_bear_t_ironfur' &&
+    !nextPlayer.mitigation &&
+    commandFlushedState.passiveTalentIds.includes('druid_bear_t_ironfur_reserve')
+  ) {
+    const reserve = createPlayerBuildStatusEffect(
+      'druid_bear_t_ironfur_reserve',
+      getBearTalentValue('druid_bear_t_ironfur_reserve', 'valueB', 3) * 1000,
+    )
+    if (reserve) {
+      nextPlayer = {
+        ...nextPlayer,
+        buffs: [...nextPlayer.buffs.filter((status) => status.id !== reserve.id), { ...reserve, damageReductionRatio: getBearTalentValue('druid_bear_t_ironfur_reserve', 'valueA', 0.08), damageReductionTypes: ['physical'] }],
+      }
+    }
+  }
 
   let periodicPlayerStunRemainingMs =
     modifiers.periodicPlayerStunIntervalMs > 0
@@ -3664,25 +3965,25 @@ export function tickEncounter(state: EncounterState, deltaMs = TICK_INTERVAL_MS)
       totalMs: modifiers.periodicPlayerStunDurationMs,
       tone: 'danger',
       kind: 'playerDebuff',
-    })
+    }, commandFlushedState.passiveTalentIds)
     periodicPlayerStunRemainingMs = modifiers.periodicPlayerStunIntervalMs
   }
 
   let nextParty = {
-    ...commandFlushedState.party,
+    ...bearPeriodicHealing.party,
     pressure: clamp(
-      commandFlushedState.party.pressure +
+      bearPeriodicHealing.party.pressure +
         0,
       0,
       commandFlushedState.party.maxPressure,
     ),
     hp: clampSuppressedHealing(
       commandFlushedState.party.hp,
-      commandFlushedState.party.hp + modifiers.partyHpDriftPerSecond * (deltaMs / 1000),
-      commandFlushedState.party.maxHp,
+      bearPeriodicHealing.party.hp + modifiers.partyHpDriftPerSecond * (deltaMs / 1000),
+      bearPeriodicHealing.party.maxHp,
       isPartyHealingSuppressedByMurlocWatch(commandFlushedState.enemies),
     ),
-    statuses: tickStatuses(commandFlushedState.party.statuses, deltaMs),
+    statuses: tickStatuses(bearPeriodicHealing.party.statuses, deltaMs),
   }
 
   const partyStatusIntervalResolvedState = applyPartyStatusIntervalEffects({
@@ -3690,6 +3991,10 @@ export function tickEncounter(state: EncounterState, deltaMs = TICK_INTERVAL_MS)
     ...commandFlushedState,
     player: nextPlayer,
     party: nextParty,
+    runtime: {
+      ...commandFlushedState.runtime,
+      classRuntime: nextClassRuntime,
+    },
   }, deltaMs)
   nextPlayer = partyStatusIntervalResolvedState.player
   nextParty = partyStatusIntervalResolvedState.party
@@ -3829,6 +4134,7 @@ export function tickEncounter(state: EncounterState, deltaMs = TICK_INTERVAL_MS)
       recoveryRemainingMs: Math.max(0, enemy.recoveryRemainingMs - deltaMs),
     }, nextPlayer, nextParty, commandFlushedState.stage.partyAutoDamageMax),
   )
+  nextEnemies = applyBearEnemyDotEffects(nextEnemies, damageSourceResolution.enemies, deltaMs)
 
   for (let index = 0; index < nextEnemies.length; index += 1) {
     let nextEnemy = nextEnemies[index]
@@ -4003,7 +4309,7 @@ export function tickEncounter(state: EncounterState, deltaMs = TICK_INTERVAL_MS)
     )
   }
 
-  const pressureDecayState = applyPassivePartyPressureDecay(
+  let pressureDecayState = applyPassivePartyPressureDecay(
     {
       ...commandFlushedState,
       player: nextPlayer,
@@ -4030,12 +4336,54 @@ export function tickEncounter(state: EncounterState, deltaMs = TICK_INTERVAL_MS)
   )
   nextParty = pressureDecayState.party
 
+  const enqueueBearRage = (amount: number, reason: string) => {
+    pressureDecayState = applyBearRageGain(
+      pressureDecayState,
+      amount,
+      undefined,
+      reason,
+      (currentState, resourceAmount, resourceReason, sourceSkillId) =>
+        enqueueEncounterEvent(currentState, {
+          type: 'player/resource-changed',
+          occurredAtMs: currentState.timeMs,
+          amount: resourceAmount,
+          sourceSkillId,
+          reason: resourceReason,
+        }),
+    )
+  }
+  const tookEffectiveDamage = combatLogEvents.some(
+    (event) => event.type === 'damage' && event.target.kind === 'tank' && event.amount > 0,
+  )
+  if (
+    tookEffectiveDamage &&
+    commandFlushedState.player.buffs.some((status) => status.id === 'druid_bear_t_frenzied_regeneration' && isStatusActive(status)) &&
+    commandFlushedState.passiveTalentIds.includes('druid_bear_t_blood_scent') &&
+    (pressureDecayState.runtime.classRuntime.bloodScentTriggered ?? 0) <= 0
+  ) {
+    enqueueBearRage(getBearTalentValue('druid_bear_t_blood_scent', 'valueA', 8), 'bear_blood_scent')
+    pressureDecayState = {
+      ...pressureDecayState,
+      runtime: {
+        ...pressureDecayState.runtime,
+        classRuntime: { ...pressureDecayState.runtime.classRuntime, bloodScentTriggered: 1 },
+      },
+    }
+  }
+  if (
+    commandFlushedState.player.classId === 'druid_bear_t' &&
+    combatLogEvents.some((event) => event.type === 'absorb-consumed' && event.fullyConsumed) &&
+    commandFlushedState.passiveTalentIds.includes('druid_bear_t_broken_bark')
+  ) {
+    enqueueBearRage(getBearTalentValue('druid_bear_t_broken_bark', 'valueA', 12), 'bear_broken_bark')
+  }
+
   return drainEncounterEvents(
     finalizeEncounterState({
       ...pressureDecayState,
       timeMs: commandFlushedState.timeMs + deltaMs,
-      player: nextPlayer,
-      party: nextParty,
+      player: pressureDecayState.player,
+      party: pressureDecayState.party,
       enemies: nextEnemies,
       skills: nextSkillsWithCharges,
       runtime: {

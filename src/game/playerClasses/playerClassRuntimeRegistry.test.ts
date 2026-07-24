@@ -18,7 +18,7 @@ describe('playerClassRuntimeRegistry', () => {
         maxResource: 100,
       },
     })
-    expect(getPlayerClassRuntimeDefinitions().map((entry) => entry.classId)).toEqual(['warrior_t'])
+    expect(getPlayerClassRuntimeDefinitions().map((entry) => entry.classId)).toEqual(['warrior_t', 'druid_bear_t'])
   })
 
   it('throws instead of silently using warrior metadata for an unknown class', () => {

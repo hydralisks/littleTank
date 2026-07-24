@@ -18,6 +18,8 @@ type PassiveTalentLogicHandler = (
   helpers: PassiveTalentLogicHelpers,
 ) => PassiveTalentModifiers
 
+const runtimeOnlyTalent: PassiveTalentLogicHandler = (_talent, modifiers) => modifiers
+
 const PASSIVE_TALENT_LOGIC_REGISTRY: Record<string, PassiveTalentLogicHandler> = {
   player_max_hp_up: (talent, modifiers, helpers) => ({
     ...modifiers,
@@ -231,6 +233,41 @@ const PASSIVE_TALENT_LOGIC_REGISTRY: Record<string, PassiveTalentLogicHandler> =
       thunderstruckThreatMultiplierOverride: firstNonZeroEffectValue(effects, 'valueB', 2),
     }
   },
+  bear_physical_reduction: (talent, modifiers, helpers) => ({
+    ...modifiers,
+    bearPhysicalDamageReduction: Math.max(
+      modifiers.bearPhysicalDamageReduction,
+      firstNonZeroEffectValue(helpers.resolveTalentEffects(talent.id), 'valueA', 0.08),
+    ),
+  }),
+  bear_threat_multiplier: (talent, modifiers, helpers) => ({
+    ...modifiers,
+    bearThreatMultiplier: modifiers.bearThreatMultiplier * (
+      1 + firstNonZeroEffectValue(helpers.resolveTalentEffects(talent.id), 'valueA', 0.2)
+    ),
+  }),
+  bear_generator_bonus: runtimeOnlyTalent,
+  bear_control_duration_reduction: (talent, modifiers, helpers) => ({
+    ...modifiers,
+    bearControlDurationMultiplier: modifiers.bearControlDurationMultiplier * (
+      1 - firstNonZeroEffectValue(helpers.resolveTalentEffects(talent.id), 'valueA', 0.25)
+    ),
+  }),
+  bear_ironfur_reserve: runtimeOnlyTalent,
+  bear_blood_scent: runtimeOnlyTalent,
+  bear_skull_bash_instinct: runtimeOnlyTalent,
+  bear_broken_bark: runtimeOnlyTalent,
+  bear_pack_presence: runtimeOnlyTalent,
+  bear_moonlit_resolve: runtimeOnlyTalent,
+  bear_bark_dispelling: runtimeOnlyTalent,
+  bear_regenerative_bond: runtimeOnlyTalent,
+  bear_ursoc_shelter: runtimeOnlyTalent,
+  bear_wild_recovery: runtimeOnlyTalent,
+  bear_regrowth_of_the_pack: runtimeOnlyTalent,
+  bear_guardian_of_the_grove: runtimeOnlyTalent,
+  bear_feral_aftershock: runtimeOnlyTalent,
+  bear_last_bear_stand: runtimeOnlyTalent,
+  bear_spring_returns: runtimeOnlyTalent,
 }
 
 function createPassiveStatuses(

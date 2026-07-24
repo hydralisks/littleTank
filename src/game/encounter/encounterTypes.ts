@@ -236,6 +236,9 @@ export interface PassiveTalentModifiers {
   shockwaveUsesMatrix3x3: boolean
   thunderstruckDamageMultiplier: number
   thunderstruckThreatMultiplierOverride: number | null
+  bearPhysicalDamageReduction: number
+  bearThreatMultiplier: number
+  bearControlDurationMultiplier: number
 }
 
 export interface PlayerBuildStatusDefinition {
@@ -432,6 +435,7 @@ export interface CombatAbsorbCreatedEvent extends CombatLogEventBase {
 export interface CombatAbsorbConsumedEvent extends CombatLogEventBase {
   type: 'absorb-consumed'
   amount: number
+  fullyConsumed?: boolean
 }
 
 export type CombatLogEvent =
