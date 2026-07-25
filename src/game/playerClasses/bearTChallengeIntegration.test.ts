@@ -114,12 +114,20 @@ describe('Bear T challenge workbook snapshots', () => {
       .find((row) => row.affixId === 'affix_dislike')
     const placements = readSheetRows('challenge_encounter_balance.xlsx', '敌人布置')
     const openings = readSheetRows('challenge_encounter_balance.xlsx', '关卡开场')
+    const activeEffects = readSheetRows('player_build.xlsx', '主动技能效果')
 
     expect(Number(affix?.valueA)).toBe(3)
     expect(Number(affix?.valueB)).toBe(2)
     expect(String(affix?.description)).toContain('2倍仇恨')
     expect(placements.find((row) => row.spawnId === 'Challenge-2-e03')?.enemyId).toBe('murloc_tidehunter')
+    expect(placements.find((row) => row.spawnId === 'Challenge-2-e01')?.enemyId).toBe('kobold_miner')
+    expect(placements.find((row) => row.spawnId === 'Challenge-2-e02')?.enemyId).toBe('kobold_apprentice')
     expect(placements.find((row) => row.spawnId === 'Challenge-3-e03')?.enemyId).toBe('murloc_tidehunter')
+    expect(placements.find((row) => row.spawnId === 'Challenge-3-e04')?.enemyId).toBe('murloc_tidehunter')
+    expect(placements.filter((row) => String(row.spawnId).startsWith('Challenge-1-')).map((row) => (
+      Number(row.hpOverride)
+    ))).toEqual([80, 80, 120, 120, 160])
+    expect(Number(activeEffects.find((row) => row.skillEffectId === 'druid_bear_t_ironfur_main')?.valueA)).toBe(20)
     expect(openings.find((row) => row.stageId === 'Challenge-2')).toMatchObject({
       playerHp: '140',
       playerMaxHp: '140',

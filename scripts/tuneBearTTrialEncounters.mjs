@@ -30,6 +30,19 @@ function writeStringCell(sheet, row, col, value) {
   sheet[address] = { ...existing, t: 's', v: value, w: value }
 }
 
+function selectSheet(table, sheetName) {
+  const sheet = table.workbook.Sheets[sheetName]
+  if (!sheet?.['!ref']) {
+    throw new Error(`Missing ${sheetName} sheet in ${path.basename(table.workbookPath)}`)
+  }
+  table.sheet = sheet
+  table.range = XLSX.utils.decode_range(sheet['!ref'])
+  table.columns = new Map()
+  for (let col = table.range.s.c; col <= table.range.e.c; col += 1) {
+    table.columns.set(String(readCell(sheet, table.range.s.r, col)), col)
+  }
+}
+
 function findRow(table, keyColumn, keyValue) {
   const column = table.columns.get(keyColumn)
   if (column === undefined) {
@@ -66,16 +79,24 @@ updateRow(encounter, 'affixId', 'affix_dislike', {
   valueB: 2,
 })
 
-const placementSheet = encounter.workbook.Sheets['敌人布置']
-if (!placementSheet?.['!ref']) {
-  throw new Error('Missing 敌人布置 sheet in challenge_encounter_balance.xlsx')
+selectSheet(encounter, '敌人布置')
+for (const [spawnId, hpOverride] of [
+  ['Challenge-1-e01', 80],
+  ['Challenge-1-e02', 80],
+  ['Challenge-1-e03', 120],
+  ['Challenge-1-e04', 120],
+  ['Challenge-1-e05', 160],
+]) {
+  updateRow(encounter, 'spawnId', spawnId, { hpOverride, maxHpOverride: hpOverride })
 }
-encounter.sheet = placementSheet
-encounter.range = XLSX.utils.decode_range(placementSheet['!ref'])
-encounter.columns = new Map()
-for (let col = encounter.range.s.c; col <= encounter.range.e.c; col += 1) {
-  encounter.columns.set(String(readCell(placementSheet, encounter.range.s.r, col)), col)
-}
+updateRow(encounter, 'spawnId', 'Challenge-2-e01', {
+  enemyId: 'kobold_miner',
+  nameOverride: '狗头人矿工',
+})
+updateRow(encounter, 'spawnId', 'Challenge-2-e02', {
+  enemyId: 'kobold_apprentice',
+  nameOverride: '狗头人学徒',
+})
 updateRow(encounter, 'spawnId', 'Challenge-2-e03', {
   enemyId: 'murloc_tidehunter',
   nameOverride: '鱼人猎潮者',
@@ -84,17 +105,12 @@ updateRow(encounter, 'spawnId', 'Challenge-3-e03', {
   enemyId: 'murloc_tidehunter',
   nameOverride: '鱼人猎潮者',
 })
+updateRow(encounter, 'spawnId', 'Challenge-3-e04', {
+  enemyId: 'murloc_tidehunter',
+  nameOverride: '鱼人猎潮者',
+})
 
-const openingSheet = encounter.workbook.Sheets['关卡开场']
-if (!openingSheet?.['!ref']) {
-  throw new Error('Missing 关卡开场 sheet in challenge_encounter_balance.xlsx')
-}
-encounter.sheet = openingSheet
-encounter.range = XLSX.utils.decode_range(openingSheet['!ref'])
-encounter.columns = new Map()
-for (let col = encounter.range.s.c; col <= encounter.range.e.c; col += 1) {
-  encounter.columns.set(String(readCell(openingSheet, encounter.range.s.r, col)), col)
-}
+selectSheet(encounter, '关卡开场')
 updateRow(encounter, 'stageId', 'Challenge-2', {
   playerHp: 140,
   playerMaxHp: 140,
@@ -110,11 +126,18 @@ save(encounter)
 const stageContent = openSheet('challenge_stage_content.xlsx', '关卡')
 updateRow(stageContent, 'stageId', 'Challenge-2', {
   affix1Description: '你的队伍开场的三次攻击会产生2倍仇恨',
-  enemySummary: '狗头人武僧、狗头人学徒、鱼人猎潮者、寒光先知、狗头人拾荒者',
+  enemySummary: '狗头人矿工、狗头人学徒、鱼人猎潮者、寒光先知、狗头人拾荒者',
 })
 updateRow(stageContent, 'stageId', 'Challenge-3', {
-  enemySummary: '老瞎眼、寒光智者、鱼人领军、鱼人猎潮者、鱼人斥候',
+  enemySummary: '老瞎眼、鱼人领军、鱼人猎潮者、鱼人斥候',
 })
 save(stageContent)
+
+const playerBuild = openSheet('player_build.xlsx', '主动技能效果')
+updateRow(playerBuild, 'skillEffectId', 'druid_bear_t_ironfur_main', {
+  valueA: 20,
+  notes: '每层20%物理减伤，最多3层。',
+})
+save(playerBuild)
 
 console.log('Applied Bear T trial encounter baseline tuning for Challenge-2 and Challenge-3')

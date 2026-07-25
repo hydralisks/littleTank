@@ -1,6 +1,6 @@
 # 挑战模式第1~3关基础数值统计
 
-生成时间：2026-07-25T06:54:47.381Z
+生成时间：2026-07-25T07:32:24.906Z
 
 本报告由自动评测战斗样本聚合生成，用于观察关卡基础数值规模。数值会受 build、AI 档位、通关/失败时长影响，因此优先看同一批报告内的横向对比。
 
@@ -18,213 +18,213 @@
 
 | 关卡 | 名称 | 参考模式 | profile | build | 通过率 | 平均时长(s) | 资源/秒 | 承伤/秒 | 治疗吸收/秒 | 造成伤害/秒 | 压力/秒 |
 | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `Challenge-1 / warrior_t / standard_5slot` | 鱼人登陆队 | `fixed` | `skilled/skilled3-200ms-8pct` | `generated_8_1` | 58% | 41.93 | 3.12 | 3.67 | 3.00 | 18.80 | 0.26 |
-| `Challenge-1 / druid_bear_t / standard_5slot` | 鱼人登陆队 | `fixed` | `average/average3-500ms-15pct` | `default` | 100% | 55.90 | 5.80 | 3.07 | 3.00 | 19.08 | 0.06 |
-| `Challenge-2 / warrior_t / standard_5slot` | 烛火与潮汐 | `fixed` | `skilled/skilled1-450ms-3pct` | `generated_4_1` | 100% | 44.18 | 3.48 | 5.96 | 4.73 | 17.89 | 0.18 |
-| `Challenge-2 / druid_bear_t / standard_5slot` | 烛火与潮汐 | `fixed` | `average/average1-1000ms-5pct` | `default` | 50% | 45.15 | 5.26 | 7.58 | 4.79 | 16.86 | 0.60 |
-| `Challenge-3 / warrior_t / standard_5slot` | 老瞎眼演练 | `fixed` | `expert/expert1-200ms-1pct` | `generated_7_1` | 50% | 33.91 | 3.83 | 5.73 | 3.82 | 35.29 | 1.01 |
-| `Challenge-3 / druid_bear_t / standard_5slot` | 老瞎眼演练 | `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_kill-high-impact` | `default` | 0% | 19.83 | 7.67 | 9.05 | 3.25 | 32.46 | 2.25 |
+| `Challenge-1 / warrior_t / standard_5slot` | 鱼人登陆队 | `fixed` | `skilled/skilled1-450ms-3pct` | `generated_1_1` | 100% | 36.93 | 3.32 | 3.34 | 3.00 | 19.35 | 0.01 |
+| `Challenge-1 / druid_bear_t / standard_5slot` | 鱼人登陆队 | `fixed` | `expert/expert1-200ms-1pct` | `default` | 100% | 41.88 | 6.09 | 2.64 | 3.00 | 19.43 | 0.05 |
+| `Challenge-2 / warrior_t / standard_5slot` | 烛火与潮汐 | `fixed` | `average/average3-500ms-15pct` | `generated_2_1` | 100% | 38.23 | 3.64 | 3.09 | 3.08 | 17.99 | 0.32 |
+| `Challenge-2 / druid_bear_t / standard_5slot` | 烛火与潮汐 | `fixed` | `skilled/skilled1-450ms-3pct` | `generated_1_1` | 100% | 47.89 | 5.17 | 4.23 | 4.21 | 16.90 | 0.25 |
+| `Challenge-3 / warrior_t / standard_5slot` | 老瞎眼演练 | `fixed` | `expert/expert3-100ms-3pct` | `generated_7_1` | 100% | 48.42 | 2.89 | 4.52 | 4.09 | 30.19 | 0.23 |
+| `Challenge-3 / druid_bear_t / standard_5slot` | 老瞎眼演练 | `fixed` | `expert/expert2-150ms-2pct` | `default` | 100% | 56.75 | 5.79 | 3.85 | 3.94 | 25.72 | 0.40 |
 
 ## `Challenge-1 / warrior_t / standard_5slot` 鱼人登陆队
 
 | 模式 | profile | build | 样本数 | 通过率 | 平均时长(s) | 资源/秒 | 承伤/秒 | 治疗吸收/秒 | 造成伤害/秒 | 压力/秒 |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `fixed` | `average/average1-1000ms-5pct` | `generated_7_1` | 12 | 50% | 40.96 | 3.06 | 3.91 | 3.00 | 19.04 | 0.33 |
-| `fixed` | `average/average1-1000ms-5pct` | `generated_8_1` | 12 | 42% | 39.71 | 3.21 | 3.85 | 3.00 | 18.84 | 0.27 |
-| `fixed` | `average/average1-1000ms-5pct` | `default` | 12 | 8% | 37.24 | 3.27 | 4.33 | 3.00 | 14.14 | 0.05 |
-| `fixed` | `average/average2-800ms-10pct` | `generated_7_1` | 12 | 42% | 40.39 | 3.20 | 3.99 | 3.00 | 19.22 | 0.26 |
-| `fixed` | `average/average2-800ms-10pct` | `generated_8_1` | 12 | 33% | 39.69 | 3.24 | 4.04 | 3.00 | 19.06 | 0.16 |
-| `fixed` | `average/average2-800ms-10pct` | `default` | 12 | 0% | 35.38 | 3.45 | 4.46 | 3.00 | 13.75 | 0.27 |
-| `fixed` | `average/average3-500ms-15pct` | `generated_7_1` | 12 | 50% | 41.07 | 3.17 | 3.93 | 3.00 | 19.21 | 0.24 |
-| `fixed` | `average/average3-500ms-15pct` | `generated_8_1` | 12 | 42% | 41.20 | 3.16 | 3.89 | 3.00 | 18.87 | 0.17 |
-| `fixed` | `average/average3-500ms-15pct` | `default` | 12 | 0% | 33.58 | 3.59 | 4.52 | 3.00 | 14.07 | 0.02 |
-| `fixed` | `expert/expert1-200ms-1pct` | `generated_7_1` | 12 | 42% | 40.42 | 3.17 | 3.90 | 3.00 | 18.74 | 0.22 |
-| `fixed` | `expert/expert1-200ms-1pct` | `generated_8_1` | 12 | 42% | 40.10 | 3.19 | 4.06 | 3.00 | 19.05 | 0.25 |
-| `fixed` | `expert/expert1-200ms-1pct` | `default` | 12 | 0% | 35.57 | 3.48 | 4.44 | 3.00 | 13.86 | 0.37 |
-| `fixed` | `expert/expert2-150ms-2pct` | `generated_8_1` | 12 | 50% | 42.38 | 3.11 | 3.85 | 3.00 | 19.08 | 0.32 |
-| `fixed` | `expert/expert2-150ms-2pct` | `default` | 12 | 8% | 36.95 | 3.35 | 4.28 | 3.00 | 14.18 | 0.24 |
-| `fixed` | `expert/expert2-150ms-2pct` | `generated_7_1` | 12 | 0% | 35.43 | 3.46 | 4.45 | 3.00 | 18.70 | 0.18 |
-| `fixed` | `expert/expert3-100ms-3pct` | `generated_7_1` | 12 | 58% | 42.19 | 3.13 | 3.87 | 3.00 | 19.16 | 0.36 |
-| `fixed` | `expert/expert3-100ms-3pct` | `generated_8_1` | 12 | 42% | 40.80 | 3.19 | 3.96 | 3.00 | 18.87 | 0.10 |
-| `fixed` | `expert/expert3-100ms-3pct` | `default` | 12 | 0% | 33.78 | 3.59 | 4.52 | 3.00 | 13.96 | 0.15 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_7_1` | 12 | 58% | 41.74 | 3.13 | 3.79 | 3.00 | 18.87 | 0.17 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_8_1` | 12 | 42% | 39.03 | 3.29 | 3.89 | 3.00 | 19.19 | 0.22 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `default` | 12 | 0% | 35.53 | 3.47 | 4.43 | 3.00 | 13.75 | 0.40 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_8_1` | 12 | 50% | 42.57 | 3.09 | 3.86 | 3.00 | 18.92 | 0.21 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_7_1` | 12 | 42% | 40.25 | 3.20 | 3.96 | 3.00 | 19.02 | 0.28 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `default` | 12 | 0% | 34.70 | 3.53 | 4.46 | 3.00 | 14.23 | 0.18 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_8_1` | 12 | 58% | 41.93 | 3.12 | 3.67 | 3.00 | 18.80 | 0.26 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_7_1` | 12 | 42% | 39.98 | 3.18 | 4.03 | 3.00 | 19.17 | 0.13 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `default` | 12 | 0% | 34.12 | 3.56 | 4.50 | 3.00 | 13.88 | 0.39 |
-| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_strict-threat` | `generated_7_1` | 12 | 50% | 40.07 | 3.23 | 3.88 | 3.00 | 19.26 | 0.21 |
-| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_strict-threat` | `default` | 12 | 0% | 33.83 | 3.59 | 4.51 | 3.00 | 14.04 | 0.14 |
+| `fixed` | `average/average1-1000ms-5pct` | `generated_1_1` | 12 | 92% | 39.15 | 3.14 | 3.57 | 3.00 | 18.55 | 0.07 |
+| `fixed` | `average/average1-1000ms-5pct` | `generated_2_1` | 12 | 83% | 37.65 | 3.26 | 3.57 | 3.00 | 19.24 | 0.15 |
+| `fixed` | `average/average1-1000ms-5pct` | `default` | 12 | 17% | 38.04 | 3.30 | 4.18 | 3.00 | 14.25 | 0.12 |
+| `fixed` | `average/average2-800ms-10pct` | `generated_1_1` | 12 | 83% | 38.19 | 3.35 | 3.71 | 3.00 | 19.14 | 0.26 |
+| `fixed` | `average/average2-800ms-10pct` | `generated_2_1` | 12 | 83% | 37.24 | 3.31 | 3.63 | 3.00 | 18.69 | 0.14 |
+| `fixed` | `average/average2-800ms-10pct` | `default` | 12 | 0% | 37.38 | 3.33 | 4.38 | 3.00 | 13.99 | 0.28 |
+| `fixed` | `average/average3-500ms-15pct` | `generated_2_1` | 12 | 83% | 37.73 | 3.37 | 3.52 | 3.00 | 19.00 | 0.17 |
+| `fixed` | `average/average3-500ms-15pct` | `generated_1_1` | 12 | 75% | 37.32 | 3.22 | 3.76 | 3.00 | 18.91 | 0.27 |
+| `fixed` | `average/average3-500ms-15pct` | `default` | 12 | 17% | 37.98 | 3.29 | 4.18 | 3.00 | 14.13 | 0.27 |
+| `fixed` | `expert/expert1-200ms-1pct` | `generated_1_1` | 12 | 100% | 38.17 | 3.23 | 3.42 | 3.00 | 19.05 | 0.35 |
+| `fixed` | `expert/expert1-200ms-1pct` | `generated_2_1` | 12 | 100% | 38.83 | 3.31 | 3.48 | 3.00 | 18.68 | 0.49 |
+| `fixed` | `expert/expert1-200ms-1pct` | `default` | 12 | 17% | 37.75 | 3.32 | 4.21 | 3.00 | 14.06 | 0.25 |
+| `fixed` | `expert/expert2-150ms-2pct` | `generated_2_1` | 12 | 100% | 38.10 | 3.30 | 3.54 | 3.00 | 19.13 | 0.15 |
+| `fixed` | `expert/expert2-150ms-2pct` | `generated_1_1` | 12 | 92% | 36.92 | 3.32 | 3.40 | 3.00 | 19.34 | 0.18 |
+| `fixed` | `expert/expert2-150ms-2pct` | `default` | 12 | 17% | 37.59 | 3.32 | 4.24 | 3.00 | 13.84 | 0.03 |
+| `fixed` | `expert/expert3-100ms-3pct` | `generated_1_1` | 12 | 83% | 37.65 | 3.31 | 3.57 | 3.00 | 18.91 | 0.25 |
+| `fixed` | `expert/expert3-100ms-3pct` | `generated_2_1` | 12 | 58% | 36.43 | 3.39 | 3.83 | 3.00 | 18.95 | 0.17 |
+| `fixed` | `expert/expert3-100ms-3pct` | `default` | 12 | 25% | 40.09 | 3.16 | 4.10 | 3.00 | 13.96 | 0.02 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_1_1` | 12 | 100% | 36.93 | 3.32 | 3.34 | 3.00 | 19.35 | 0.01 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_2_1` | 12 | 83% | 37.39 | 3.35 | 3.61 | 3.00 | 19.03 | 0.38 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `default` | 12 | 42% | 42.39 | 3.04 | 3.86 | 3.00 | 14.18 | 0.37 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_1_1` | 12 | 92% | 38.25 | 3.24 | 3.53 | 3.00 | 18.72 | 0.24 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_2_1` | 12 | 92% | 36.58 | 3.38 | 3.50 | 3.00 | 19.00 | 0.24 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `default` | 12 | 42% | 41.18 | 3.13 | 3.87 | 3.00 | 14.22 | 0.43 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_1_1` | 12 | 92% | 38.03 | 3.29 | 3.44 | 3.00 | 18.85 | 0.53 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_2_1` | 12 | 92% | 37.85 | 3.32 | 3.53 | 3.00 | 18.80 | 0.24 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `default` | 12 | 33% | 41.33 | 3.11 | 3.95 | 3.00 | 13.90 | 0.23 |
+| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_strict-threat` | `generated_1_1` | 12 | 75% | 36.33 | 3.37 | 3.46 | 3.00 | 19.08 | 0.29 |
+| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_strict-threat` | `default` | 12 | 25% | 39.27 | 3.24 | 4.01 | 3.00 | 14.04 | 0.05 |
 
 ## `Challenge-1 / druid_bear_t / standard_5slot` 鱼人登陆队
 
 | 模式 | profile | build | 样本数 | 通过率 | 平均时长(s) | 资源/秒 | 承伤/秒 | 治疗吸收/秒 | 造成伤害/秒 | 压力/秒 |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `fixed` | `average/average1-1000ms-5pct` | `default` | 12 | 100% | 58.50 | 5.73 | 3.12 | 3.00 | 19.02 | 0.04 |
-| `fixed` | `average/average1-1000ms-5pct` | `generated_2_1` | 12 | 100% | 54.37 | 5.73 | 3.24 | 3.00 | 19.27 | 0.06 |
-| `fixed` | `average/average1-1000ms-5pct` | `generated_1_1` | 12 | 92% | 52.93 | 5.84 | 3.24 | 3.00 | 19.33 | 0.07 |
-| `fixed` | `average/average2-800ms-10pct` | `default` | 12 | 100% | 55.83 | 5.72 | 3.20 | 3.00 | 19.33 | 0.01 |
-| `fixed` | `average/average2-800ms-10pct` | `generated_2_1` | 12 | 100% | 53.99 | 5.82 | 3.35 | 3.00 | 19.41 | 0.03 |
-| `fixed` | `average/average2-800ms-10pct` | `generated_1_1` | 12 | 75% | 50.81 | 5.94 | 3.40 | 3.00 | 19.40 | 0.00 |
-| `fixed` | `average/average3-500ms-15pct` | `default` | 12 | 100% | 55.90 | 5.80 | 3.07 | 3.00 | 19.08 | 0.06 |
-| `fixed` | `average/average3-500ms-15pct` | `generated_2_1` | 12 | 92% | 54.42 | 5.74 | 3.34 | 3.00 | 19.18 | 0.02 |
-| `fixed` | `average/average3-500ms-15pct` | `generated_1_1` | 12 | 83% | 53.34 | 5.83 | 3.32 | 3.00 | 19.10 | 0.05 |
-| `fixed` | `expert/expert1-200ms-1pct` | `default` | 12 | 100% | 53.45 | 5.81 | 3.14 | 3.00 | 19.27 | 0.03 |
-| `fixed` | `expert/expert1-200ms-1pct` | `generated_2_1` | 12 | 100% | 53.30 | 5.80 | 3.25 | 3.00 | 19.41 | 0.04 |
-| `fixed` | `expert/expert1-200ms-1pct` | `generated_1_1` | 12 | 92% | 51.65 | 5.81 | 3.26 | 3.00 | 19.50 | 0.05 |
-| `fixed` | `expert/expert2-150ms-2pct` | `default` | 12 | 100% | 50.17 | 5.91 | 3.16 | 3.00 | 19.17 | 0.02 |
-| `fixed` | `expert/expert2-150ms-2pct` | `generated_2_1` | 12 | 100% | 50.32 | 5.85 | 3.24 | 3.00 | 19.17 | 0.02 |
-| `fixed` | `expert/expert2-150ms-2pct` | `generated_1_1` | 12 | 75% | 46.73 | 6.04 | 3.37 | 3.00 | 19.66 | 0.08 |
-| `fixed` | `expert/expert3-100ms-3pct` | `default` | 12 | 100% | 49.19 | 6.06 | 3.11 | 3.00 | 19.57 | 0.02 |
-| `fixed` | `expert/expert3-100ms-3pct` | `generated_2_1` | 12 | 100% | 50.30 | 5.91 | 3.28 | 3.00 | 19.48 | 0.01 |
-| `fixed` | `expert/expert3-100ms-3pct` | `generated_1_1` | 12 | 92% | 48.71 | 5.97 | 3.33 | 3.00 | 19.55 | 0.00 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `default` | 12 | 100% | 53.34 | 5.76 | 3.10 | 3.00 | 19.55 | 0.01 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_1_1` | 12 | 100% | 54.38 | 5.79 | 3.21 | 3.00 | 19.39 | 0.01 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_2_1` | 12 | 92% | 55.35 | 5.83 | 3.24 | 3.00 | 19.10 | 0.01 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `default` | 12 | 100% | 54.63 | 5.79 | 3.14 | 3.00 | 19.45 | 0.03 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_1_1` | 12 | 83% | 53.22 | 5.86 | 3.36 | 3.00 | 19.50 | 0.03 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_2_1` | 12 | 83% | 52.36 | 5.87 | 3.32 | 3.00 | 19.16 | 0.02 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `default` | 12 | 100% | 55.08 | 5.77 | 3.22 | 3.00 | 19.58 | 0.03 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_1_1` | 12 | 92% | 52.26 | 5.85 | 3.35 | 3.00 | 19.56 | 0.04 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_2_1` | 12 | 83% | 52.14 | 5.87 | 3.37 | 3.00 | 19.43 | 0.03 |
-| `learning` | `average/learning-220ms-low-error__cast_broad-window__tactic_mechanic-focus` | `default` | 12 | 100% | 53.72 | 5.80 | 3.19 | 3.00 | 19.30 | 0.24 |
-| `learning` | `average/learning-220ms-low-error__cast_broad-window__tactic_mechanic-focus` | `generated_1_1` | 12 | 100% | 50.98 | 5.85 | 3.32 | 3.00 | 19.54 | 0.15 |
+| `fixed` | `average/average1-1000ms-5pct` | `default` | 12 | 100% | 44.88 | 6.11 | 2.86 | 3.00 | 19.02 | 0.02 |
+| `fixed` | `average/average1-1000ms-5pct` | `generated_1_1` | 12 | 100% | 43.98 | 6.06 | 3.05 | 3.00 | 19.45 | 0.06 |
+| `fixed` | `average/average1-1000ms-5pct` | `generated_2_1` | 12 | 100% | 42.67 | 6.03 | 2.89 | 3.00 | 19.10 | 0.02 |
+| `fixed` | `average/average2-800ms-10pct` | `default` | 12 | 100% | 41.74 | 6.21 | 2.84 | 3.00 | 19.55 | 0.01 |
+| `fixed` | `average/average2-800ms-10pct` | `generated_1_1` | 12 | 100% | 42.23 | 6.07 | 2.96 | 3.00 | 19.43 | 0.03 |
+| `fixed` | `average/average2-800ms-10pct` | `generated_2_1` | 12 | 100% | 39.61 | 6.25 | 2.94 | 3.00 | 19.85 | 0.01 |
+| `fixed` | `average/average3-500ms-15pct` | `default` | 12 | 100% | 41.99 | 6.07 | 2.73 | 3.00 | 19.52 | 0.04 |
+| `fixed` | `average/average3-500ms-15pct` | `generated_1_1` | 12 | 100% | 42.39 | 6.11 | 2.96 | 3.00 | 19.26 | 0.03 |
+| `fixed` | `average/average3-500ms-15pct` | `generated_2_1` | 12 | 100% | 43.44 | 6.03 | 2.93 | 3.00 | 19.36 | 0.04 |
+| `fixed` | `expert/expert1-200ms-1pct` | `default` | 12 | 100% | 41.88 | 6.09 | 2.64 | 3.00 | 19.43 | 0.05 |
+| `fixed` | `expert/expert1-200ms-1pct` | `generated_1_1` | 12 | 100% | 42.57 | 6.10 | 2.86 | 3.00 | 19.59 | 0.01 |
+| `fixed` | `expert/expert1-200ms-1pct` | `generated_2_1` | 12 | 100% | 41.17 | 6.07 | 2.78 | 3.00 | 19.54 | 0.02 |
+| `fixed` | `expert/expert2-150ms-2pct` | `default` | 12 | 100% | 39.92 | 6.18 | 2.76 | 3.00 | 19.54 | 0.03 |
+| `fixed` | `expert/expert2-150ms-2pct` | `generated_1_1` | 12 | 100% | 43.13 | 6.07 | 2.89 | 3.00 | 19.25 | 0.05 |
+| `fixed` | `expert/expert2-150ms-2pct` | `generated_2_1` | 12 | 100% | 41.53 | 6.13 | 2.90 | 3.00 | 19.80 | 0.02 |
+| `fixed` | `expert/expert3-100ms-3pct` | `default` | 12 | 100% | 40.64 | 6.19 | 2.76 | 3.00 | 19.51 | 0.02 |
+| `fixed` | `expert/expert3-100ms-3pct` | `generated_1_1` | 12 | 100% | 40.38 | 6.15 | 2.90 | 3.00 | 19.77 | 0.00 |
+| `fixed` | `expert/expert3-100ms-3pct` | `generated_2_1` | 12 | 100% | 41.75 | 6.17 | 2.81 | 3.00 | 19.31 | 0.01 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `default` | 12 | 100% | 41.02 | 6.21 | 2.81 | 3.00 | 19.50 | 0.01 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_1_1` | 12 | 100% | 42.13 | 6.07 | 2.88 | 3.00 | 19.54 | 0.03 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_2_1` | 12 | 100% | 43.19 | 6.05 | 2.83 | 3.00 | 19.40 | 0.03 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `default` | 12 | 100% | 41.52 | 6.17 | 2.80 | 3.00 | 19.70 | 0.05 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_1_1` | 12 | 100% | 42.10 | 6.06 | 2.77 | 3.00 | 19.33 | 0.03 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_2_1` | 12 | 100% | 43.38 | 6.07 | 2.84 | 3.00 | 19.22 | 0.07 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `default` | 12 | 100% | 41.62 | 6.19 | 2.86 | 3.00 | 19.73 | 0.04 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_1_1` | 12 | 100% | 43.48 | 5.96 | 2.94 | 3.00 | 19.34 | 0.06 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_2_1` | 12 | 100% | 43.62 | 6.09 | 2.88 | 3.00 | 19.55 | 0.02 |
+| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_kill-high-impact` | `default` | 12 | 100% | 41.60 | 6.08 | 2.93 | 3.00 | 19.55 | 0.10 |
+| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_kill-high-impact` | `generated_1_1` | 12 | 100% | 40.85 | 6.10 | 2.97 | 3.00 | 19.67 | 0.10 |
 
 ## `Challenge-2 / warrior_t / standard_5slot` 烛火与潮汐
 
 | 模式 | profile | build | 样本数 | 通过率 | 平均时长(s) | 资源/秒 | 承伤/秒 | 治疗吸收/秒 | 造成伤害/秒 | 压力/秒 |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `fixed` | `average/average1-1000ms-5pct` | `generated_4_1` | 12 | 92% | 42.12 | 3.53 | 6.00 | 4.77 | 18.00 | 0.18 |
-| `fixed` | `average/average1-1000ms-5pct` | `generated_7_1` | 12 | 92% | 42.18 | 3.55 | 6.55 | 4.77 | 17.87 | 0.08 |
-| `fixed` | `average/average1-1000ms-5pct` | `default` | 12 | 42% | 48.11 | 3.29 | 7.04 | 4.81 | 12.83 | 0.24 |
-| `fixed` | `average/average2-800ms-10pct` | `generated_4_1` | 12 | 100% | 42.25 | 3.54 | 6.14 | 4.78 | 17.79 | 0.29 |
-| `fixed` | `average/average2-800ms-10pct` | `generated_7_1` | 12 | 100% | 43.09 | 3.49 | 6.02 | 4.78 | 17.73 | 0.23 |
-| `fixed` | `average/average2-800ms-10pct` | `default` | 12 | 42% | 51.03 | 3.23 | 6.94 | 4.81 | 12.93 | 0.24 |
-| `fixed` | `average/average3-500ms-15pct` | `generated_7_1` | 12 | 100% | 45.35 | 3.46 | 6.21 | 4.77 | 17.99 | 0.22 |
-| `fixed` | `average/average3-500ms-15pct` | `generated_4_1` | 12 | 92% | 43.07 | 3.52 | 6.43 | 4.79 | 18.08 | 0.16 |
-| `fixed` | `average/average3-500ms-15pct` | `default` | 12 | 33% | 49.03 | 3.31 | 7.14 | 4.82 | 12.84 | 0.10 |
-| `fixed` | `expert/expert1-200ms-1pct` | `generated_7_1` | 12 | 100% | 45.15 | 3.42 | 6.32 | 4.80 | 17.91 | 0.06 |
-| `fixed` | `expert/expert1-200ms-1pct` | `generated_4_1` | 12 | 83% | 43.52 | 3.52 | 6.51 | 4.79 | 17.84 | 0.14 |
-| `fixed` | `expert/expert1-200ms-1pct` | `default` | 12 | 33% | 44.08 | 3.49 | 7.34 | 4.76 | 13.05 | 0.26 |
-| `fixed` | `expert/expert2-150ms-2pct` | `generated_4_1` | 12 | 100% | 43.92 | 3.47 | 6.08 | 4.78 | 18.11 | 0.24 |
-| `fixed` | `expert/expert2-150ms-2pct` | `generated_7_1` | 12 | 75% | 44.71 | 3.52 | 6.73 | 4.79 | 17.86 | 0.19 |
-| `fixed` | `expert/expert2-150ms-2pct` | `default` | 12 | 25% | 42.58 | 3.58 | 7.63 | 4.77 | 12.66 | 0.24 |
-| `fixed` | `expert/expert3-100ms-3pct` | `generated_4_1` | 12 | 83% | 42.85 | 3.54 | 6.40 | 4.76 | 18.15 | 0.10 |
-| `fixed` | `expert/expert3-100ms-3pct` | `generated_7_1` | 12 | 67% | 41.46 | 3.65 | 7.06 | 4.78 | 17.77 | 0.11 |
-| `fixed` | `expert/expert3-100ms-3pct` | `default` | 12 | 17% | 40.60 | 3.68 | 8.05 | 4.78 | 13.01 | 0.07 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_4_1` | 12 | 100% | 44.18 | 3.48 | 5.96 | 4.73 | 17.89 | 0.18 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_7_1` | 12 | 75% | 43.79 | 3.52 | 6.35 | 4.77 | 17.88 | 0.17 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `default` | 12 | 33% | 49.83 | 3.26 | 7.09 | 4.82 | 12.76 | 0.05 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_7_1` | 12 | 100% | 43.61 | 3.46 | 6.23 | 4.77 | 18.16 | 0.18 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_4_1` | 12 | 83% | 41.99 | 3.62 | 6.46 | 4.78 | 17.98 | 0.34 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `default` | 12 | 25% | 46.78 | 3.45 | 7.39 | 4.80 | 12.78 | 0.26 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_4_1` | 12 | 92% | 44.43 | 3.46 | 6.25 | 4.80 | 18.17 | 0.12 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_7_1` | 12 | 92% | 42.35 | 3.59 | 6.22 | 4.77 | 18.14 | 0.25 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `default` | 12 | 33% | 45.33 | 3.47 | 7.52 | 4.80 | 13.00 | 0.13 |
-| `learning` | `average/learning-220ms-low-error__cast_late-window__tactic_kill-high-impact` | `generated_7_1` | 12 | 92% | 47.25 | 3.33 | 6.25 | 4.81 | 18.08 | 0.30 |
-| `learning` | `average/learning-220ms-low-error__cast_late-window__tactic_kill-high-impact` | `default` | 12 | 8% | 43.88 | 3.52 | 7.90 | 4.79 | 12.66 | 0.26 |
+| `fixed` | `average/average1-1000ms-5pct` | `default` | 12 | 100% | 50.22 | 3.20 | 3.72 | 3.69 | 12.86 | 0.26 |
+| `fixed` | `average/average1-1000ms-5pct` | `generated_1_1` | 12 | 100% | 34.40 | 3.74 | 3.30 | 3.26 | 18.13 | 0.12 |
+| `fixed` | `average/average1-1000ms-5pct` | `generated_2_1` | 12 | 100% | 35.52 | 3.74 | 3.35 | 3.31 | 17.67 | 0.24 |
+| `fixed` | `average/average2-800ms-10pct` | `default` | 12 | 100% | 53.07 | 3.14 | 3.78 | 3.77 | 12.96 | 0.25 |
+| `fixed` | `average/average2-800ms-10pct` | `generated_1_1` | 12 | 100% | 36.27 | 3.73 | 3.40 | 3.38 | 17.93 | 0.02 |
+| `fixed` | `average/average2-800ms-10pct` | `generated_2_1` | 12 | 100% | 38.10 | 3.66 | 3.38 | 3.34 | 18.08 | 0.28 |
+| `fixed` | `average/average3-500ms-15pct` | `default` | 12 | 100% | 60.97 | 2.92 | 3.76 | 3.74 | 12.92 | 0.09 |
+| `fixed` | `average/average3-500ms-15pct` | `generated_1_1` | 12 | 100% | 39.95 | 3.67 | 3.62 | 3.61 | 18.38 | 0.24 |
+| `fixed` | `average/average3-500ms-15pct` | `generated_2_1` | 12 | 100% | 38.23 | 3.64 | 3.09 | 3.08 | 17.99 | 0.32 |
+| `fixed` | `expert/expert1-200ms-1pct` | `default` | 12 | 100% | 58.07 | 2.98 | 3.47 | 3.47 | 13.01 | 0.05 |
+| `fixed` | `expert/expert1-200ms-1pct` | `generated_1_1` | 12 | 100% | 38.75 | 3.66 | 3.64 | 3.62 | 18.04 | 0.07 |
+| `fixed` | `expert/expert1-200ms-1pct` | `generated_2_1` | 12 | 100% | 38.92 | 3.66 | 3.36 | 3.30 | 17.86 | 0.05 |
+| `fixed` | `expert/expert2-150ms-2pct` | `default` | 12 | 100% | 59.78 | 2.95 | 3.59 | 3.58 | 13.03 | 0.10 |
+| `fixed` | `expert/expert2-150ms-2pct` | `generated_1_1` | 12 | 100% | 38.14 | 3.68 | 3.32 | 3.28 | 18.20 | 0.09 |
+| `fixed` | `expert/expert2-150ms-2pct` | `generated_2_1` | 12 | 100% | 38.38 | 3.69 | 3.39 | 3.35 | 17.88 | 0.03 |
+| `fixed` | `expert/expert3-100ms-3pct` | `default` | 12 | 100% | 54.72 | 3.10 | 3.72 | 3.71 | 13.11 | 0.12 |
+| `fixed` | `expert/expert3-100ms-3pct` | `generated_1_1` | 12 | 100% | 36.13 | 3.71 | 3.43 | 3.36 | 17.92 | 0.18 |
+| `fixed` | `expert/expert3-100ms-3pct` | `generated_2_1` | 12 | 100% | 36.90 | 3.70 | 3.29 | 3.25 | 18.17 | 0.06 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `default` | 12 | 100% | 59.74 | 2.95 | 3.57 | 3.56 | 13.09 | 0.03 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_1_1` | 12 | 100% | 37.78 | 3.68 | 3.30 | 3.25 | 17.70 | 0.14 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_2_1` | 12 | 100% | 37.80 | 3.64 | 3.27 | 3.19 | 17.96 | 0.09 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `default` | 12 | 100% | 58.47 | 2.96 | 3.66 | 3.66 | 13.19 | 0.02 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_1_1` | 12 | 100% | 38.16 | 3.66 | 3.28 | 3.26 | 18.08 | 0.10 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_2_1` | 12 | 100% | 37.85 | 3.67 | 3.41 | 3.39 | 18.16 | 0.18 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `default` | 12 | 100% | 62.85 | 2.84 | 3.63 | 3.63 | 13.17 | 0.05 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_1_1` | 12 | 100% | 39.67 | 3.69 | 3.38 | 3.33 | 18.17 | 0.01 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_2_1` | 12 | 100% | 40.16 | 3.71 | 3.42 | 3.42 | 18.01 | 0.15 |
+| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_kill-high-impact` | `default` | 12 | 100% | 64.67 | 2.77 | 3.89 | 3.89 | 12.97 | 0.05 |
+| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_kill-high-impact` | `generated_1_1` | 12 | 100% | 40.75 | 3.58 | 3.52 | 3.51 | 17.78 | 0.30 |
 
 ## `Challenge-2 / druid_bear_t / standard_5slot` 烛火与潮汐
 
 | 模式 | profile | build | 样本数 | 通过率 | 平均时长(s) | 资源/秒 | 承伤/秒 | 治疗吸收/秒 | 造成伤害/秒 | 压力/秒 |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `fixed` | `average/average1-1000ms-5pct` | `default` | 12 | 50% | 45.15 | 5.26 | 7.58 | 4.79 | 16.86 | 0.60 |
-| `fixed` | `average/average1-1000ms-5pct` | `generated_3_1` | 12 | 0% | 29.22 | 5.56 | 9.51 | 4.70 | 17.12 | 0.46 |
-| `fixed` | `average/average1-1000ms-5pct` | `generated_4_1` | 12 | 0% | 29.36 | 5.54 | 9.50 | 4.69 | 17.10 | 0.22 |
-| `fixed` | `average/average2-800ms-10pct` | `default` | 12 | 42% | 45.10 | 5.43 | 8.17 | 4.79 | 16.78 | 0.57 |
-| `fixed` | `average/average2-800ms-10pct` | `generated_3_1` | 12 | 8% | 32.26 | 5.40 | 8.97 | 4.72 | 17.05 | 0.40 |
-| `fixed` | `average/average2-800ms-10pct` | `generated_4_1` | 12 | 8% | 34.42 | 5.31 | 8.74 | 4.75 | 17.00 | 0.73 |
-| `fixed` | `average/average3-500ms-15pct` | `default` | 12 | 33% | 43.14 | 5.41 | 8.19 | 4.78 | 16.87 | 0.30 |
-| `fixed` | `average/average3-500ms-15pct` | `generated_3_1` | 12 | 8% | 30.62 | 5.39 | 9.19 | 4.71 | 16.91 | 0.43 |
-| `fixed` | `average/average3-500ms-15pct` | `generated_4_1` | 12 | 0% | 28.09 | 5.38 | 9.75 | 4.69 | 17.12 | 0.33 |
-| `fixed` | `expert/expert1-200ms-1pct` | `default` | 12 | 33% | 44.51 | 5.43 | 8.13 | 4.79 | 17.20 | 0.45 |
-| `fixed` | `expert/expert1-200ms-1pct` | `generated_3_1` | 12 | 8% | 30.65 | 5.33 | 9.12 | 4.71 | 16.91 | 0.36 |
-| `fixed` | `expert/expert1-200ms-1pct` | `generated_4_1` | 12 | 8% | 33.96 | 5.24 | 8.76 | 4.74 | 17.02 | 0.67 |
-| `fixed` | `expert/expert2-150ms-2pct` | `default` | 12 | 25% | 45.44 | 5.37 | 8.18 | 4.79 | 16.99 | 0.61 |
-| `fixed` | `expert/expert2-150ms-2pct` | `generated_4_1` | 12 | 17% | 32.01 | 5.43 | 8.60 | 4.72 | 17.30 | 0.53 |
-| `fixed` | `expert/expert2-150ms-2pct` | `generated_3_1` | 12 | 8% | 32.01 | 5.23 | 8.81 | 4.72 | 16.85 | 0.72 |
-| `fixed` | `expert/expert3-100ms-3pct` | `default` | 12 | 33% | 41.57 | 5.44 | 8.43 | 4.77 | 16.80 | 0.21 |
-| `fixed` | `expert/expert3-100ms-3pct` | `generated_4_1` | 12 | 17% | 31.65 | 5.31 | 8.95 | 4.72 | 17.08 | 0.61 |
-| `fixed` | `expert/expert3-100ms-3pct` | `generated_3_1` | 12 | 8% | 30.97 | 5.33 | 9.17 | 4.71 | 17.18 | 0.75 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_3_1` | 12 | 25% | 34.73 | 5.27 | 8.51 | 4.73 | 17.31 | 0.42 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `default` | 12 | 17% | 42.48 | 5.43 | 8.53 | 4.78 | 17.17 | 0.43 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_4_1` | 12 | 8% | 31.70 | 5.30 | 9.05 | 4.72 | 17.08 | 0.69 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `default` | 12 | 33% | 43.50 | 5.27 | 8.20 | 4.78 | 17.06 | 0.66 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_4_1` | 12 | 17% | 33.88 | 5.36 | 8.54 | 4.73 | 17.01 | 0.71 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_3_1` | 12 | 0% | 32.10 | 5.31 | 9.12 | 4.71 | 17.04 | 0.38 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `default` | 12 | 42% | 43.78 | 5.38 | 7.89 | 4.79 | 17.03 | 0.55 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_4_1` | 12 | 8% | 31.43 | 5.24 | 9.08 | 4.72 | 17.38 | 0.69 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_3_1` | 12 | 0% | 29.68 | 5.35 | 9.46 | 4.70 | 17.11 | 0.38 |
-| `learning` | `average/learning-220ms-low-error__cast_broad-low-mid-casts__tactic_strict-threat` | `default` | 12 | 50% | 43.21 | 5.38 | 7.91 | 4.78 | 17.44 | 0.29 |
-| `learning` | `average/learning-220ms-low-error__cast_broad-low-mid-casts__tactic_strict-threat` | `generated_3_1` | 12 | 17% | 31.08 | 5.47 | 8.93 | 4.71 | 17.45 | 0.74 |
+| `fixed` | `average/average1-1000ms-5pct` | `default` | 12 | 100% | 47.22 | 5.29 | 4.39 | 4.37 | 17.15 | 0.43 |
+| `fixed` | `average/average1-1000ms-5pct` | `generated_1_1` | 12 | 100% | 45.76 | 5.32 | 4.66 | 4.57 | 17.10 | 0.13 |
+| `fixed` | `average/average1-1000ms-5pct` | `generated_2_1` | 12 | 100% | 45.58 | 5.37 | 4.44 | 4.42 | 16.97 | 0.52 |
+| `fixed` | `average/average2-800ms-10pct` | `default` | 12 | 100% | 47.06 | 5.23 | 4.48 | 4.42 | 16.98 | 0.20 |
+| `fixed` | `average/average2-800ms-10pct` | `generated_2_1` | 12 | 100% | 44.82 | 5.30 | 4.38 | 4.37 | 17.21 | 0.25 |
+| `fixed` | `average/average2-800ms-10pct` | `generated_1_1` | 12 | 92% | 42.54 | 5.39 | 4.53 | 4.47 | 17.05 | 0.63 |
+| `fixed` | `average/average3-500ms-15pct` | `default` | 12 | 100% | 45.82 | 5.29 | 4.43 | 4.39 | 17.13 | 0.48 |
+| `fixed` | `average/average3-500ms-15pct` | `generated_1_1` | 12 | 100% | 47.00 | 5.25 | 4.50 | 4.42 | 17.04 | 0.32 |
+| `fixed` | `average/average3-500ms-15pct` | `generated_2_1` | 12 | 100% | 46.83 | 5.23 | 4.51 | 4.42 | 16.94 | 0.23 |
+| `fixed` | `expert/expert1-200ms-1pct` | `default` | 12 | 100% | 47.75 | 5.28 | 4.65 | 4.54 | 16.99 | 0.36 |
+| `fixed` | `expert/expert1-200ms-1pct` | `generated_1_1` | 12 | 100% | 46.17 | 5.30 | 4.55 | 4.49 | 17.12 | 0.38 |
+| `fixed` | `expert/expert1-200ms-1pct` | `generated_2_1` | 12 | 100% | 46.77 | 5.35 | 4.66 | 4.54 | 16.95 | 0.50 |
+| `fixed` | `expert/expert2-150ms-2pct` | `default` | 12 | 100% | 46.82 | 5.16 | 4.47 | 4.43 | 17.07 | 0.32 |
+| `fixed` | `expert/expert2-150ms-2pct` | `generated_1_1` | 12 | 100% | 45.83 | 5.33 | 4.44 | 4.36 | 16.98 | 0.64 |
+| `fixed` | `expert/expert2-150ms-2pct` | `generated_2_1` | 12 | 100% | 46.22 | 5.25 | 4.41 | 4.35 | 17.03 | 0.48 |
+| `fixed` | `expert/expert3-100ms-3pct` | `default` | 12 | 100% | 44.69 | 5.32 | 4.63 | 4.53 | 17.30 | 0.28 |
+| `fixed` | `expert/expert3-100ms-3pct` | `generated_1_1` | 12 | 100% | 44.18 | 5.29 | 4.45 | 4.39 | 17.23 | 0.38 |
+| `fixed` | `expert/expert3-100ms-3pct` | `generated_2_1` | 12 | 100% | 45.88 | 5.32 | 4.60 | 4.50 | 17.12 | 0.22 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `default` | 12 | 100% | 46.71 | 5.19 | 4.35 | 4.29 | 16.97 | 0.32 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_1_1` | 12 | 100% | 47.89 | 5.17 | 4.23 | 4.21 | 16.90 | 0.25 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_2_1` | 12 | 100% | 48.21 | 5.22 | 4.50 | 4.44 | 16.93 | 0.41 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `default` | 12 | 100% | 48.61 | 5.16 | 4.47 | 4.38 | 16.81 | 0.25 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_1_1` | 12 | 100% | 46.33 | 5.25 | 4.54 | 4.47 | 16.83 | 0.44 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_2_1` | 12 | 100% | 46.73 | 5.25 | 4.54 | 4.46 | 17.02 | 0.24 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_1_1` | 12 | 100% | 44.69 | 5.30 | 4.57 | 4.51 | 17.37 | 0.19 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_2_1` | 12 | 100% | 48.13 | 5.33 | 4.73 | 4.55 | 17.11 | 0.24 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `default` | 12 | 83% | 42.35 | 5.24 | 4.60 | 4.49 | 17.03 | 0.65 |
+| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_kill-high-impact` | `generated_1_1` | 12 | 100% | 44.17 | 5.36 | 4.64 | 4.58 | 17.20 | 0.44 |
+| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_kill-high-impact` | `default` | 12 | 92% | 44.03 | 5.31 | 4.34 | 4.28 | 17.26 | 0.60 |
 
 ## `Challenge-3 / warrior_t / standard_5slot` 老瞎眼演练
 
 | 模式 | profile | build | 样本数 | 通过率 | 平均时长(s) | 资源/秒 | 承伤/秒 | 治疗吸收/秒 | 造成伤害/秒 | 压力/秒 |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `fixed` | `average/average1-1000ms-5pct` | `generated_5_1` | 12 | 33% | 29.48 | 4.30 | 5.95 | 3.49 | 35.65 | 0.99 |
-| `fixed` | `average/average1-1000ms-5pct` | `generated_7_1` | 12 | 33% | 29.73 | 4.26 | 5.98 | 3.35 | 36.17 | 0.98 |
-| `fixed` | `average/average1-1000ms-5pct` | `default` | 12 | 0% | 19.77 | 6.07 | 7.54 | 2.71 | 27.16 | 1.64 |
-| `fixed` | `average/average2-800ms-10pct` | `generated_7_1` | 12 | 42% | 32.98 | 3.87 | 5.90 | 3.83 | 34.35 | 1.00 |
-| `fixed` | `average/average2-800ms-10pct` | `generated_5_1` | 12 | 25% | 28.18 | 4.44 | 6.21 | 3.35 | 35.52 | 1.37 |
-| `fixed` | `average/average2-800ms-10pct` | `default` | 12 | 0% | 19.93 | 6.02 | 7.41 | 2.59 | 27.91 | 1.99 |
-| `fixed` | `average/average3-500ms-15pct` | `generated_7_1` | 12 | 42% | 33.08 | 3.88 | 5.85 | 3.62 | 34.35 | 0.81 |
-| `fixed` | `average/average3-500ms-15pct` | `generated_5_1` | 12 | 33% | 29.83 | 4.25 | 6.10 | 3.56 | 35.84 | 1.07 |
-| `fixed` | `average/average3-500ms-15pct` | `default` | 12 | 0% | 19.68 | 6.10 | 7.65 | 2.67 | 28.15 | 1.31 |
-| `fixed` | `expert/expert1-200ms-1pct` | `generated_7_1` | 12 | 50% | 33.91 | 3.83 | 5.73 | 3.82 | 35.29 | 1.01 |
-| `fixed` | `expert/expert1-200ms-1pct` | `generated_5_1` | 12 | 25% | 27.45 | 4.55 | 6.31 | 3.37 | 35.90 | 0.60 |
-| `fixed` | `expert/expert1-200ms-1pct` | `default` | 12 | 0% | 19.22 | 6.24 | 7.90 | 2.78 | 27.63 | 1.46 |
-| `fixed` | `expert/expert2-150ms-2pct` | `generated_5_1` | 12 | 33% | 30.24 | 4.19 | 6.10 | 3.57 | 35.52 | 0.85 |
-| `fixed` | `expert/expert2-150ms-2pct` | `generated_7_1` | 12 | 33% | 29.77 | 4.26 | 5.95 | 3.49 | 36.27 | 1.11 |
-| `fixed` | `expert/expert2-150ms-2pct` | `default` | 12 | 0% | 19.37 | 6.20 | 7.77 | 2.63 | 28.44 | 0.91 |
-| `fixed` | `expert/expert3-100ms-3pct` | `generated_5_1` | 12 | 25% | 28.03 | 4.46 | 6.53 | 3.62 | 35.91 | 1.05 |
-| `fixed` | `expert/expert3-100ms-3pct` | `generated_7_1` | 12 | 17% | 24.95 | 4.94 | 6.69 | 3.25 | 36.99 | 0.65 |
-| `fixed` | `expert/expert3-100ms-3pct` | `default` | 12 | 0% | 20.68 | 5.80 | 7.84 | 2.83 | 27.86 | 1.56 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_5_1` | 12 | 33% | 29.43 | 4.30 | 5.96 | 3.43 | 36.21 | 1.29 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_7_1` | 12 | 25% | 28.29 | 4.42 | 6.15 | 3.37 | 35.54 | 0.99 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `default` | 12 | 0% | 19.87 | 6.04 | 7.59 | 2.57 | 27.74 | 1.67 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_7_1` | 12 | 25% | 26.66 | 4.69 | 6.21 | 3.52 | 36.80 | 1.19 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_5_1` | 12 | 17% | 23.81 | 5.04 | 6.44 | 3.40 | 36.55 | 1.73 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `default` | 12 | 0% | 19.81 | 6.06 | 7.88 | 2.57 | 27.68 | 1.47 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_5_1` | 12 | 33% | 28.91 | 4.38 | 6.18 | 3.71 | 36.04 | 1.51 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_7_1` | 12 | 33% | 29.67 | 4.27 | 6.21 | 3.54 | 36.65 | 0.98 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `default` | 12 | 0% | 19.27 | 6.23 | 8.06 | 2.87 | 28.32 | 1.74 |
-| `learning` | `average/learning-220ms-low-error__cast_broad-window__tactic_strict-threat` | `generated_7_1` | 12 | 25% | 28.26 | 4.42 | 6.23 | 3.32 | 36.14 | 1.15 |
-| `learning` | `average/learning-220ms-low-error__cast_broad-window__tactic_strict-threat` | `default` | 12 | 0% | 18.23 | 6.40 | 7.59 | 2.70 | 27.63 | 1.35 |
+| `fixed` | `average/average1-1000ms-5pct` | `generated_1_1` | 12 | 75% | 41.00 | 3.29 | 4.76 | 3.80 | 31.64 | 0.73 |
+| `fixed` | `average/average1-1000ms-5pct` | `generated_7_1` | 12 | 75% | 40.50 | 3.25 | 4.80 | 3.93 | 30.92 | 0.75 |
+| `fixed` | `average/average1-1000ms-5pct` | `default` | 12 | 0% | 21.18 | 5.66 | 7.09 | 2.61 | 27.77 | 1.58 |
+| `fixed` | `average/average2-800ms-10pct` | `generated_7_1` | 12 | 92% | 45.39 | 3.01 | 4.67 | 3.99 | 30.94 | 0.48 |
+| `fixed` | `average/average2-800ms-10pct` | `generated_1_1` | 12 | 67% | 38.32 | 3.48 | 5.04 | 3.79 | 32.57 | 0.18 |
+| `fixed` | `average/average2-800ms-10pct` | `default` | 12 | 0% | 19.97 | 6.01 | 7.29 | 2.61 | 27.86 | 1.16 |
+| `fixed` | `average/average3-500ms-15pct` | `generated_7_1` | 12 | 92% | 45.21 | 3.06 | 4.79 | 3.96 | 31.12 | 0.23 |
+| `fixed` | `average/average3-500ms-15pct` | `generated_1_1` | 12 | 67% | 39.05 | 3.41 | 5.05 | 3.80 | 32.08 | 0.38 |
+| `fixed` | `average/average3-500ms-15pct` | `default` | 12 | 0% | 21.18 | 5.67 | 7.34 | 2.80 | 26.95 | 1.18 |
+| `fixed` | `expert/expert1-200ms-1pct` | `generated_1_1` | 12 | 83% | 43.33 | 3.15 | 4.75 | 3.92 | 31.30 | 0.80 |
+| `fixed` | `expert/expert1-200ms-1pct` | `generated_7_1` | 12 | 83% | 42.85 | 3.19 | 4.88 | 4.00 | 32.11 | 0.56 |
+| `fixed` | `expert/expert1-200ms-1pct` | `default` | 12 | 8% | 24.42 | 5.05 | 6.77 | 3.20 | 25.97 | 0.80 |
+| `fixed` | `expert/expert2-150ms-2pct` | `generated_7_1` | 12 | 75% | 40.83 | 3.22 | 4.73 | 3.88 | 30.84 | 0.71 |
+| `fixed` | `expert/expert2-150ms-2pct` | `generated_1_1` | 12 | 67% | 39.68 | 3.36 | 4.96 | 3.83 | 31.79 | 0.24 |
+| `fixed` | `expert/expert2-150ms-2pct` | `default` | 12 | 0% | 20.33 | 5.90 | 7.37 | 2.86 | 27.67 | 1.23 |
+| `fixed` | `expert/expert3-100ms-3pct` | `generated_7_1` | 12 | 100% | 48.42 | 2.89 | 4.52 | 4.09 | 30.19 | 0.23 |
+| `fixed` | `expert/expert3-100ms-3pct` | `generated_1_1` | 12 | 83% | 42.93 | 3.18 | 4.85 | 3.87 | 31.30 | 0.33 |
+| `fixed` | `expert/expert3-100ms-3pct` | `default` | 12 | 0% | 20.17 | 5.95 | 7.45 | 2.71 | 28.63 | 0.12 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_1_1` | 12 | 67% | 39.28 | 3.39 | 5.18 | 3.93 | 31.68 | 0.59 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_7_1` | 12 | 50% | 34.07 | 3.82 | 5.40 | 3.49 | 33.85 | 0.40 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `default` | 12 | 0% | 20.37 | 5.89 | 7.42 | 2.64 | 27.24 | 0.71 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_1_1` | 12 | 92% | 45.96 | 3.01 | 4.67 | 4.01 | 30.86 | 0.25 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_7_1` | 12 | 58% | 36.28 | 3.63 | 5.17 | 3.83 | 32.24 | 0.50 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `default` | 12 | 0% | 20.28 | 5.92 | 7.30 | 2.79 | 27.62 | 1.67 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_7_1` | 12 | 83% | 41.54 | 3.21 | 4.69 | 3.94 | 31.42 | 0.83 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_1_1` | 12 | 67% | 38.89 | 3.43 | 4.97 | 3.88 | 32.50 | 0.60 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `default` | 12 | 0% | 19.78 | 5.89 | 7.19 | 2.94 | 28.15 | 2.11 |
+| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_strict-threat` | `generated_7_1` | 12 | 50% | 35.27 | 3.69 | 5.29 | 3.84 | 32.89 | 0.40 |
+| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_strict-threat` | `default` | 12 | 0% | 20.67 | 5.81 | 7.19 | 2.53 | 27.87 | 0.90 |
 
 ## `Challenge-3 / druid_bear_t / standard_5slot` 老瞎眼演练
 
 | 模式 | profile | build | 样本数 | 通过率 | 平均时长(s) | 资源/秒 | 承伤/秒 | 治疗吸收/秒 | 造成伤害/秒 | 压力/秒 |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `fixed` | `average/average1-1000ms-5pct` | `default` | 12 | 0% | 16.62 | 7.72 | 9.65 | 2.83 | 33.61 | 0.86 |
-| `fixed` | `average/average1-1000ms-5pct` | `generated_1_1` | 12 | 0% | 14.07 | 7.91 | 10.07 | 2.93 | 31.71 | 1.04 |
-| `fixed` | `average/average1-1000ms-5pct` | `generated_2_1` | 12 | 0% | 13.47 | 7.92 | 10.07 | 2.77 | 32.43 | 0.76 |
-| `fixed` | `average/average2-800ms-10pct` | `default` | 12 | 0% | 16.25 | 8.03 | 10.01 | 2.86 | 33.96 | 0.68 |
-| `fixed` | `average/average2-800ms-10pct` | `generated_1_1` | 12 | 0% | 13.48 | 8.03 | 10.21 | 2.78 | 32.13 | 0.74 |
-| `fixed` | `average/average2-800ms-10pct` | `generated_2_1` | 12 | 0% | 13.66 | 7.93 | 10.14 | 2.80 | 31.84 | 0.75 |
-| `fixed` | `average/average3-500ms-15pct` | `default` | 12 | 0% | 15.65 | 7.96 | 10.24 | 3.10 | 32.65 | 0.90 |
-| `fixed` | `average/average3-500ms-15pct` | `generated_1_1` | 12 | 0% | 13.85 | 8.06 | 10.30 | 2.83 | 33.54 | 0.78 |
-| `fixed` | `average/average3-500ms-15pct` | `generated_2_1` | 12 | 0% | 13.10 | 8.27 | 10.28 | 2.71 | 32.81 | 0.64 |
-| `fixed` | `expert/expert1-200ms-1pct` | `default` | 12 | 0% | 16.67 | 7.90 | 9.68 | 2.85 | 35.02 | 0.68 |
-| `fixed` | `expert/expert1-200ms-1pct` | `generated_1_1` | 12 | 0% | 13.47 | 7.92 | 10.03 | 2.77 | 31.49 | 0.76 |
-| `fixed` | `expert/expert1-200ms-1pct` | `generated_2_1` | 12 | 0% | 13.47 | 7.92 | 10.04 | 2.77 | 31.34 | 0.70 |
-| `fixed` | `expert/expert2-150ms-2pct` | `default` | 12 | 0% | 15.83 | 8.05 | 10.14 | 2.91 | 33.31 | 0.63 |
-| `fixed` | `expert/expert2-150ms-2pct` | `generated_1_1` | 12 | 0% | 13.08 | 7.90 | 9.97 | 2.71 | 31.81 | 0.69 |
-| `fixed` | `expert/expert2-150ms-2pct` | `generated_2_1` | 12 | 0% | 13.27 | 7.91 | 10.04 | 2.74 | 31.40 | 0.71 |
-| `fixed` | `expert/expert3-100ms-3pct` | `default` | 12 | 0% | 15.00 | 8.00 | 10.35 | 3.00 | 33.42 | 0.63 |
-| `fixed` | `expert/expert3-100ms-3pct` | `generated_1_1` | 12 | 0% | 13.08 | 7.90 | 9.92 | 2.71 | 31.06 | 0.72 |
-| `fixed` | `expert/expert3-100ms-3pct` | `generated_2_1` | 12 | 0% | 13.08 | 7.90 | 9.92 | 2.71 | 32.81 | 0.72 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `default` | 12 | 0% | 15.42 | 7.97 | 10.18 | 2.95 | 32.92 | 0.60 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_1_1` | 12 | 0% | 14.04 | 7.95 | 10.29 | 2.86 | 32.65 | 0.76 |
-| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_2_1` | 12 | 0% | 13.27 | 7.91 | 10.05 | 2.74 | 32.11 | 0.71 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `default` | 12 | 0% | 15.61 | 7.88 | 10.12 | 2.95 | 32.68 | 0.60 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_1_1` | 12 | 0% | 13.62 | 8.07 | 10.03 | 2.80 | 31.54 | 0.69 |
-| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_2_1` | 12 | 0% | 13.27 | 7.91 | 9.99 | 2.74 | 32.27 | 0.77 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `default` | 12 | 0% | 15.42 | 7.97 | 10.22 | 2.95 | 33.10 | 0.68 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_1_1` | 12 | 0% | 13.67 | 7.93 | 10.07 | 2.77 | 31.23 | 1.02 |
-| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_2_1` | 12 | 0% | 14.27 | 8.15 | 10.14 | 2.96 | 31.93 | 1.06 |
-| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_kill-high-impact` | `default` | 12 | 0% | 19.83 | 7.67 | 9.05 | 3.25 | 32.46 | 2.25 |
-| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_kill-high-impact` | `generated_1_1` | 12 | 0% | 14.84 | 7.94 | 10.23 | 3.04 | 32.64 | 1.25 |
+| `fixed` | `average/average1-1000ms-5pct` | `default` | 12 | 92% | 54.48 | 5.81 | 4.10 | 3.95 | 25.65 | 0.37 |
+| `fixed` | `average/average1-1000ms-5pct` | `generated_8_1` | 12 | 33% | 32.35 | 6.54 | 5.28 | 3.39 | 28.62 | 0.33 |
+| `fixed` | `average/average1-1000ms-5pct` | `generated_2_0` | 12 | 8% | 23.35 | 7.21 | 6.31 | 2.87 | 30.49 | 0.94 |
+| `fixed` | `average/average2-800ms-10pct` | `default` | 12 | 67% | 44.47 | 6.07 | 4.58 | 3.66 | 27.14 | 0.03 |
+| `fixed` | `average/average2-800ms-10pct` | `generated_2_0` | 12 | 33% | 32.37 | 6.54 | 5.40 | 3.43 | 28.60 | 0.18 |
+| `fixed` | `average/average2-800ms-10pct` | `generated_8_1` | 12 | 0% | 20.37 | 7.61 | 7.15 | 2.51 | 32.95 | 0.08 |
+| `fixed` | `average/average3-500ms-15pct` | `default` | 12 | 100% | 56.47 | 5.78 | 4.01 | 3.97 | 25.92 | 0.08 |
+| `fixed` | `average/average3-500ms-15pct` | `generated_8_1` | 12 | 25% | 29.04 | 6.71 | 5.73 | 3.23 | 29.16 | 0.18 |
+| `fixed` | `average/average3-500ms-15pct` | `generated_2_0` | 12 | 8% | 23.10 | 7.22 | 6.54 | 2.78 | 31.13 | 0.09 |
+| `fixed` | `expert/expert1-200ms-1pct` | `default` | 12 | 83% | 51.62 | 5.80 | 4.10 | 3.86 | 25.76 | 0.05 |
+| `fixed` | `expert/expert1-200ms-1pct` | `generated_8_1` | 12 | 42% | 35.13 | 6.36 | 5.15 | 3.49 | 28.29 | 0.69 |
+| `fixed` | `expert/expert1-200ms-1pct` | `generated_2_0` | 12 | 8% | 23.62 | 7.13 | 6.36 | 2.77 | 31.31 | 0.41 |
+| `fixed` | `expert/expert2-150ms-2pct` | `default` | 12 | 100% | 56.75 | 5.79 | 3.85 | 3.94 | 25.72 | 0.40 |
+| `fixed` | `expert/expert2-150ms-2pct` | `generated_8_1` | 12 | 25% | 28.91 | 6.76 | 5.59 | 3.17 | 28.87 | 0.82 |
+| `fixed` | `expert/expert2-150ms-2pct` | `generated_2_0` | 12 | 8% | 23.73 | 7.17 | 6.31 | 2.77 | 30.92 | 0.61 |
+| `fixed` | `expert/expert3-100ms-3pct` | `default` | 12 | 75% | 47.21 | 5.93 | 4.36 | 3.74 | 27.00 | 0.02 |
+| `fixed` | `expert/expert3-100ms-3pct` | `generated_8_1` | 12 | 25% | 28.68 | 6.91 | 5.73 | 3.21 | 29.83 | 0.01 |
+| `fixed` | `expert/expert3-100ms-3pct` | `generated_2_0` | 12 | 8% | 23.48 | 7.24 | 6.45 | 2.78 | 30.69 | 0.22 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `default` | 12 | 75% | 49.45 | 5.89 | 4.33 | 3.75 | 26.30 | 0.03 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_2_0` | 12 | 8% | 23.52 | 7.16 | 6.40 | 2.76 | 30.91 | 0.05 |
+| `fixed` | `skilled/skilled1-450ms-3pct` | `generated_8_1` | 12 | 8% | 23.23 | 7.25 | 6.53 | 2.80 | 31.22 | 0.04 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `default` | 12 | 92% | 54.47 | 5.84 | 3.96 | 3.89 | 25.68 | 0.27 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_2_0` | 12 | 17% | 26.23 | 6.99 | 6.03 | 3.07 | 29.61 | 0.31 |
+| `fixed` | `skilled/skilled2-300ms-5pct` | `generated_8_1` | 12 | 17% | 26.54 | 6.97 | 6.12 | 3.16 | 29.48 | 0.18 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `default` | 12 | 100% | 56.73 | 5.76 | 3.93 | 3.95 | 25.72 | 0.26 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_8_1` | 12 | 17% | 26.94 | 6.87 | 5.80 | 2.97 | 29.43 | 0.79 |
+| `fixed` | `skilled/skilled3-200ms-8pct` | `generated_2_0` | 12 | 8% | 23.23 | 7.32 | 6.64 | 2.93 | 30.56 | 0.71 |
+| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_kill-high-impact` | `default` | 12 | 58% | 40.32 | 6.00 | 4.15 | 4.41 | 25.74 | 1.65 |
+| `learning` | `average/learning-220ms-low-error__cast_balanced-window__tactic_kill-high-impact` | `generated_2_0` | 12 | 17% | 22.14 | 6.81 | 5.40 | 4.35 | 28.24 | 3.38 |
