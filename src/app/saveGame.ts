@@ -8,6 +8,7 @@ import {
 import { WARRIOR_T_CLASS_ID } from '../game/playerClasses/playerClassRuntimeRegistry'
 
 export interface TutorialSaveState {
+  seenPreparationTutorial: boolean
   seenStageSelectStageIds: StageId[]
   seenEncounterStageIds: StageId[]
   seenMonsterCodexTutorial: boolean
@@ -47,6 +48,7 @@ export function getSaveStorageKey(namespace = getGlobalSaveNamespace(), version 
 
 export function createEmptyTutorialSaveState(): TutorialSaveState {
   return {
+    seenPreparationTutorial: false,
     seenStageSelectStageIds: [],
     seenEncounterStageIds: [],
     seenMonsterCodexTutorial: false,
@@ -129,6 +131,7 @@ function normalizeV2TutorialSaveState(value: unknown): TutorialSaveState {
   }
   const tutorial = value as Record<string, unknown>
   return {
+    seenPreparationTutorial: tutorial.seenPreparationTutorial === true,
     seenStageSelectStageIds: normalizeStageIdList(tutorial.seenStageSelectStageIds),
     seenEncounterStageIds: normalizeStageIdList(tutorial.seenEncounterStageIds),
     seenMonsterCodexTutorial: tutorial.seenMonsterCodexTutorial === true,
@@ -190,6 +193,7 @@ function migrateLegacySave(parsed: Record<string, unknown>): SaveGameState | nul
     campaignUnlockedClassIds: [WARRIOR_T_CLASS_ID],
     seenEnemyDefinitionIds: normalizeStringList(parsed.seenEnemyDefinitionIds),
     tutorial: {
+      seenPreparationTutorial: false,
       seenStageSelectStageIds: legacyTutorial.seenStageSelectStageIds,
       seenEncounterStageIds: legacyTutorial.seenEncounterStageIds,
       seenMonsterCodexTutorial: legacyTutorial.seenMonsterCodexTutorial,

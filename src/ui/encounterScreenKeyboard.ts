@@ -23,7 +23,7 @@ export type EncounterScreenKeyboardAction =
     }
   | {
       type: 'noop'
-      reason: 'panel-open' | 'paused' | 'unhandled-key'
+      reason: 'panel-open' | 'paused' | 'combat-locked' | 'unhandled-key'
       preventDefault: false
     }
 
@@ -43,12 +43,14 @@ export function getEncounterScreenKeyboardAction({
   shiftKey,
   openPanel,
   pauseVisible,
+  combatLocked = false,
   skills,
 }: {
   key: string
   shiftKey: boolean
   openPanel: EncounterScreenPanel
   pauseVisible: boolean
+  combatLocked?: boolean
   skills: EncounterScreenKeyboardSkill[]
 }): EncounterScreenKeyboardAction {
   if (key === 'Escape') {
@@ -56,6 +58,14 @@ export function getEncounterScreenKeyboardAction({
       return {
         type: 'close-panel',
         preventDefault: true,
+      }
+    }
+
+    if (combatLocked) {
+      return {
+        type: 'noop',
+        reason: 'combat-locked',
+        preventDefault: false,
       }
     }
 
@@ -77,6 +87,14 @@ export function getEncounterScreenKeyboardAction({
     return {
       type: 'noop',
       reason: 'paused',
+      preventDefault: false,
+    }
+  }
+
+  if (combatLocked) {
+    return {
+      type: 'noop',
+      reason: 'combat-locked',
       preventDefault: false,
     }
   }
@@ -109,6 +127,7 @@ export function handleEncounterScreenKeyDown({
   event,
   openPanel,
   pauseVisible,
+  combatLocked = false,
   skills,
   onClosePanel,
   onOpenPause,
@@ -119,6 +138,7 @@ export function handleEncounterScreenKeyDown({
   event: EncounterScreenKeyDownEvent
   openPanel: EncounterScreenPanel
   pauseVisible: boolean
+  combatLocked?: boolean
   skills: EncounterScreenKeyboardSkill[]
   onClosePanel: () => void
   onOpenPause: () => void
@@ -131,6 +151,7 @@ export function handleEncounterScreenKeyDown({
     shiftKey: event.shiftKey,
     openPanel,
     pauseVisible,
+    combatLocked,
     skills,
   })
 

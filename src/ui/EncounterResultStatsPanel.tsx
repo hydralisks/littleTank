@@ -28,7 +28,6 @@ interface EncounterResultStatsPanelProps {
   stageTitle: string
   reason: string
   stats: EncounterStats
-  onReturnToStageSelect: () => void
   onRetryStage: () => void
 }
 
@@ -188,7 +187,6 @@ export function EncounterResultStatsPanel({
   stageTitle,
   reason,
   stats,
-  onReturnToStageSelect,
   onRetryStage,
 }: EncounterResultStatsPanelProps) {
   const [activeTab, setActiveTab] = useState<ResultStatsTabId>('tank')
@@ -287,11 +285,7 @@ export function EncounterResultStatsPanel({
           <button type="button" className="result-action result-action--primary" onClick={onRetryStage}>
             <span className="result-action__title">我不信了</span>
           </button>
-        ) : (
-          <button type="button" className="result-action result-action--primary" onClick={onReturnToStageSelect}>
-            <span className="result-action__title">简单简单</span>
-          </button>
-        )}
+        ) : null}
       </footer>
     </section>
   )

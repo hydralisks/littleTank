@@ -29,6 +29,7 @@ import {
   resolveStageClassId,
 } from '../game/progression/stageClassAvailability'
 import { EncounterScreen } from '../ui/EncounterScreen'
+import type { EncounterEntrySource } from '../ui/encounterPreparation'
 import { StageSelectScreen, type StageSelectMode } from '../ui/StageSelectScreen'
 import {
   createEmptyTutorialSaveState,
@@ -52,6 +53,7 @@ function App() {
   const [stageSelectMode, setStageSelectMode] = useState<StageSelectMode>('campaign')
   const [stageId, setStageId] = useState<StageId>(loadedSave?.stageId ?? initialStageId)
   const [encounterInstance, setEncounterInstance] = useState(0)
+  const [encounterEntrySource, setEncounterEntrySource] = useState<EncounterEntrySource>('map')
   const [highestClearedStageIndex, setHighestClearedStageIndex] = useState(
     loadedSave?.highestClearedStageIndex ?? INITIAL_HIGHEST_CLEARED_STAGE_INDEX,
   )
@@ -113,6 +115,7 @@ function App() {
     mode: StageSelectMode,
     classId: PlayerClassId,
     clearedCampaignIndex = highestClearedStageIndex,
+    entrySource: EncounterEntrySource = 'map',
   ) {
     const nextStageIndex = mode === 'campaign' ? campaignStageOrder.indexOf(nextStageId) : stageOrder.indexOf(nextStageId)
     const nextMaxUnlockedStageIndex = Math.max(
@@ -170,6 +173,7 @@ function App() {
     setEncounterClassId(classId)
     setStageSelectMode(mode)
     setStageId(nextStageId)
+    setEncounterEntrySource(entrySource)
     setEncounterInstance((value) => value + 1)
     setScreen('encounter')
   }
@@ -215,7 +219,7 @@ function App() {
       setScreen('select')
       return
     }
-    startStage(nextStageId, 'campaign', nextClassId, nextClearedIndex)
+    startStage(nextStageId, 'campaign', nextClassId, nextClearedIndex, 'victory-continue')
   }
 
   function markStageSelectTutorialSeen(seenStageId: StageId) {
@@ -242,6 +246,7 @@ function App() {
   function resetTutorials() {
     setTutorialState((current) => ({
       ...current,
+      seenPreparationTutorial: false,
       seenStageSelectStageIds: [],
       seenEncounterStageIds: [],
       seenMonsterCodexTutorial: false,
@@ -296,10 +301,18 @@ function App() {
       stage={encounterStage}
       classId={encounterClassId}
       buildState={encounterBuild}
+      entrySource={encounterEntrySource}
       unlockedPassiveTalentTier={getPassiveTalentUnlockTierForStage(encounterStage)}
       unlockedActiveSkillIds={getUnlockedActiveSkillIdsForStage(encounterStage)}
       tutorialEnabled={!tutorialState.seenEncounterStageIds.includes(stageId)}
+      preparationTutorialEnabled={!tutorialState.seenPreparationTutorial}
       onTutorialComplete={() => markEncounterTutorialSeen(stageId)}
+      onPreparationTutorialComplete={() => {
+        setTutorialState((current) => ({
+          ...current,
+          seenPreparationTutorial: true,
+        }))
+      }}
       onBuildChange={(build) => {
         setBuildsByClassId((current) => ({ ...current, [encounterClassId]: build }))
         setTutorialState((current) => ({
@@ -314,7 +327,7 @@ function App() {
         }))
       }}
       onReturnToStageSelect={handleReturnToStageSelect}
-      onRetryStage={() => startStage(stageId, stageSelectMode, encounterClassId)}
+      onRetryStage={() => startStage(stageId, stageSelectMode, encounterClassId, highestClearedStageIndex, 'retry')}
       onAdvanceStage={handleAdvanceStage}
     />
   )

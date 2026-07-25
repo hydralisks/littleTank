@@ -12,6 +12,39 @@ export interface TutorialStep {
   openPanel?: TutorialBuildPanel
 }
 
+export function getPreparationTutorialScript(): TutorialStep[] {
+  return [
+    {
+      id: 'preparation-enemy-info',
+      title: '观察敌方初始信息',
+      body: '开战前可以查看敌人的名称、初始生命、站位和公开状态。先根据这些信息判断本关需要的承伤、控制和队伍支援能力。',
+      target: '[data-tutorial-id="enemy-frames"]',
+      placement: 'right',
+    },
+    {
+      id: 'preparation-active-build',
+      title: '调整主动技能',
+      body: '打开主动技能配置，根据已经看到的敌人调整技能栏。战备期间不会推进时间，也不会触发敌方行动。',
+      target: '[data-tutorial-id="encounter-skill-config"]',
+      placement: 'bottom',
+    },
+    {
+      id: 'preparation-passive-build',
+      title: '调整被动天赋',
+      body: '被动天赋也可以在这里修改。改动会立即反映在玩家面板中，便于确认生命、资源和公开状态。',
+      target: '[data-tutorial-id="encounter-passive-config"]',
+      placement: 'bottom',
+    },
+    {
+      id: 'preparation-start',
+      title: '完成战备后开战',
+      body: '确认目标和构筑后点击开战。战斗将从干净的初始状态开始，之后才能使用主动技能。',
+      target: '[data-tutorial-id="encounter-start-battle"]',
+      placement: 'top',
+    },
+  ]
+}
+
 export function getMonsterCodexTutorialScript(): TutorialStep[] {
   return [
     {

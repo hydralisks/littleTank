@@ -15,10 +15,10 @@ describe('guardian druid bear tank design contract', () => {
     resetPlayerBuildCatalog()
   })
 
-  it('keeps the complete bear class staged for challenge snapshot activation', () => {
+  it('keeps the complete bear class enabled for challenge snapshot activation', () => {
     const workbook = parsePlayerBuildWorkbook(XLSX.readFile('public/designer-data/player_build.xlsx'))
     const bear = workbook.classDefinitions.find((entry) => entry.classId === 'druid_bear_t')
-    expect(bear).toMatchObject({ classId: 'druid_bear_t', className: '熊T', enabled: false })
+    expect(bear).toMatchObject({ classId: 'druid_bear_t', className: '熊T', enabled: true })
     expect(getDefaultPersistedBuildForRule('standard_5slot', 'druid_bear_t').loadout).toMatchObject({
       '1': 'druid_bear_t_growl',
       '2': 'druid_bear_t_mangle',

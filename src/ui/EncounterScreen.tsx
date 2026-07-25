@@ -42,6 +42,11 @@ import {
   handleEncounterScreenKeyDown,
   type EncounterScreenPanel,
 } from './encounterScreenKeyboard'
+import {
+  getInitialEncounterPhase,
+  type EncounterEntrySource,
+  type EncounterPhase,
+} from './encounterPreparation'
 import { EnemyRaidFrameList } from './EnemyRaidFrameList'
 import { EncounterResultStatsPanel } from './EncounterResultStatsPanel'
 import { PassiveTalentPanel } from './PassiveTalentPanel'
@@ -51,16 +56,19 @@ import { SkillConfigPanel } from './SkillConfigPanel'
 import { StageStatusPanel } from './StageStatusPanel'
 import { TeamStatusPanel } from './TeamStatusPanel'
 import { TutorialOverlay } from './TutorialOverlay'
-import { getEncounterTutorialScript } from './tutorialGuide'
+import { getEncounterTutorialScript, getPreparationTutorialScript } from './tutorialGuide'
 
 interface EncounterScreenProps {
   stage: StageInfo
   classId: PlayerClassId
   buildState: PersistedBuildState
+  entrySource?: EncounterEntrySource
   unlockedPassiveTalentTier: number
   unlockedActiveSkillIds: readonly SkillId[]
   tutorialEnabled?: boolean
+  preparationTutorialEnabled?: boolean
   onTutorialComplete?: () => void
+  onPreparationTutorialComplete?: () => void
   onBuildChange: (build: PersistedBuildState) => void
   onReturnToStageSelect: (outcome?: 'victory' | 'defeat') => void
   onRetryStage: () => void
@@ -134,25 +142,87 @@ function canTogglePassiveTalent(
   return nextTotalPoints - activePoints - nextPassivePoints >= 0
 }
 
+function EncounterNavigationControls({
+  className = '',
+  startDisabled,
+  continueDisabled,
+  onReturn,
+  onStart,
+  onContinue,
+}: {
+  className?: string
+  startDisabled: boolean
+  continueDisabled: boolean
+  onReturn: () => void
+  onStart: () => void
+  onContinue: () => void
+}) {
+  return (
+    <div className={['encounter-noncombat-controls', className].filter(Boolean).join(' ')}>
+      <button
+        type="button"
+        className="encounter-noncombat-action encounter-noncombat-action--secondary"
+        data-encounter-action="return"
+        onClick={onReturn}
+      >
+        返回
+      </button>
+      <button
+        type="button"
+        className="encounter-noncombat-action encounter-noncombat-action--primary"
+        data-encounter-action="start"
+        data-tutorial-id="encounter-start-battle"
+        onClick={onStart}
+        disabled={startDisabled}
+      >
+        开战
+      </button>
+      <button
+        type="button"
+        className="encounter-noncombat-action encounter-noncombat-action--continue"
+        data-encounter-action="continue"
+        onClick={onContinue}
+        disabled={continueDisabled}
+      >
+        继续
+      </button>
+    </div>
+  )
+}
+
 export function EncounterScreen({
   stage,
   classId,
   buildState,
+  entrySource = 'retry',
   unlockedPassiveTalentTier,
   unlockedActiveSkillIds,
   tutorialEnabled = true,
+  preparationTutorialEnabled = false,
   onTutorialComplete,
+  onPreparationTutorialComplete,
   onBuildChange,
   onReturnToStageSelect,
   onRetryStage,
+  onAdvanceStage,
 }: EncounterScreenProps) {
   const [encounter, setEncounter] = useState<EncounterState>(() => createInitialEncounterState(stage, classId, buildState))
+  const initialPhase = getInitialEncounterPhase(entrySource)
+  const [phase, setPhase] = useState<EncounterPhase>(initialPhase)
+  const phaseRef = useRef<EncounterPhase>(initialPhase)
+  const latestBuildRef = useRef(buildState)
   const [openPanel, setOpenPanel] = useState<EncounterScreenPanel>(null)
   const [selectedConfigHotkey, setSelectedConfigHotkey] = useState<SkillHotkey | null>('1')
   const skillLoadout = buildState.loadout
   const selectedPassiveTalentIds = buildState.passiveTalentIds
   const tutorialScript = getEncounterTutorialScript(stage) ?? []
-  const [tutorialStepIndex, setTutorialStepIndex] = useState(() => (tutorialEnabled && tutorialScript.length > 0 ? 0 : -1))
+  const preparationTutorialScript = getPreparationTutorialScript()
+  const [preparationTutorialStepIndex, setPreparationTutorialStepIndex] = useState(() => (
+    initialPhase === 'preparation' && preparationTutorialEnabled ? 0 : -1
+  ))
+  const [tutorialStepIndex, setTutorialStepIndex] = useState(() => (
+    initialPhase === 'active' && tutorialEnabled && tutorialScript.length > 0 ? 0 : -1
+  ))
   const buildRuleId = encounter.stage.buildRuleId
   const buildRule = getBuildRuleDefinition(buildRuleId)
   const activeSkills = getActiveSkillCatalog()
@@ -162,10 +232,15 @@ export function EncounterScreen({
     canUseTalentInRule(buildRuleId, classId, talent.id, unlockedPassiveTalentTier)
   )
   const pauseVisible = encounter.runtime.pauseOverlay === 'pause' && !encounter.result
-  const tutorialStep =
+  const encounterTutorialStep =
     tutorialStepIndex >= 0 && tutorialStepIndex < tutorialScript.length
       ? tutorialScript[tutorialStepIndex]
       : null
+  const preparationTutorialStep =
+    preparationTutorialStepIndex >= 0 && preparationTutorialStepIndex < preparationTutorialScript.length
+      ? preparationTutorialScript[preparationTutorialStepIndex]
+      : null
+  const tutorialStep = phase === 'preparation' ? preparationTutorialStep : encounterTutorialStep
   const tutorialVisible = Boolean(tutorialStep)
   const tutorialVisibleRef = useRef(tutorialVisible)
 
@@ -176,7 +251,7 @@ export function EncounterScreen({
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       setEncounter((current) => {
-        if (tutorialVisibleRef.current) {
+        if (phaseRef.current !== 'active' || tutorialVisibleRef.current) {
           return current
         }
 
@@ -188,6 +263,9 @@ export function EncounterScreen({
   }, [])
 
   const tryActivateSkill = useCallback((skillId: SkillId) => {
+    if (phaseRef.current !== 'active') {
+      return
+    }
     setEncounter((current) =>
       dispatchEncounterCommand(current, {
         type: 'player/activate-skill',
@@ -198,6 +276,9 @@ export function EncounterScreen({
   }, [])
 
   const openPauseMenu = useCallback(() => {
+    if (phaseRef.current !== 'active') {
+      return
+    }
     setEncounter((current) => openPauseOverlay(current))
   }, [])
 
@@ -210,6 +291,7 @@ export function EncounterScreen({
       event,
       openPanel,
       pauseVisible: pauseVisible || tutorialVisible,
+      combatLocked: phase === 'preparation',
       skills: getEncounterScreenKeyboardSkills(encounter.skills),
       onClosePanel: () => {
         setOpenPanel(null)
@@ -245,7 +327,7 @@ export function EncounterScreen({
     return () => window.removeEventListener('keydown', handleWindowKeyDown)
   }, [])
 
-  const buildLocked = encounter.result === null
+  const buildLocked = phase === 'active' && encounter.result === null
   const activeEnemyCount = encounter.enemies.filter((enemy) => enemy.hp > 0).length
   const activePoints = getActivePointCost(skillLoadout)
   const passivePoints = getPassivePointCost(selectedPassiveTalentIds)
@@ -261,8 +343,56 @@ export function EncounterScreen({
   const encounterStats = buildEncounterStats(encounter)
 
   function commitBuild(nextLoadout: SkillLoadout, nextPassiveTalentIds: PassiveTalentId[]) {
-    onBuildChange({ loadout: nextLoadout, passiveTalentIds: nextPassiveTalentIds })
+    const nextBuild = { loadout: nextLoadout, passiveTalentIds: nextPassiveTalentIds }
+    latestBuildRef.current = nextBuild
+    onBuildChange(nextBuild)
     setEncounter((current) => applyBuildConfiguration(current, nextLoadout, nextPassiveTalentIds))
+  }
+
+  function startBattle() {
+    if (preparationTutorialStep) {
+      return
+    }
+
+    setEncounter((current) => {
+      const selectedTargetId = current.player.currentTargetId
+      const next = createInitialEncounterState(stage, classId, latestBuildRef.current)
+      const selectedTargetIsAvailable = next.enemies.some((enemy) => enemy.id === selectedTargetId && enemy.hp > 0)
+      return selectedTargetIsAvailable
+        ? {
+            ...next,
+            player: {
+              ...next.player,
+              currentTargetId: selectedTargetId,
+            },
+          }
+        : next
+    })
+    phaseRef.current = 'active'
+    setPhase('active')
+    const hasEncounterTutorial = tutorialEnabled && tutorialScript.length > 0
+    tutorialVisibleRef.current = hasEncounterTutorial
+    setTutorialStepIndex(hasEncounterTutorial ? 0 : -1)
+  }
+
+  function selectEnemy(enemyId: string) {
+    setEncounter((current) => {
+      if (phaseRef.current === 'preparation') {
+        return {
+          ...current,
+          player: {
+            ...current.player,
+            currentTargetId: enemyId,
+          },
+        }
+      }
+
+      return dispatchEncounterCommand(current, {
+        type: 'player/select-target',
+        submittedAtMs: current.timeMs,
+        targetEnemyId: enemyId,
+      })
+    })
   }
 
   function handleAssignSkill(skillId: SkillId) {
@@ -311,6 +441,19 @@ export function EncounterScreen({
   }
 
   function advanceTutorial() {
+    if (phaseRef.current === 'preparation') {
+      setPreparationTutorialStepIndex((current) => {
+        const next = current + 1
+        const hasNextStep = next < preparationTutorialScript.length
+        if (!hasNextStep) {
+          onPreparationTutorialComplete?.()
+        }
+        tutorialVisibleRef.current = hasNextStep
+        return hasNextStep ? next : -1
+      })
+      return
+    }
+
     setTutorialStepIndex((current) => {
       const next = current + 1
       const hasNextStep = next < tutorialScript.length
@@ -323,6 +466,13 @@ export function EncounterScreen({
   }
 
   function skipTutorial() {
+    if (phaseRef.current === 'preparation') {
+      onPreparationTutorialComplete?.()
+      tutorialVisibleRef.current = false
+      setPreparationTutorialStepIndex(-1)
+      return
+    }
+
     onTutorialComplete?.()
     tutorialVisibleRef.current = false
     setTutorialStepIndex(-1)
@@ -340,7 +490,7 @@ export function EncounterScreen({
                 type="button"
                 className="header-pause-button"
                 onClick={openPauseMenu}
-                disabled={Boolean(encounter.result)}
+                disabled={phase === 'preparation' || Boolean(encounter.result)}
               >
                 我说停停
               </button>
@@ -350,6 +500,7 @@ export function EncounterScreen({
           <div className="header-action-row">
             <button
               type="button"
+              data-tutorial-id="encounter-skill-config"
               className={['header-action-button', buildLocked ? 'is-blocked' : ''].filter(Boolean).join(' ')}
               onClick={() => {
                 if (!buildLocked) {
@@ -362,6 +513,7 @@ export function EncounterScreen({
             </button>
             <button
               type="button"
+              data-tutorial-id="encounter-passive-config"
               className={['header-action-button', buildLocked ? 'is-blocked' : ''].filter(Boolean).join(' ')}
               onClick={() => {
                 if (!buildLocked) {
@@ -406,15 +558,7 @@ export function EncounterScreen({
             <EnemyRaidFrameList
               enemies={encounter.enemies}
               selectedEnemyId={encounter.player.currentTargetId}
-              onSelectEnemy={(enemyId) =>
-                setEncounter((current) =>
-                  dispatchEncounterCommand(current, {
-                    type: 'player/select-target',
-                    submittedAtMs: current.timeMs,
-                    targetEnemyId: enemyId,
-                  }),
-                )
-              }
+              onSelectEnemy={selectEnemy}
             />
 
             <TeamStatusPanel
@@ -431,34 +575,31 @@ export function EncounterScreen({
             slots={skillSlots}
             currentResource={encounter.player.resource}
             gcdRemainingMs={encounter.player.gcdRemainingMs}
-            combatLocked={Boolean(encounter.result)}
+            combatLocked={phase === 'preparation' || Boolean(encounter.result)}
             onActivateSkill={tryActivateSkill}
           />
         </section>
 
+        {phase === 'preparation' ? (
+          <EncounterNavigationControls
+            className="encounter-preparation-controls"
+            startDisabled={Boolean(preparationTutorialStep)}
+            continueDisabled
+            onReturn={() => onReturnToStageSelect()}
+            onStart={startBattle}
+            onContinue={() => undefined}
+          />
+        ) : null}
+
         {pauseVisible ? (
           <div className="result-overlay result-overlay--pause">
-            <button
-              type="button"
-              className="result-action result-action--secondary"
-              onClick={() => onReturnToStageSelect(encounter.result?.outcome)}
-            >
-              <span className="result-action__title">算他厉害</span>
-            </button>
-            <button
-              type="button"
-              className="result-action result-action--primary"
-              onClick={onRetryStage}
-            >
-              <span className="result-action__title">我不信了</span>
-            </button>
-            <button
-              type="button"
-              className="result-action result-action--pause"
-              onClick={closePauseMenu}
-            >
-              <span className="result-action__title">继续继续</span>
-            </button>
+            <EncounterNavigationControls
+              startDisabled
+              continueDisabled={false}
+              onReturn={() => onReturnToStageSelect()}
+              onStart={() => undefined}
+              onContinue={closePauseMenu}
+            />
           </div>
         ) : null}
 
@@ -470,7 +611,13 @@ export function EncounterScreen({
               reason={encounter.result.reason}
               stats={encounterStats}
               onRetryStage={onRetryStage}
-              onReturnToStageSelect={() => onReturnToStageSelect('victory')}
+            />
+            <EncounterNavigationControls
+              startDisabled
+              continueDisabled={encounter.result.outcome !== 'victory'}
+              onReturn={() => onReturnToStageSelect(encounter.result?.outcome)}
+              onStart={() => undefined}
+              onContinue={onAdvanceStage}
             />
           </div>
         ) : null}

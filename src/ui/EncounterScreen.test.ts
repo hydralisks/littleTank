@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { act, createElement } from 'react'
+import { act, createElement, type ComponentProps } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { JSDOM } from 'jsdom'
 import {
@@ -8,6 +8,7 @@ import {
   type EncounterScreenKeyboardSkill,
 } from './encounterScreenKeyboard'
 import { EncounterScreen } from './EncounterScreen'
+import { getInitialEncounterPhase } from './encounterPreparation'
 import { applyEncounterWorkbookOverrides } from '../game/data/encounterTemplates'
 import { getDefaultPersistedBuildForRule } from '../game/data/playerBuildCatalog'
 import { getStageById } from '../game/data/stageTemplates'
@@ -17,6 +18,17 @@ const testSkills: EncounterScreenKeyboardSkill[] = [
   { hotkey: '1', id: 'warrior_t_taunt' },
   { hotkey: 'Q', id: 'warrior_t_shield_wall' },
 ]
+
+describe('EncounterScreen entry source', () => {
+  it('starts map and victory continuation entries in preparation', () => {
+    expect(getInitialEncounterPhase('map')).toBe('preparation')
+    expect(getInitialEncounterPhase('victory-continue')).toBe('preparation')
+  })
+
+  it('starts failed retries directly in active combat', () => {
+    expect(getInitialEncounterPhase('retry')).toBe('active')
+  })
+})
 
 function createScreenHarness() {
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
@@ -61,7 +73,125 @@ function countKeydownSubscriptions(calls: unknown[][]) {
   return calls.filter((call) => call[0] === 'keydown').length
 }
 
+async function mountEncounterScreen(overrides: Partial<ComponentProps<typeof EncounterScreen>> = {}) {
+  const { dom, window, container } = createScreenHarness()
+  const globalWithReactAct = globalThis as typeof globalThis & {
+    IS_REACT_ACT_ENVIRONMENT?: boolean
+  }
+  const previousGlobals = {
+    window: globalThis.window,
+    document: globalThis.document,
+    navigator: globalThis.navigator,
+    HTMLElement: globalThis.HTMLElement,
+    Node: globalThis.Node,
+    KeyboardEvent: globalThis.KeyboardEvent,
+    MouseEvent: globalThis.MouseEvent,
+    Event: globalThis.Event,
+    reactAct: globalWithReactAct.IS_REACT_ACT_ENVIRONMENT,
+  }
+  const stage = getStageById('harbor-1')
+  const buildState = getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')
+  const callbacks = {
+    onBuildChange: vi.fn(),
+    onReturnToStageSelect: vi.fn(),
+    onRetryStage: vi.fn(),
+    onAdvanceStage: vi.fn(),
+    onPreparationTutorialComplete: vi.fn(),
+  }
+
+  vi.useFakeTimers()
+  setGlobalProperty('window', window as typeof globalThis.window)
+  setGlobalProperty('document', window.document)
+  setGlobalProperty('navigator', window.navigator)
+  setGlobalProperty('HTMLElement', window.HTMLElement)
+  setGlobalProperty('Node', window.Node)
+  setGlobalProperty('KeyboardEvent', window.KeyboardEvent)
+  setGlobalProperty('MouseEvent', window.MouseEvent)
+  setGlobalProperty('Event', window.Event)
+  setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', true)
+
+  const root = createRoot(container)
+  await act(async () => {
+    root.render(createElement(EncounterScreen, {
+      stage,
+      classId: 'warrior_t',
+      buildState,
+      unlockedPassiveTalentTier: 3,
+      unlockedActiveSkillIds: Object.values(buildState.loadout).filter((skillId): skillId is string => Boolean(skillId)),
+      tutorialEnabled: false,
+      preparationTutorialEnabled: false,
+      ...callbacks,
+      ...overrides,
+    }))
+  })
+
+  async function cleanup() {
+    await act(async () => {
+      root.unmount()
+    })
+    vi.useRealTimers()
+    dom.window.close()
+    setGlobalProperty('window', previousGlobals.window)
+    setGlobalProperty('document', previousGlobals.document)
+    setGlobalProperty('navigator', previousGlobals.navigator)
+    setGlobalProperty('HTMLElement', previousGlobals.HTMLElement)
+    setGlobalProperty('Node', previousGlobals.Node)
+    setGlobalProperty('KeyboardEvent', previousGlobals.KeyboardEvent)
+    setGlobalProperty('MouseEvent', previousGlobals.MouseEvent)
+    setGlobalProperty('Event', previousGlobals.Event)
+    setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', previousGlobals.reactAct)
+  }
+
+  return { window, container, callbacks, cleanup }
+}
+
 describe('EncounterScreen keyboard behavior', () => {
+  it('blocks combat shortcuts during preparation but still lets Escape close an open panel', () => {
+    expect(
+      getEncounterScreenKeyboardAction({
+        key: '1',
+        shiftKey: false,
+        openPanel: null,
+        pauseVisible: false,
+        combatLocked: true,
+        skills: testSkills,
+      }),
+    ).toEqual({
+      type: 'noop',
+      reason: 'combat-locked',
+      preventDefault: false,
+    })
+
+    expect(
+      getEncounterScreenKeyboardAction({
+        key: 'Tab',
+        shiftKey: false,
+        openPanel: null,
+        pauseVisible: false,
+        combatLocked: true,
+        skills: testSkills,
+      }),
+    ).toEqual({
+      type: 'noop',
+      reason: 'combat-locked',
+      preventDefault: false,
+    })
+
+    expect(
+      getEncounterScreenKeyboardAction({
+        key: 'Escape',
+        shiftKey: false,
+        openPanel: 'skills',
+        pauseVisible: false,
+        combatLocked: true,
+        skills: testSkills,
+      }),
+    ).toEqual({
+      type: 'close-panel',
+      preventDefault: true,
+    })
+  })
+
   it('queues target cycling with Tab when no panel is open and combat is not paused', () => {
     expect(
       getEncounterScreenKeyboardAction({
@@ -452,6 +582,121 @@ describe('EncounterScreen keydown handling', () => {
 })
 
 describe('EncounterScreen component keyboard integration', () => {
+  it('freezes map entries until battle starts while allowing target preselection', async () => {
+    const { window, container, cleanup } = await mountEncounterScreen({ entrySource: 'map' })
+
+    try {
+      expect(container.querySelector('.encounter-preparation-controls')).not.toBeNull()
+      expect(container.querySelector('.header-chip--time')?.textContent).toContain('0.0s')
+      expect((container.querySelector('[data-encounter-action="start"]') as HTMLButtonElement | null)?.disabled).toBe(false)
+      expect((container.querySelector('[data-encounter-action="continue"]') as HTMLButtonElement | null)?.disabled).toBe(true)
+
+      const enemyFrames = [...container.querySelectorAll('.enemy-frame[data-enemy-id]')] as HTMLElement[]
+      expect(enemyFrames.length).toBeGreaterThan(1)
+      const selectedEnemyId = enemyFrames[1].getAttribute('data-enemy-id')
+
+      await act(async () => {
+        enemyFrames[1].dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+        vi.advanceTimersByTime(500)
+      })
+
+      expect(container.querySelector(`.enemy-frame[data-enemy-id="${selectedEnemyId}"]`)?.classList.contains('is-selected')).toBe(true)
+      expect(container.querySelector('.header-chip--time')?.textContent).toContain('0.0s')
+
+      await act(async () => {
+        const startButton = container.querySelector('[data-encounter-action="start"]') as HTMLElement | null
+        startButton?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+        vi.advanceTimersByTime(100)
+      })
+
+      expect(container.querySelector('.encounter-preparation-controls')).toBeNull()
+      expect(container.querySelector('.header-chip--time')?.textContent).toContain('0.1s')
+      expect(container.querySelector('.enemy-frame.is-selected')?.getAttribute('data-enemy-id'))
+        .toBe(selectedEnemyId)
+    } finally {
+      await cleanup()
+    }
+  })
+
+  it('finishes the one-time preparation tutorial before enabling battle and showing stage tutorials', async () => {
+    const stage = makeRingingDeepsStage(1)
+    const { window, container, callbacks, cleanup } = await mountEncounterScreen({
+      stage,
+      entrySource: 'map',
+      tutorialEnabled: true,
+      preparationTutorialEnabled: true,
+    })
+
+    try {
+      const startButton = container.querySelector('[data-encounter-action="start"]') as HTMLButtonElement | null
+      expect(container.querySelector('.tutorial-overlay')?.textContent).toContain('观察敌方初始信息')
+      expect(startButton?.disabled).toBe(true)
+
+      for (let step = 0; step < 4; step += 1) {
+        await act(async () => {
+          const nextButton = container.querySelector('.tutorial-overlay__next') as HTMLElement | null
+          nextButton?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+        })
+      }
+
+      expect(container.querySelector('.tutorial-overlay')).toBeNull()
+      expect(startButton?.disabled).toBe(false)
+      expect(callbacks.onPreparationTutorialComplete).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        startButton?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+      })
+
+      expect(container.querySelector('.tutorial-overlay')).not.toBeNull()
+      expect(container.querySelector('.encounter-preparation-controls')).toBeNull()
+    } finally {
+      await cleanup()
+    }
+  })
+
+  it('updates the player preview immediately when the preparation build changes', async () => {
+    const defaultBuild = getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t')
+    const { window, container, callbacks, cleanup } = await mountEncounterScreen({
+      entrySource: 'map',
+      buildState: {
+        ...defaultBuild,
+        loadout: {
+          ...defaultBuild.loadout,
+          '2': null,
+          '3': null,
+          '4': null,
+          Q: null,
+        },
+        passiveTalentIds: [],
+      },
+    })
+
+    try {
+      const readPlayerHp = () => container.querySelector('.status-panel--player .status-card strong')?.textContent
+      const initialHp = readPlayerHp()
+
+      await act(async () => {
+        const passiveButton = container.querySelector('[data-tutorial-id="encounter-passive-config"]') as HTMLElement | null
+        passiveButton?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+      })
+
+      const selectedTalentAction = container.querySelector(
+        '.passive-talent-card__action:not(:disabled)',
+      ) as HTMLButtonElement | null
+      expect(selectedTalentAction).not.toBeNull()
+
+      await act(async () => {
+        selectedTalentAction?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+      })
+
+      expect(callbacks.onBuildChange).toHaveBeenCalledTimes(1)
+      expect(readPlayerHp()).not.toBe(initialHp)
+      expect(container.querySelector('.header-chip--time')?.textContent).toContain('0.0s')
+    } finally {
+      await cleanup()
+    }
+  })
+
   it('clears stale keydown subscription churn across ticks and routes live window events through fresh state', async () => {
     const { dom, window, container } = createScreenHarness()
     const globalWithReactAct = globalThis as typeof globalThis & {
@@ -527,6 +772,9 @@ describe('EncounterScreen component keyboard integration', () => {
       })
 
       expect(container.querySelector('.result-overlay--pause')).not.toBeNull()
+      expect(container.querySelectorAll('.result-overlay--pause [data-encounter-action]').length).toBe(3)
+      expect((container.querySelector('.result-overlay--pause [data-encounter-action="start"]') as HTMLButtonElement | null)?.disabled).toBe(true)
+      expect((container.querySelector('.result-overlay--pause [data-encounter-action="continue"]') as HTMLButtonElement | null)?.disabled).toBe(false)
 
       await act(async () => {
         window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Tab' }))
@@ -764,7 +1012,7 @@ describe('EncounterScreen component keyboard integration', () => {
     }
   })
 
-  it('returns to the map from victory without offering an alternate victory button', async () => {
+  it('offers the shared navigation controls on victory and continues to the next stage', async () => {
     applyEncounterWorkbookOverrides({
       openingOverrides: {},
       placementOverrides: {
@@ -841,18 +1089,18 @@ describe('EncounterScreen component keyboard integration', () => {
         vi.advanceTimersByTime(100)
       })
 
-      expect(container.querySelectorAll('.result-action').length).toBe(1)
-      expect(container.querySelector('.result-action__title')?.textContent).toBe('简单简单')
+      expect(container.querySelectorAll('.result-overlay [data-encounter-action]').length).toBe(3)
+      expect((container.querySelector('.result-overlay [data-encounter-action="start"]') as HTMLButtonElement | null)?.disabled).toBe(true)
+      expect((container.querySelector('.result-overlay [data-encounter-action="continue"]') as HTMLButtonElement | null)?.disabled).toBe(false)
 
       await act(async () => {
-        const victoryButton = container.querySelector('.result-action') as HTMLElement | null
+        const victoryButton = container.querySelector('.result-overlay [data-encounter-action="continue"]') as HTMLElement | null
         victoryButton?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
       })
 
-      expect(onReturnToStageSelect).toHaveBeenCalledWith('victory')
-      expect(onAdvanceStage).not.toHaveBeenCalled()
+      expect(onReturnToStageSelect).not.toHaveBeenCalled()
+      expect(onAdvanceStage).toHaveBeenCalledTimes(1)
       expect(onRetryStage).not.toHaveBeenCalled()
-      expect(container.textContent).not.toContain('算他厉害')
     } finally {
       applyEncounterWorkbookOverrides({
         openingOverrides: {},

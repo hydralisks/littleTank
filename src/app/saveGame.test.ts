@@ -45,6 +45,7 @@ describe('saveGame', () => {
       campaignUnlockedClassIds: ['warrior_t'],
       seenEnemyDefinitionIds: ['kobold_miner', 'kobold_apprentice'],
       tutorial: {
+        seenPreparationTutorial: true,
         seenStageSelectStageIds: ['RingingDeeps-2'],
         seenEncounterStageIds: ['RingingDeeps-1'],
         seenMonsterCodexTutorial: true,
@@ -63,6 +64,7 @@ describe('saveGame', () => {
       campaignUnlockedClassIds: ['warrior_t'],
       seenEnemyDefinitionIds: ['kobold_miner', 'kobold_apprentice'],
       tutorial: {
+        seenPreparationTutorial: true,
         seenStageSelectStageIds: ['RingingDeeps-2'],
         seenEncounterStageIds: ['RingingDeeps-1'],
         seenMonsterCodexTutorial: true,
@@ -100,6 +102,7 @@ describe('saveGame', () => {
       campaignUnlockedClassIds: ['warrior_t'],
       seenEnemyDefinitionIds: ['kobold_miner'],
       tutorial: {
+        seenPreparationTutorial: false,
         seenStageSelectStageIds: ['RingingDeeps-1'],
         seenEncounterStageIds: [],
         seenMonsterCodexTutorial: false,
@@ -129,6 +132,7 @@ describe('saveGame', () => {
 
     const firstLoad = loadSaveGame(storage, 'completed-bear')
     const secondLoad = loadSaveGame(storage, 'completed-bear')
+    expect(firstLoad?.tutorial.seenPreparationTutorial).toBe(false)
     expect(firstLoad?.campaignUnlockedClassIds).toEqual(['warrior_t', 'druid_bear_t'])
     expect(firstLoad?.challengeVictoriesByClass.druid_bear_t).toEqual([
       'Challenge-1', 'Challenge-2', 'Challenge-3',
@@ -150,6 +154,7 @@ describe('saveGame', () => {
       campaignUnlockedClassIds: ['warrior_t'],
       seenEnemyDefinitionIds: [],
       tutorial: {
+        seenPreparationTutorial: false,
         seenStageSelectStageIds: [],
         seenEncounterStageIds: [],
         seenMonsterCodexTutorial: false,
@@ -165,6 +170,7 @@ describe('saveGame', () => {
 
   it('tracks stage-entry auto equip independently for each class', () => {
     const tutorial = {
+      seenPreparationTutorial: false,
       seenStageSelectStageIds: [],
       seenEncounterStageIds: [],
       seenMonsterCodexTutorial: false,

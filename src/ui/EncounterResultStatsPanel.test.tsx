@@ -108,7 +108,6 @@ describe('EncounterResultStatsPanel', () => {
           stageTitle: '测试关卡',
           reason: '测试胜利',
           stats: emptyStats,
-          onReturnToStageSelect: vi.fn(),
           onRetryStage: vi.fn(),
         }))
       })

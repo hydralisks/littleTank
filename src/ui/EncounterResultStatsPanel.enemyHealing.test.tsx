@@ -98,7 +98,6 @@ describe('EncounterResultStatsPanel enemy healing page', () => {
           stageTitle: 'Test Stage',
           reason: 'Victory',
           stats,
-          onReturnToStageSelect: vi.fn(),
           onRetryStage: vi.fn(),
         }))
       })
