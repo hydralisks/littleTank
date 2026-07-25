@@ -1265,10 +1265,120 @@ function runAutomatedDecision(
   return skillState
 }
 
+function getBestBearThrashTarget(state: EncounterState, lostThreatEnemies: readonly EnemyState[]) {
+  return [...getLivingEnemies(state)].sort((left, right) => {
+    const leftCoverage = lostThreatEnemies.filter((enemy) => (
+      Math.abs(enemy.row - left.row) <= 1 && Math.abs(enemy.col - left.col) <= 1
+    )).length
+    const rightCoverage = lostThreatEnemies.filter((enemy) => (
+      Math.abs(enemy.row - right.row) <= 1 && Math.abs(enemy.col - right.col) <= 1
+    )).length
+    return rightCoverage - leftCoverage || left.row - right.row || left.col - right.col
+  })[0] ?? null
+}
+
+function runBearAutomatedDecision(
+  state: EncounterState,
+  profile: BalanceOperationProfile,
+  random: () => number,
+  memory: BalanceAutomationMemory,
+  traceEvents?: BalanceTraceEvent[],
+) {
+  let nextState = improveTargeting(state, profile, memory, traceEvents)
+  const hpRatio = nextState.player.hp / Math.max(1, nextState.player.maxHp)
+  const shouldUsePreemptiveDefense =
+    profileEvaluatesEnemySkillImpact(profile) &&
+    getIncomingPlayerDamageScore(nextState, 2500) >= 18
+  const shouldUseDefense = hpRatio <= 0.72 || shouldUsePreemptiveDefense || nextState.player.resource >= 85
+
+  if (shouldUseDefense && sampleProfileMistakeKind(profile, random) !== 'forget_skill') {
+    const defensiveState = tryUseFirstMatchingSkill(
+      nextState,
+      hpRatio <= 0.45
+        ? [
+            'frenzied_regeneration',
+            'regrowth',
+            'ironfur',
+            'survival_instincts',
+            'barkskin',
+            'rage_of_the_sleeper',
+            'lunar_beam',
+            'incarnation_ursoc',
+          ]
+        : [
+            'ironfur',
+            'barkskin',
+            'survival_instincts',
+            'rage_of_the_sleeper',
+            'frenzied_regeneration',
+            'lunar_beam',
+            'incarnation_ursoc',
+            'regrowth',
+          ],
+      traceEvents,
+    )
+    if (defensiveState !== nextState) {
+      return defensiveState
+    }
+  }
+
+  const lostThreatEnemies = getLivingEnemies(nextState).filter((enemy) => enemy.threatState === 'lost')
+  if (lostThreatEnemies.length >= 2 && sampleProfileMistakeKind(profile, random) !== 'forget_skill') {
+    const areaTarget = getBestBearThrashTarget(nextState, lostThreatEnemies)
+    if (areaTarget) {
+      const targetState = maybeSelectEnemy(nextState, areaTarget, traceEvents)
+      rememberSelectedTarget(memory, targetState, areaTarget.id)
+      const thrashState = tryUseFirstMatchingSkill(targetState, ['thrash'], traceEvents)
+      if (thrashState !== targetState) {
+        memory.lockedTargetTickAtMs = thrashState.timeMs
+        return thrashState
+      }
+      nextState = targetState
+    }
+  }
+
+  const lostThreatTarget = lostThreatEnemies[0]
+
+  if (lostThreatTarget && shouldRetargetForLostThreat(nextState, profile, memory, lostThreatTarget)) {
+    const target = maybeSelectEnemy(nextState, lostThreatTarget, traceEvents)
+    rememberSelectedTarget(memory, target, lostThreatTarget.id)
+    const threatState = tryUseFirstMatchingSkill(target, ['growl', 'roar', 'thrash'], traceEvents)
+    if (threatState !== target) {
+      memory.lockedTargetTickAtMs = threatState.timeMs
+      return threatState
+    }
+    nextState = target
+  }
+
+  const mistake = sampleProfileMistakeKind(profile, random)
+  if (mistake === 'forget_skill') {
+    return nextState
+  }
+  if (mistake === 'wrong_target') {
+    const target = getWrongTarget(nextState, nextState.player.currentTargetId ?? '', random)
+    if (target) {
+      nextState = maybeSelectEnemy(nextState, target, traceEvents)
+      rememberSelectedTarget(memory, nextState, target.id)
+    }
+  }
+
+  const skillState = tryUseFirstMatchingSkill(nextState, [
+    'mangle',
+    'thrash',
+    'moonfire',
+    'swipe',
+  ], traceEvents)
+  if (skillState !== nextState) {
+    memory.lockedTargetTickAtMs = skillState.timeMs
+  }
+  return skillState
+}
+
 type PlayerClassAiHandler = typeof runAutomatedDecision
 
 const PLAYER_CLASS_AI_HANDLERS: Record<string, PlayerClassAiHandler> = {
   warrior_t_default: runAutomatedDecision,
+  druid_bear_t_default: runBearAutomatedDecision,
 }
 
 function runPlayerClassAutomatedDecision(

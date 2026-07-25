@@ -724,6 +724,7 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
     const effect = getPrimarySkillEffect(skillId)
     const existing = state.player.mitigation?.id === 'druid_bear_t_ironfur' ? state.player.mitigation : null
     const stacks = Math.min(3, (existing?.stacks ?? 0) + 1)
+    const reductionPerStack = Math.max(0, effect?.valueA ?? 15) / 100
     const status = createPlayerBuildStatusEffect('druid_bear_t_ironfur', effect?.durationMs ?? 8000)
     if (!status) return state
     return {
@@ -734,7 +735,7 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
           ...status,
           stacks,
           maxStacks: 3,
-          damageReductionRatio: stacks * 0.15,
+          damageReductionRatio: Math.min(0.95, stacks * reductionPerStack),
           damageReductionTypes: ['physical'],
         },
       },

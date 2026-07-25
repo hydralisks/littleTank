@@ -33,6 +33,28 @@ describe('bear tank runtime smoke behavior', () => {
     expect(withMoonfire.enemies.map((enemy) => enemy.statuses.map((status) => status.id))).toEqual(expect.arrayContaining([expect.arrayContaining(['druid_bear_t_moonfire'])]))
   })
 
+  it('reads Ironfur physical reduction per stack from the designer effect percentage', () => {
+    const workbook = parsePlayerBuildWorkbook(XLSX.readFile('public/designer-data/player_build.xlsx'))
+    applyPlayerBuildWorkbookOverrides({
+      ...workbook,
+      activeSkillEffectDefinitions: workbook.activeSkillEffectDefinitions.map((effect) => (
+        effect.skillId === 'druid_bear_t_ironfur'
+          ? { ...effect, valueA: 10 }
+          : effect
+      )),
+    })
+    const stage = getStageById('harbor-1')
+    const build = getDefaultPersistedBuildForRule('standard_5slot', 'druid_bear_t')
+    const encounter = createInitialEncounterState(stage, 'druid_bear_t', build)
+
+    const withIronfur = activateSkill({
+      ...encounter,
+      player: { ...encounter.player, resource: 100 },
+    }, 'druid_bear_t_ironfur')
+
+    expect(withIronfur.player.mitigation?.damageReductionRatio).toBe(0.1)
+  })
+
   it('ticks frenzied regeneration from current max hp without repeating prior ticks', () => {
     const stage = getStageById('harbor-1')
     const build = getDefaultPersistedBuildForRule('8slot_0', 'druid_bear_t')

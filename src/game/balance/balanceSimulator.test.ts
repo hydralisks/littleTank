@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import * as XLSX from 'xlsx'
 import { createInitialEncounterState } from '../encounter/encounterFactory'
 import type { EncounterState, PassiveTalentId, PersistedBuildState } from '../encounter/encounterTypes'
 import { getStageById } from '../data/stageTemplates'
@@ -8,6 +9,7 @@ import {
   resetPlayerBuildCatalog,
 } from '../data/playerBuildCatalog'
 import { getStageBuildRuleId } from '../data/encounterTemplates'
+import { parsePlayerBuildWorkbook } from '../data/workbookLoader'
 import {
   runBalanceScenario,
   runStageBalanceAnalysis,
@@ -142,6 +144,120 @@ describe('balance simulator', () => {
       victories: 3,
       passRate: 1,
     })
+  })
+
+  it('runs the registered bear strategy and activates bear-owned skills', () => {
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(
+      XLSX.readFile('public/designer-data/player_build.xlsx'),
+    ))
+    const stage = getStageById('harbor-1')
+    const build = getDefaultPersistedBuildForRule('standard_5slot', 'druid_bear_t')
+
+    const result = runBalanceScenario({
+      stage,
+      classId: 'druid_bear_t',
+      build,
+      buildId: 'bear-default',
+      profile: noMistakeProfile,
+      attempts: 1,
+      maxDurationMs: 3000,
+      collectTrace: true,
+    })
+
+    expect(result.trace?.events.some((event) => (
+      event.type === 'skill-activated' && event.message.includes('druid_bear_t_')
+    ))).toBe(true)
+  })
+
+  it('spends bear rage on Ironfur before attacking at low health', () => {
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(
+      XLSX.readFile('public/designer-data/player_build.xlsx'),
+    ))
+    const stage = getStageById('harbor-1')
+    const build = getDefaultPersistedBuildForRule('standard_5slot', 'druid_bear_t')
+
+    const result = runBalanceScenario({
+      stage,
+      classId: 'druid_bear_t',
+      build,
+      buildId: 'bear-defensive',
+      profile: noMistakeProfile,
+      attempts: 1,
+      maxDurationMs: 500,
+      collectTrace: true,
+      initialStateMutator: (state) => ({
+        ...state,
+        enemies: state.enemies.map((enemy) => ({ ...enemy, cast: null })),
+        player: {
+          ...state.player,
+          hp: state.player.maxHp * 0.4,
+          resource: 100,
+        },
+      }),
+    })
+
+    const firstSkill = result.trace?.events.find((event) => event.type === 'skill-activated')
+    expect(firstSkill?.message).toContain('druid_bear_t_ironfur')
+  })
+
+  it('uses Thrash before Growl when several enemies have lost threat', () => {
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(
+      XLSX.readFile('public/designer-data/player_build.xlsx'),
+    ))
+    const stage = getStageById('harbor-1')
+    const build = getDefaultPersistedBuildForRule('standard_5slot', 'druid_bear_t')
+
+    const result = runBalanceScenario({
+      stage,
+      classId: 'druid_bear_t',
+      build,
+      buildId: 'bear-area-threat',
+      profile: noMistakeProfile,
+      attempts: 1,
+      maxDurationMs: 500,
+      collectTrace: true,
+      initialStateMutator: (state) => ({
+        ...state,
+        enemies: state.enemies.map((enemy) => ({
+          ...enemy,
+          cast: null,
+          threatState: 'lost',
+        })),
+      }),
+    })
+
+    const firstSkill = result.trace?.events.find((event) => event.type === 'skill-activated')
+    expect(firstSkill?.message).toContain('druid_bear_t_thrash')
+  })
+
+  it('uses Growl for a single lost-threat target after target optimization', () => {
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(
+      XLSX.readFile('public/designer-data/player_build.xlsx'),
+    ))
+    const stage = getStageById('harbor-1')
+    const build = getDefaultPersistedBuildForRule('standard_5slot', 'druid_bear_t')
+
+    const result = runBalanceScenario({
+      stage,
+      classId: 'druid_bear_t',
+      build,
+      buildId: 'bear-single-threat',
+      profile: noMistakeProfile,
+      attempts: 1,
+      maxDurationMs: 500,
+      collectTrace: true,
+      initialStateMutator: (state) => ({
+        ...state,
+        enemies: state.enemies.map((enemy, index) => ({
+          ...enemy,
+          cast: null,
+          threatState: index === 0 ? 'lost' : enemy.threatState,
+        })),
+      }),
+    })
+
+    const firstSkill = result.trace?.events.find((event) => event.type === 'skill-activated')
+    expect(firstSkill?.message).toContain('druid_bear_t_growl')
   })
 
   it('does not include hp or pressure ratios in scenario results', () => {
