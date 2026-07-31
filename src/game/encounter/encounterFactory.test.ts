@@ -482,7 +482,13 @@ describe('encounterFactory hand-cast flow', () => {
           stageId: 'RingingDeeps-6',
           buildRuleId: 'standard_5slot',
           enemyDefinitionIds: ['kobold_apprentice', 'kobold_apprentice', 'The_Candle_King', 'kobold_rummager'],
-          unlockedActiveSkillIds: [],
+          unlockedActiveSkillIds: [
+            'druid_bear_t_growl',
+            'druid_bear_t_mangle',
+            'druid_bear_t_thrash',
+            'druid_bear_t_skull_bash',
+            'druid_bear_t_ironfur',
+          ],
           specialRuleLogicIds: ['sensitiveParty?', 'watchAndLearn'],
         },
       ]

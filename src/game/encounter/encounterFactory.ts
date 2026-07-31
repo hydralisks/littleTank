@@ -10,6 +10,7 @@ import {
   getActiveSkillDefinition,
   getPassiveModifiers,
   getPlayerBuildStatusDefinition,
+  getSkillEffectsForSkill,
   getStatusesForTalent,
   getTalentEffectsForTalent,
 } from '../data/skillTemplates'
@@ -54,6 +55,7 @@ import type {
   EncounterState,
   EnemySeed,
   EnemyState,
+  PassiveTalentModifiers,
   PassiveTalentId,
   PersistedBuildState,
   PlayerClassId,
@@ -75,6 +77,12 @@ const PARTY_AMBIENT_SOURCE_ID = 'party_ambient_random'
 const DAMAGE_TAKEN_RESOURCE_WINDOW_MS = 1_000
 const DAMAGE_TAKEN_RESOURCE_WINDOW_CAP = 10
 const NON_GCD_SELF_COOLDOWN_MS = 500
+const BEAR_TEMPORARY_MAX_HP_STATUS_IDS = new Set([
+  'druid_bear_t_survival_instincts',
+  'druid_bear_t_lunar_beam',
+  'druid_bear_t_incarnation_ursoc',
+  'druid_bear_t_rage_of_the_sleeper',
+])
 
 function getBearTalentValue(
   talentId: PassiveTalentId,
@@ -1203,6 +1211,7 @@ function buildRuntimeDamageSources(
   currentSources: DamageSourceRuntime[],
   playerCurrentTargetId: string | null,
   partyCurrentTargetId: string | null,
+  modifiers = getPassiveModifiers([]),
 ) {
   const definitions = new Map<string, DamageSourceDefinition>()
 
@@ -1210,6 +1219,9 @@ function buildRuntimeDamageSources(
     if (definition.enabled) {
       definitions.set(definition.sourceId, {
         ...definition,
+        intervalMs: definition.ownerSide === 'party'
+          ? Math.max(1, definition.intervalMs * modifiers.partyAutoAttackIntervalMultiplier)
+          : definition.intervalMs,
         sourceTags: [...definition.sourceTags],
       })
     }
@@ -1217,7 +1229,10 @@ function buildRuntimeDamageSources(
 
   const legacyPartySource = createLegacyPartyAmbientSource(stage)
   if (legacyPartySource) {
-    definitions.set(legacyPartySource.sourceId, legacyPartySource)
+    definitions.set(legacyPartySource.sourceId, {
+      ...legacyPartySource,
+      intervalMs: Math.max(1, legacyPartySource.intervalMs * modifiers.partyAutoAttackIntervalMultiplier),
+    })
   } else {
     definitions.delete(PARTY_AMBIENT_SOURCE_ID)
   }
@@ -1326,6 +1341,7 @@ function applyImmediatePlayerAutoAttack(state: EncounterState, targetEnemyId: st
   const autoAttackSource = createPlayerAutoAttackDefinitionForStage(state.stage)
   const autoAttackRuntime = createDamageSourceRuntime(autoAttackSource)
   const rawDamage = resolveDamageSourceDamage(autoAttackRuntime, modifiers) *
+    modifiers.playerOutgoingDamageMultiplier *
     getPlayerOutgoingDamageMultiplier(state.player) *
     getPlayerOutgoingDamageMultiplierFromMurlocWatch(state.enemies) *
     getEnemyDamageTakenMultiplier(targetEnemy)
@@ -1377,6 +1393,21 @@ function resolveDamageSourceDamage(source: DamageSourceRuntime, modifiers = getP
   }
 
   return (source.baseDamage + bonusDamage) * multiplier
+}
+
+function getIronThornsPartyDamageMultiplier(
+  player: PlayerState,
+  modifiers: PassiveTalentModifiers,
+) {
+  if (
+    modifiers.bearIronThornsPartyDamagePerStack <= 0 ||
+    player.mitigation?.id !== 'druid_bear_t_ironfur'
+  ) {
+    return 1
+  }
+
+  const stacks = clamp(player.mitigation.stacks ?? 0, 0, player.mitigation.maxStacks ?? 3)
+  return 1 + stacks * modifiers.bearIronThornsPartyDamagePerStack
 }
 
 function getDamageSourceMurlocWatchingMultiplier(
@@ -1542,6 +1573,7 @@ function applyDamageSources(state: EncounterState, deltaMs: number) {
     state.runtime.damageSources,
     effectivePlayerCurrentTargetId,
     effectivePartyCurrentTargetId,
+    modifiers,
   )
 
   const nextSources = syncedSources.map((source) => {
@@ -1592,7 +1624,11 @@ function applyDamageSources(state: EncounterState, deltaMs: number) {
 
         const rawDamage =
           resolveDamageSourceDamage(nextSource, modifiers) *
-          (nextSource.ownerSide === 'player' ? getPlayerOutgoingDamageMultiplier(nextPlayer) : 1) *
+          (nextSource.ownerSide === 'player'
+            ? modifiers.playerOutgoingDamageMultiplier * getPlayerOutgoingDamageMultiplier(nextPlayer)
+            : nextSource.ownerSide === 'party'
+              ? getIronThornsPartyDamageMultiplier(nextPlayer, modifiers)
+              : 1) *
           getDamageSourceMurlocWatchingMultiplier(nextSource, nextEnemies) *
           getEnemyDamageTakenMultiplier(enemy)
         const damageResult = applyEnemyDamageWithStatusMitigation(enemy, rawDamage)
@@ -1742,6 +1778,7 @@ function appendOrReplacePlayerDebuff(
 function getPlayerBuffDamageMultiplier(player: PlayerState, damageType: EnemySkillDamageType) {
   return player.buffs.reduce((multiplier, status) => {
     if (
+      status.id === 'druid_bear_t_ironfur_reserve' ||
       !status.damageReductionRatio ||
       !status.damageReductionTypes?.includes(damageType)
     ) {
@@ -1952,7 +1989,7 @@ function applyPlayerDamageWithAbsorbResult(
   )
   const absorbed: PlayerAbsorbConsumption[] = []
   const nextBuffs = player.buffs.flatMap((status) => {
-    if (status.id !== 'ignorePain' || !status.absorbRemaining || !status.absorbRatio) {
+    if (!status.absorbRemaining || !status.absorbRatio) {
       return [status]
     }
 
@@ -2109,25 +2146,30 @@ function applyPlayerDebuffOnApplyEffects(player: PlayerState, status: StatusEffe
   return player
 }
 
-function getPlayerMitigationDamageMultiplier(player: PlayerState, damageType: EnemySkillDamageType) {
-  const mitigation = player.mitigation
-  if (!mitigation) return 1
-  if (typeof mitigation.damageReductionRatio === 'number') {
-    return mitigation.damageReductionTypes?.includes(damageType)
-      ? 1 - mitigation.damageReductionRatio
-      : 1
-  }
-  return 0.62
-}
-
-function getBearTalentPlayerDamageMultiplier(
+function getPlayerMitigationDamageMultiplier(
+  player: PlayerState,
   passiveTalentIds: PassiveTalentId[],
   damageType: EnemySkillDamageType,
 ) {
-  const modifiers = getPassiveModifiers(passiveTalentIds)
-  return damageType === 'physical'
-    ? 1 - modifiers.bearPhysicalDamageReduction
-    : 1
+  const mitigation = player.mitigation
+  const mitigationReduction = mitigation && typeof mitigation.damageReductionRatio === 'number'
+    ? mitigation.damageReductionTypes?.includes(damageType)
+      ? damageType === 'magic'
+        ? mitigation.magicDamageReductionRatio ?? mitigation.damageReductionRatio
+        : mitigation.damageReductionRatio
+      : 0
+    : mitigation ? 0.38 : 0
+  const reserveReduction = player.buffs.reduce((total, status) => (
+    status.id === 'druid_bear_t_ironfur_reserve' &&
+    isStatusActive(status) &&
+    status.damageReductionTypes?.includes(damageType)
+      ? total + (status.damageReductionRatio ?? 0)
+      : total
+  ), 0)
+  const thickHideReduction = damageType === 'physical'
+    ? getPassiveModifiers(passiveTalentIds).bearPhysicalDamageReduction
+    : 0
+  return 1 - Math.min(0.95, mitigationReduction + reserveReduction + thickHideReduction)
 }
 
 function countElapsedStatusTicks(status: StatusEffect, deltaMs: number, fallbackIntervalMs: number) {
@@ -2155,9 +2197,19 @@ function applyBearPlayerBuffContinuousEffects(
     if (!isStatusActive(status)) continue
     const elapsedTicks = countElapsedStatusTicks(status, deltaMs, 2000)
     if (elapsedTicks <= 0) continue
-    const ratio = status.id === 'druid_bear_t_lunar_beam' ? 0.03 : status.id === 'druid_bear_t_frenzied_regeneration' ? 0.06 : status.id === 'druid_bear_t_regrowth' ? 0.03 : 0
-    if (ratio <= 0) continue
-    const amount = nextPlayer.maxHp * ratio * elapsedTicks * healingMultiplier
+    const ratio = status.id === 'druid_bear_t_lunar_beam'
+      ? getStatusValue(status, 'valueB', 0.03)
+      : status.id === 'druid_bear_t_frenzied_regeneration'
+        ? getStatusValue(status, 'valueA', 0.06)
+        : 0
+    const fixedHealingPerTick = status.id === 'druid_bear_t_regrowth'
+      ? getStatusValue(status, 'valueB', 5)
+      : 0
+    if (ratio <= 0 && fixedHealingPerTick <= 0) continue
+    const rawHealing = fixedHealingPerTick > 0
+      ? fixedHealingPerTick * elapsedTicks
+      : nextPlayer.maxHp * ratio * elapsedTicks
+    const amount = rawHealing * healingMultiplier
     const previousHp = nextPlayer.hp
     const nextHp = clampSuppressedHealing(
       previousHp,
@@ -2168,15 +2220,12 @@ function applyBearPlayerBuffContinuousEffects(
     effectivePlayerHealing += Math.max(0, nextHp - previousHp)
     nextPlayer = { ...nextPlayer, hp: nextHp }
 
-    const regrowthPartyHealing = status.id === 'druid_bear_t_regrowth' && passiveTalentIds.includes('druid_bear_t_regrowth_of_the_pack')
-      ? nextPlayer.maxHp * ratio * elapsedTicks * getBearTalentValue('druid_bear_t_regrowth_of_the_pack', 'valueA', 0.25)
-      : 0
     const regenerativeBondHealing = status.id === 'druid_bear_t_frenzied_regeneration' &&
       passiveTalentIds.includes('druid_bear_t_regenerative_bond') &&
       status.remainingMs <= deltaMs
       ? getBearTalentValue('druid_bear_t_regenerative_bond', 'valueA', 5)
       : 0
-    const rawPartyHealing = regrowthPartyHealing + regenerativeBondHealing
+    const rawPartyHealing = regenerativeBondHealing
     if (rawPartyHealing > 0) {
       const previousPartyHp = nextParty.hp
       const nextPartyHp = clampSuppressedHealing(
@@ -2191,39 +2240,62 @@ function applyBearPlayerBuffContinuousEffects(
       )
     }
   }
+  const barkskinExpired = activeStatusSource.buffs.some((status) => (
+    status.id === 'druid_bear_t_barkskin' && isStatusActive(status) && status.remainingMs <= deltaMs
+  ))
+  if (barkskinExpired && passiveTalentIds.includes('druid_bear_t_bark_dispelling')) {
+    const previousHp = nextPlayer.hp
+    const rawHealing = nextPlayer.maxHp * getBearTalentValue('druid_bear_t_bark_dispelling', 'valueA', 0.1)
+    const nextHp = clampSuppressedHealing(
+      previousHp,
+      previousHp + rawHealing * healingMultiplier,
+      nextPlayer.maxHp,
+      isPlayerHealingSuppressedByMurlocWatch(enemies),
+    )
+    effectivePlayerHealing += Math.max(0, nextHp - previousHp)
+    nextPlayer = { ...nextPlayer, hp: nextHp }
+  }
   return { player: nextPlayer, party: nextParty, effectivePlayerHealing }
 }
 
-function applyBearEnemyDotEffects(enemies: EnemyState[], activeStatusSource: EnemyState[], deltaMs: number) {
-  return enemies.map((enemy) => {
-    let hp = enemy.hp
+function applyBearEnemyDotEffects(
+  enemies: EnemyState[],
+  activeStatusSource: EnemyState[],
+  deltaMs: number,
+  occurredAtMs: number,
+) {
+  const combatLogEvents: CombatLogEvent[] = []
+  const nextEnemies = enemies.map((enemy) => {
+    let nextEnemy = enemy
     const sourceEnemy = activeStatusSource.find((entry) => entry.id === enemy.id)
     for (const status of sourceEnemy?.statuses ?? []) {
       if (status.id !== 'druid_bear_t_moonfire' || !isStatusActive(status)) continue
       const elapsedTicks = countElapsedStatusTicks(status, deltaMs, 3000)
-      hp = Math.max(0, hp - elapsedTicks * getStatusValue(status, 'valueA', 6))
+      const damage = elapsedTicks * getStatusValue(status, 'valueA', 5)
+      if (damage <= 0) continue
+      nextEnemy = applyThreatGain(
+        { ...nextEnemy, hp: Math.max(0, nextEnemy.hp - damage) },
+        damage * (status.threatMultiplier ?? 5),
+      )
+      combatLogEvents.push({
+        id: `${occurredAtMs}:damage:${status.id}:${enemy.id}:${combatLogEvents.length}`,
+        occurredAtMs,
+        type: 'damage',
+        source: getStatusCombatLogSource(status),
+        target: { kind: 'enemy', id: enemy.id, name: enemy.name },
+        ability: getStatusCombatLogAbility(status),
+        amount: damage,
+      })
     }
-    return { ...enemy, hp }
+    return nextEnemy
   })
+  return { enemies: nextEnemies, combatLogEvents }
 }
 
 function getBearMaxHpBuffMultiplier(player: PlayerState) {
   return player.buffs
-    .filter((entry) => ['druid_bear_t_survival_instincts', 'druid_bear_t_lunar_beam', 'druid_bear_t_incarnation_ursoc', 'druid_bear_t_wild_recovery'].includes(entry.id) && isStatusActive(entry))
+    .filter((entry) => BEAR_TEMPORARY_MAX_HP_STATUS_IDS.has(entry.id) && isStatusActive(entry))
     .reduce((multiplier, entry) => multiplier * (1 + (entry.valueA ?? 0)), 1)
-}
-
-function applyBearWildRecoveryBuff(player: PlayerState) {
-  const maxHpBonus = getBearTalentValue('druid_bear_t_wild_recovery', 'valueA', 0.1)
-  const status = createPlayerBuildStatusEffect('druid_bear_t_wild_recovery')
-  if (!status || player.buffs.some((entry) => entry.id === status.id && isStatusActive(entry))) return player
-  const nextMaxHp = Math.round(player.maxHp * (1 + maxHpBonus))
-  return {
-    ...player,
-    hp: player.maxHp > 0 ? (player.hp / player.maxHp) * nextMaxHp : nextMaxHp,
-    maxHp: nextMaxHp,
-    buffs: [...player.buffs.filter((entry) => entry.id !== status.id), { ...status, valueA: maxHpBonus }],
-  }
 }
 
 function syncExpiredBearMaxHpBuffs(previous: PlayerState, current: PlayerState) {
@@ -2834,8 +2906,7 @@ function resolveCompletedCast(
     getEnemyOutgoingDamageMultiplier(currentEnemy) *
     getEnemyMagicDamageMultiplier(currentEnemy, skillDefinition.damageType)
   const damageTakenMultiplier =
-    getPlayerMitigationDamageMultiplier(player, skillDefinition.damageType) *
-    getBearTalentPlayerDamageMultiplier(passiveTalentIds, skillDefinition.damageType) *
+    getPlayerMitigationDamageMultiplier(player, passiveTalentIds, skillDefinition.damageType) *
     modifiers.playerDamageTakenMultiplier *
     tuning.enemyDamageMultiplier *
     enemyOutgoingDamageMultiplier *
@@ -3336,7 +3407,7 @@ export function getSkillActivationBlockReason(state: EncounterState, skillId: Sk
     return `${skill.name} 仍在冷却中。`
   }
 
-  if (state.player.resource < skill.resourceCost) {
+  if (state.player.resource < getEffectiveSkillResourceCost(state, skill)) {
     return `${skill.name} 所需资源不足。`
   }
 
@@ -3345,6 +3416,16 @@ export function getSkillActivationBlockReason(state: EncounterState, skillId: Sk
   }
 
   return null
+}
+
+function getEffectiveSkillResourceCost(state: EncounterState, skill: SkillState) {
+  if (
+    skill.id === 'druid_bear_t_barkskin' &&
+    state.passiveTalentIds.includes('druid_bear_t_broken_bark')
+  ) {
+    return Math.max(0, getBearTalentValue('druid_bear_t_broken_bark', 'valueB', 10))
+  }
+  return skill.resourceCost
 }
 
 function withCurrentTarget(state: EncounterState, mutate: (enemy: EnemyState) => EnemyState) {
@@ -3512,6 +3593,7 @@ export function applyBuildConfiguration(
         state.runtime.damageSources,
         state.player.currentTargetId,
         state.party.currentTargetId,
+        modifiers,
       ),
       pauseOverlay: state.runtime.pauseOverlay,
     },
@@ -3561,7 +3643,7 @@ function syncBearConditionalTalentStatuses(state: EncounterState): EncounterStat
       buffs: [
         ...state.player.buffs.filter((status) => status.id !== 'druid_bear_t_moonlit_resolve'),
         ...(hasMoonfire && state.passiveTalentIds.includes('druid_bear_t_moonlit_resolve') && moonlit
-          ? [{ ...moonlit, damageReductionRatio: getBearTalentValue('druid_bear_t_moonlit_resolve', 'valueA', 0.05), damageReductionTypes: ['physical', 'magic'] as EnemySkillDamageType[] }]
+          ? [{ ...moonlit, damageReductionRatio: getBearTalentValue('druid_bear_t_moonlit_resolve', 'valueA', 0.1), damageReductionTypes: ['physical', 'magic'] as EnemySkillDamageType[] }]
           : []),
       ],
     },
@@ -3589,14 +3671,23 @@ function applyBearLastStand(state: EncounterState): EncounterState {
     return state
   }
   const ironfur = createPlayerBuildStatusEffect('druid_bear_t_ironfur', 8000)
+  const rageExhaustionDurationMs = getBearTalentValue('druid_bear_t_last_bear_stand', 'valueB', 10) * 1000
+  const rageExhaustion = createPlayerBuildStatusEffect('druid_bear_t_rage_exhaustion', rageExhaustionDurationMs)
+  const ironfurReduction = Math.max(0, getSkillEffectsForSkill('druid_bear_t_ironfur')[0]?.valueA ?? 20) / 100
   return {
     ...state,
     player: {
       ...state.player,
-      hp: 1,
+      hp: Math.max(1, state.player.maxHp * getBearTalentValue('druid_bear_t_last_bear_stand', 'valueA', 0.15)),
       mitigation: ironfur
-        ? { ...ironfur, stacks: 1, maxStacks: 3, damageReductionRatio: 0.15, damageReductionTypes: ['physical'] }
+        ? { ...ironfur, stacks: 1, maxStacks: 3, damageReductionRatio: ironfurReduction, damageReductionTypes: ['physical'] }
         : state.player.mitigation,
+      debuffs: rageExhaustion
+        ? [
+            ...state.player.debuffs.filter((status) => status.id !== rageExhaustion.id),
+            { ...rageExhaustion, tone: 'danger', kind: 'playerDebuff', dispellable: true },
+          ]
+        : state.player.debuffs,
     },
     runtime: {
       ...state.runtime,
@@ -3637,6 +3728,7 @@ function finalizeEncounterState(state: EncounterState): EncounterState {
     state.runtime.damageSources,
     currentTargetId,
     partyCurrentTargetId,
+    getPassiveModifiers(state.passiveTalentIds),
   )
 
   let result: EncounterResult | null = state.result
@@ -3807,7 +3899,13 @@ export function createInitialEncounterState(
       partyPressureLastValue: template.partyPressure,
       damageTakenResourceWindowRemainingMs: DAMAGE_TAKEN_RESOURCE_WINDOW_MS,
       damageTakenResourceGainedInWindow: 0,
-      damageSources: buildRuntimeDamageSources(template.stage, [], currentTargetId, currentTargetId),
+      damageSources: buildRuntimeDamageSources(
+        template.stage,
+        [],
+        currentTargetId,
+        currentTargetId,
+        getPassiveModifiers(buildState.passiveTalentIds),
+      ),
       commandQueue: [],
       eventQueue: [],
       combatLog: [],
@@ -3896,13 +3994,7 @@ export function tickEncounter(state: EncounterState, deltaMs = TICK_INTERVAL_MS)
     debuffs: tickStatuses(commandFlushedState.player.debuffs, deltaMs),
   }
   const previousMitigation = commandFlushedState.player.mitigation
-  let nextClassRuntime = {
-    ...commandFlushedState.runtime.classRuntime,
-    wildRecoveryCooldownMs: Math.max(
-      0,
-      (commandFlushedState.runtime.classRuntime.wildRecoveryCooldownMs ?? 0) - deltaMs,
-    ),
-  }
+  const nextClassRuntime = { ...commandFlushedState.runtime.classRuntime }
   const bearPeriodicHealing = applyBearPlayerBuffContinuousEffects(
     nextPlayer,
     commandFlushedState.party,
@@ -3914,17 +4006,6 @@ export function tickEncounter(state: EncounterState, deltaMs = TICK_INTERVAL_MS)
   nextPlayer = bearPeriodicHealing.player
   nextPlayer = syncExpiredBearMaxHpBuffs(commandFlushedState.player, nextPlayer)
   nextPlayer = applyBearBarkskinDispel(commandFlushedState.player, nextPlayer, commandFlushedState.passiveTalentIds)
-  if (
-    bearPeriodicHealing.effectivePlayerHealing > 0 &&
-    commandFlushedState.passiveTalentIds.includes('druid_bear_t_wild_recovery') &&
-    nextClassRuntime.wildRecoveryCooldownMs <= 0
-  ) {
-    nextPlayer = applyBearWildRecoveryBuff(nextPlayer)
-    nextClassRuntime = {
-      ...nextClassRuntime,
-      wildRecoveryCooldownMs: getBearTalentValue('druid_bear_t_wild_recovery', 'valueB', 10) * 1000,
-    }
-  }
   if (
     previousMitigation?.id === 'druid_bear_t_ironfur' &&
     !nextPlayer.mitigation &&
@@ -4134,7 +4215,14 @@ export function tickEncounter(state: EncounterState, deltaMs = TICK_INTERVAL_MS)
       recoveryRemainingMs: Math.max(0, enemy.recoveryRemainingMs - deltaMs),
     }, nextPlayer, nextParty, commandFlushedState.stage.partyAutoDamageMax),
   )
-  nextEnemies = applyBearEnemyDotEffects(nextEnemies, damageSourceResolution.enemies, deltaMs)
+  const bearDotResolution = applyBearEnemyDotEffects(
+    nextEnemies,
+    damageSourceResolution.enemies,
+    deltaMs,
+    commandFlushedState.timeMs + deltaMs,
+  )
+  nextEnemies = bearDotResolution.enemies
+  combatLogEvents.push(...bearDotResolution.combatLogEvents)
 
   for (let index = 0; index < nextEnemies.length; index += 1) {
     let nextEnemy = nextEnemies[index]
@@ -4372,10 +4460,14 @@ export function tickEncounter(state: EncounterState, deltaMs = TICK_INTERVAL_MS)
   }
   if (
     commandFlushedState.player.classId === 'druid_bear_t' &&
-    combatLogEvents.some((event) => event.type === 'absorb-consumed' && event.fullyConsumed) &&
+    combatLogEvents.some((event) => (
+      event.type === 'absorb-consumed' &&
+      event.ability.id === 'druid_bear_t_broken_bark_shield' &&
+      event.fullyConsumed
+    )) &&
     commandFlushedState.passiveTalentIds.includes('druid_bear_t_broken_bark')
   ) {
-    enqueueBearRage(getBearTalentValue('druid_bear_t_broken_bark', 'valueA', 12), 'bear_broken_bark')
+    enqueueBearRage(getBearTalentValue('druid_bear_t_broken_bark', 'valueA', 30), 'bear_broken_bark')
   }
 
   return drainEncounterEvents(
@@ -4419,6 +4511,7 @@ export function selectEnemy(state: EncounterState, enemyId: string): EncounterSt
         state.runtime.damageSources,
         targetEnemyId,
         state.party.currentTargetId,
+        getPassiveModifiers(state.passiveTalentIds),
       ),
     },
   }
@@ -4486,6 +4579,7 @@ export function activateSkill(state: EncounterState, skillId: SkillId): Encounte
               state.runtime.damageSources,
               effectivePlayerCurrentTargetId,
               state.party.currentTargetId,
+              getPassiveModifiers(state.passiveTalentIds),
             ),
           },
         }
@@ -4521,7 +4615,8 @@ export function activateSkill(state: EncounterState, skillId: SkillId): Encounte
     return activationState
   }
 
-  if (activationState.player.resource < skill.resourceCost) {
+  const effectiveResourceCost = getEffectiveSkillResourceCost(activationState, skill)
+  if (activationState.player.resource < effectiveResourceCost) {
     return activationState
   }
 
@@ -4562,7 +4657,7 @@ export function activateSkill(state: EncounterState, skillId: SkillId): Encounte
     player: {
       ...activationState.player,
       resource: clamp(
-        activationState.player.resource - skill.resourceCost,
+        activationState.player.resource - effectiveResourceCost,
         0,
         activationState.player.maxResource,
       ),

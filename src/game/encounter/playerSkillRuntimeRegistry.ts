@@ -19,6 +19,12 @@ import type {
 
 const TAUNT_THREAT_BOOST = 72
 const MASS_TAUNT_THREAT_BOOST = 48
+const BEAR_TEMPORARY_MAX_HP_STATUS_IDS = new Set([
+  'druid_bear_t_survival_instincts',
+  'druid_bear_t_lunar_beam',
+  'druid_bear_t_incarnation_ursoc',
+  'druid_bear_t_rage_of_the_sleeper',
+])
 
 function getBearTalentValue(
   talentId: string,
@@ -279,7 +285,7 @@ function getPlayerDamageMultiplier(state: EncounterState) {
     ? 0.5
     : 1
 
-  return watchedMultiplier * state.player.buffs.reduce(
+  return watchedMultiplier * getPassiveModifiers(state.passiveTalentIds).playerOutgoingDamageMultiplier * state.player.buffs.reduce(
     (multiplier, status) => multiplier * (1 + (status.damageMultiplierBonus ?? 0)),
     1,
   )
@@ -536,7 +542,7 @@ function applyBearBuffStatus(state: EncounterState, skillId: SkillId, statusId: 
   const effect = getPrimarySkillEffect(skillId)
   const status = createPlayerBuildStatusEffect(
     statusId,
-    statusId === 'druid_bear_t_wild_recovery' ? undefined : durationMs ?? effect?.durationMs,
+    durationMs ?? effect?.durationMs,
   )
   if (!status) {
     return state
@@ -561,17 +567,16 @@ function applyBearBuffStatus(state: EncounterState, skillId: SkillId, statusId: 
         : {}),
     ...(typeof effect?.valueA === 'number' ? { valueA: effect.valueA } : {}),
     ...(typeof effect?.valueB === 'number' ? { valueB: effect.valueB } : {}),
-    ...(statusId === 'druid_bear_t_wild_recovery' ? { valueA: getBearTalentValue('druid_bear_t_wild_recovery', 'valueA', 0.1) } : {}),
     ...(statusId === 'druid_bear_t_frenzied_regeneration' || statusId === 'druid_bear_t_lunar_beam' || statusId === 'druid_bear_t_regrowth'
       ? { tickIntervalMs: statusId === 'druid_bear_t_lunar_beam' ? 2000 : 2000 }
       : {}),
   }
 
-  const hpMultiplier = ['druid_bear_t_survival_instincts', 'druid_bear_t_lunar_beam', 'druid_bear_t_incarnation_ursoc', 'druid_bear_t_wild_recovery'].includes(statusId)
-    ? 1 + (statusId === 'druid_bear_t_wild_recovery' ? getBearTalentValue('druid_bear_t_wild_recovery', 'valueA', 0.1) : effect?.valueA ?? 0)
+  const hpMultiplier = BEAR_TEMPORARY_MAX_HP_STATUS_IDS.has(statusId)
+    ? 1 + (effect?.valueA ?? 0)
     : 1
   const previousMultiplier = state.player.buffs
-    .filter((entry) => ['druid_bear_t_survival_instincts', 'druid_bear_t_lunar_beam', 'druid_bear_t_incarnation_ursoc', 'druid_bear_t_wild_recovery'].includes(entry.id))
+    .filter((entry) => BEAR_TEMPORARY_MAX_HP_STATUS_IDS.has(entry.id))
     .reduce((multiplier, entry) => multiplier * (1 + (entry.valueA ?? 0)), 1)
   const baseMaxHp = state.player.maxHp / previousMultiplier
   const nextMaxHp = Math.round(baseMaxHp * previousMultiplier * hpMultiplier)
@@ -600,36 +605,59 @@ function applyBearBuffStatus(state: EncounterState, skillId: SkillId, statusId: 
     : nextState
 }
 
-function applyBearHealing(state: EncounterState, _skillId: SkillId, ratio: number, helpers: RuntimeSkillHelpers) {
+function applyBearHealing(state: EncounterState, amount: number, helpers: RuntimeSkillHelpers) {
   const nextHp = clampHealing(
     state.player.hp,
-    state.player.hp + state.player.maxHp * ratio * getHealingReceivedMultiplier(state, 'player'),
+    state.player.hp + amount * getHealingReceivedMultiplier(state, 'player'),
     state.player.maxHp,
     isHealingSuppressedByMurlocWatch(state, 'player'),
     helpers,
   )
-  const healedState = {
+  return {
     ...state,
     player: { ...state.player, hp: nextHp },
   }
-  if (
-    nextHp <= state.player.hp ||
-    !state.passiveTalentIds.includes('druid_bear_t_wild_recovery') ||
-    (state.runtime.classRuntime.wildRecoveryCooldownMs ?? 0) > 0
-  ) {
-    return healedState
+}
+
+function applyBearPainImmunityShield(
+  state: EncounterState,
+  skillId: SkillId,
+  targetCount: number,
+) {
+  const status = createPlayerBuildStatusEffect('druid_bear_t_pain_immunity_shield', 9000)
+  if (!status || targetCount <= 0) return state
+  const amountPerTarget = Math.max(0, getBearTalentValue('druid_bear_t_pain_immunity', 'valueA', 5))
+  const cap = Math.max(0, getBearTalentValue('druid_bear_t_pain_immunity', 'valueB', 20))
+  const existing = state.player.buffs.find((entry) => entry.id === status.id)?.absorbRemaining ?? 0
+  const absorbRemaining = Math.min(cap, existing + Math.min(cap, targetCount * amountPerTarget))
+  const addedAmount = Math.max(0, absorbRemaining - existing)
+  const nextStatus: StatusEffect = {
+    ...status,
+    remainingMs: 9000,
+    totalMs: 9000,
+    absorbRemaining,
+    absorbRatio: 1,
+    combatLogSource: { kind: 'player', id: 'player', name: '玩家' },
+    combatLogAbility: { kind: 'playerSkill', id: skillId, name: getActiveSkillDefinition(skillId)?.name },
   }
-  const recovered = applyBearBuffStatus(healedState, _skillId, 'druid_bear_t_wild_recovery')
-  return {
-    ...recovered,
-    runtime: {
-      ...recovered.runtime,
-      classRuntime: {
-        ...recovered.runtime.classRuntime,
-        wildRecoveryCooldownMs: getBearTalentValue('druid_bear_t_wild_recovery', 'valueB', 10) * 1000,
-      },
+  const nextState = {
+    ...state,
+    player: {
+      ...state.player,
+      buffs: [...state.player.buffs.filter((entry) => entry.id !== status.id), nextStatus],
     },
   }
+  return addedAmount > 0
+    ? recordCombatLogEvents(nextState, [{
+        id: createCombatLogEventId(state, 'absorb-created', `${skillId}:pain-immunity`),
+        occurredAtMs: state.timeMs,
+        type: 'absorb-created',
+        source: { kind: 'player', id: 'player', name: '玩家' },
+        target: { kind: 'tank', id: 'tank', name: '坦克' },
+        ability: { kind: 'playerSkill', id: skillId, name: getActiveSkillDefinition(skillId)?.name },
+        amount: addedAmount,
+      }])
+    : nextState
 }
 
 export function applyBearRageGain(
@@ -639,6 +667,11 @@ export function applyBearRageGain(
   reason: string,
   changePlayerResource: RuntimeSkillHelpers['changePlayerResource'],
 ) {
+  if (state.player.debuffs.some((status) => (
+    status.id === 'druid_bear_t_rage_exhaustion' && status.remainingMs !== 0
+  ))) {
+    return state
+  }
   const actualGain = Math.max(0, Math.min(amount, state.player.maxResource - state.player.resource))
   let nextState = changePlayerResource(state, amount, reason, skillId)
   if (!state.passiveTalentIds.includes('druid_bear_t_spring_returns') || actualGain <= 0) return nextState
@@ -692,10 +725,10 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
   bear_mangle: (state, skillId, helpers) => {
     const effect = getPrimarySkillEffect(skillId)
     const bonusRage = state.passiveTalentIds.includes('druid_bear_t_savage_focus')
-      ? getBearTalentValue('druid_bear_t_savage_focus', 'valueA', 5)
+      ? getBearTalentValue('druid_bear_t_savage_focus', 'valueA', 7)
       : 0
     return enqueueEncounterEvents(
-      applyBearRageGain(state, 20 + bonusRage, skillId, 'bear_mangle', helpers.changePlayerResource),
+      applyBearRageGain(state, Math.max(0, effect?.valueB ?? 15) + bonusRage, skillId, 'bear_mangle', helpers.changePlayerResource),
       buildFlatDamageEvents(state, getCurrentTargetEnemy(state) ? [getCurrentTargetEnemy(state)!] : [], withBearThreatMultiplier(effect, state), skillId, effect?.valueA ?? 15),
     )
   },
@@ -703,12 +736,23 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
     const effect = getPrimarySkillEffect(skillId)
     const targets = helpers.getEnemyTargetIdsBySelector(state, 'matrix3x3')
     const affected = state.enemies.filter((enemy) => targets.has(enemy.id))
-    const bonusRage = state.passiveTalentIds.includes('druid_bear_t_savage_focus')
-      ? getBearTalentValue('druid_bear_t_savage_focus', 'valueA', 5)
+    const hasPainImmunity = state.passiveTalentIds.includes('druid_bear_t_pain_immunity')
+    const bonusRage = !hasPainImmunity && state.passiveTalentIds.includes('druid_bear_t_pain_rage')
+      ? Math.min(
+          getBearTalentValue('druid_bear_t_pain_rage', 'valueB', 10),
+          affected.length * getBearTalentValue('druid_bear_t_pain_rage', 'valueA', 2),
+        )
       : 0
+    const damage = (effect?.valueA ?? 10) * (hasPainImmunity ? 0.7 : 1)
+    let nextState = hasPainImmunity
+      ? state
+      : applyBearRageGain(state, Math.max(0, effect?.valueB ?? 10) + bonusRage, skillId, 'bear_thrash', helpers.changePlayerResource)
+    if (hasPainImmunity) {
+      nextState = applyBearPainImmunityShield(nextState, skillId, affected.length)
+    }
     return enqueueEncounterEvents(
-      applyBearRageGain(state, 15 + bonusRage, skillId, 'bear_thrash', helpers.changePlayerResource),
-      buildDamageAndDeathEvents(state, affected, withBearThreatMultiplier(effect, state), skillId, state.player.currentTargetId, effect?.valueA ?? 10, effect?.valueA ?? 10),
+      nextState,
+      buildDamageAndDeathEvents(state, affected, withBearThreatMultiplier(effect, state), skillId, state.player.currentTargetId, damage, damage),
     )
   },
   bear_swipe: (state, skillId, helpers) => {
@@ -723,10 +767,15 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
   bear_ironfur: (state, skillId) => {
     const effect = getPrimarySkillEffect(skillId)
     const existing = state.player.mitigation?.id === 'druid_bear_t_ironfur' ? state.player.mitigation : null
-    const stacks = Math.min(3, (existing?.stacks ?? 0) + 1)
-    const reductionPerStack = Math.max(0, effect?.valueA ?? 15) / 100
     const status = createPlayerBuildStatusEffect('druid_bear_t_ironfur', effect?.durationMs ?? 8000)
     if (!status) return state
+    const hasWaterFireImmunity = state.passiveTalentIds.includes('druid_bear_t_water_fire_immunity')
+    const maxStacks = status.maxStacks ?? 3
+    const stacks = Math.min(maxStacks, (existing?.stacks ?? 0) + 1)
+    const physicalReductionPerStack = Math.max(0, effect?.valueA ?? 20) / 100
+    const magicReductionPerStack = hasWaterFireImmunity
+      ? getBearTalentValue('druid_bear_t_water_fire_immunity', 'valueB', 0.1)
+      : 0
     return {
       ...state,
       player: {
@@ -734,9 +783,10 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
         mitigation: {
           ...status,
           stacks,
-          maxStacks: 3,
-          damageReductionRatio: Math.min(0.95, stacks * reductionPerStack),
-          damageReductionTypes: ['physical'],
+          maxStacks,
+          damageReductionRatio: Math.min(0.95, Number((stacks * physicalReductionPerStack).toFixed(10))),
+          magicDamageReductionRatio: Math.min(0.95, Number((stacks * magicReductionPerStack).toFixed(10))),
+          damageReductionTypes: hasWaterFireImmunity ? ['physical', 'magic'] : ['physical'],
         },
       },
     }
@@ -748,39 +798,49 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
     const effect = getPrimarySkillEffect(skillId)
     const status = createPlayerBuildStatusEffect('druid_bear_t_moonfire', effect?.durationMs ?? 12000)
     if (!status) return state
+    const affected = state.enemies.filter((enemy) => targetIds.has(enemy.id))
+    const tickDamage = (effect?.valueA ?? 5) * getPlayerDamageMultiplier(state)
+    const rageState = applyBearRageGain(state, 5, skillId, 'bear_moonfire', helpers.changePlayerResource)
     const nextState = {
-      ...state,
+      ...rageState,
       enemies: state.enemies.map((enemy) => targetIds.has(enemy.id) ? {
         ...enemy,
-        statuses: [...enemy.statuses.filter((entry) => entry.id !== status.id), { ...status, valueA: effect?.valueA ?? 6, tickIntervalMs: 3000 }],
+        statuses: [...enemy.statuses.filter((entry) => entry.id !== status.id), {
+          ...status,
+          valueA: tickDamage,
+          tickIntervalMs: 3000,
+          threatMultiplier: (effect?.threatMultiplier ?? 0) * getBearSkillThreatMultiplier(state),
+          combatLogSource: { kind: 'player' as const, id: 'player', name: '玩家' },
+          combatLogAbility: { kind: 'playerSkill' as const, id: skillId, name: getActiveSkillDefinition(skillId)?.name },
+        }],
       } : enemy),
     }
-    const threatDelta = (effect?.threatDelta ?? 0) * getBearSkillThreatMultiplier(state)
-    return threatDelta === 0
-      ? nextState
-      : enqueueEncounterEvents(nextState, state.enemies
-          .filter((enemy) => targetIds.has(enemy.id))
-          .map((enemy) => ({
-            type: 'enemy/threat-applied' as const,
-            occurredAtMs: state.timeMs,
-            enemyId: enemy.id,
-            tankThreatDelta: threatDelta,
-            allyThreatDelta: 0,
-          })))
+    return enqueueEncounterEvents(
+      nextState,
+      buildFlatDamageEvents(state, affected, withBearThreatMultiplier(effect, state), skillId, effect?.valueA ?? 5),
+    )
   },
   bear_survival_instincts: (state, skillId) => applyBearBuffStatus(state, skillId, 'druid_bear_t_survival_instincts'),
   bear_lunar_beam: (state, skillId) => applyBearBuffStatus(state, skillId, 'druid_bear_t_lunar_beam'),
   bear_incarnation_ursoc: (state, skillId) => applyBearBuffStatus(state, skillId, 'druid_bear_t_incarnation_ursoc'),
-  bear_rage_of_the_sleeper: (state, skillId) => {
-    const nextState = applyBearBuffStatus(state, skillId, 'druid_bear_t_rage_of_the_sleeper')
+  bear_rage_of_the_sleeper: (state, skillId, helpers) => {
+    const nextState = applyBearRageGain(
+      applyBearBuffStatus(state, skillId, 'druid_bear_t_rage_of_the_sleeper'),
+      25,
+      skillId,
+      'bear_rage_of_the_sleeper',
+      helpers.changePlayerResource,
+    )
     return state.passiveTalentIds.includes('druid_bear_t_ursoc_shelter')
       ? { ...nextState, party: { ...nextState.party, statuses: [...nextState.party.statuses.filter((entry) => entry.id !== 'druid_bear_t_ursoc_shelter'), createPlayerBuildStatusEffect('druid_bear_t_ursoc_shelter', 8000)].filter((entry): entry is StatusEffect => Boolean(entry)).map((entry) => entry.id === 'druid_bear_t_ursoc_shelter' ? { ...entry, damageTakenMultiplierBonus: -getBearTalentValue('druid_bear_t_ursoc_shelter', 'valueA', 0.12) } : entry) } }
       : nextState
   },
   bear_regrowth: (state, skillId, helpers) => {
-    const healed = applyBearBuffStatus(applyBearHealing(state, skillId, 0.12, helpers), skillId, 'druid_bear_t_regrowth')
+    const effect = getPrimarySkillEffect(skillId)
+    const immediateHealing = Math.max(0, effect?.valueA ?? 25)
+    const healed = applyBearBuffStatus(applyBearHealing(state, immediateHealing, helpers), skillId, 'druid_bear_t_regrowth')
     if (!state.passiveTalentIds.includes('druid_bear_t_regrowth_of_the_pack')) return healed
-    const partyHealing = state.player.maxHp * 0.12 * getBearTalentValue('druid_bear_t_regrowth_of_the_pack', 'valueA', 0.25)
+    const partyHealing = immediateHealing * getBearTalentValue('druid_bear_t_regrowth_of_the_pack', 'valueA', 0.5)
     return {
       ...healed,
       party: reducePartyPressureByEffectiveHealing({
@@ -796,7 +856,26 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
     'bear_berserk',
     helpers.changePlayerResource,
   ),
-  bear_barkskin: (state, skillId) => applyBearBuffStatus(state, skillId, 'druid_bear_t_barkskin'),
+  bear_barkskin: (state, skillId) => {
+    const barkskin = applyBearBuffStatus(state, skillId, 'druid_bear_t_barkskin')
+    if (!state.passiveTalentIds.includes('druid_bear_t_broken_bark')) return barkskin
+    const shield = createPlayerBuildStatusEffect('druid_bear_t_broken_bark_shield', 5000)
+    if (!shield) return barkskin
+    return {
+      ...barkskin,
+      player: {
+        ...barkskin.player,
+        buffs: [
+          ...barkskin.player.buffs.filter((status) => status.id !== shield.id),
+          {
+            ...shield,
+            absorbRemaining: getBearTalentValue('druid_bear_t_broken_bark', 'valueA', 30),
+            absorbRatio: 1,
+          },
+        ],
+      },
+    }
+  },
   interrupt_cast: (state, skillId, helpers) => {
     const modifiers = getPassiveModifiers(state.passiveTalentIds)
     const targetIds = getInterruptTargetIds(state, skillId, helpers)
@@ -876,7 +955,7 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
     }
     return applyBearRageGain(
       interruptedState,
-      getBearTalentValue('druid_bear_t_skull_bash_instinct', 'valueA', 10) * affectedEnemies.length,
+      getBearTalentValue('druid_bear_t_skull_bash_instinct', 'valueA', 15) * affectedEnemies.length,
       skillId,
       'bear_skull_bash_instinct',
       helpers.changePlayerResource,

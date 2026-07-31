@@ -10,6 +10,7 @@ import {
 } from '../data/workbookLoader'
 import {
   buildManualPlaytestCandidateForStage,
+  getManualPlaytestEntryForStage,
   parseManualPlaytestWorkbook,
 } from './manualPlaytestBuilds'
 
@@ -71,5 +72,46 @@ describe('manual playtest builds', () => {
       'warrior_t_defenders_aegis',
       'warrior_t_barbaric_training',
     ])
+  })
+
+  it('keeps separate Warrior T and Bear T manual difficulty records per stage', () => {
+    const entries = parseManualPlaytestWorkbook(XLSX.readFile('public/designer-data/manual_playtest_builds.xlsx'))
+    const expectedBearDifficulties = {
+      'Challenge-1': 'balance',
+      'Challenge-2': 'balance',
+      'Challenge-3': 'expert',
+      'WestFall-1': 'easy',
+      'WestFall-2': 'balance',
+      'WestFall-3': 'balance',
+      'WestFall-4': 'expert',
+      'WestFall-5': 'hard',
+      'WestFall-6': 'expert',
+    }
+
+    for (const [stageId, manualDifficulty] of Object.entries(expectedBearDifficulties)) {
+      expect(getManualPlaytestEntryForStage(entries, stageId, 'druid_bear_t')).toMatchObject({
+        classId: 'druid_bear_t',
+        manualDifficulty,
+        source: stageId === 'WestFall-6' ? 'manual_user_2026-07-29' : 'manual_user_2026-07-26',
+      })
+    }
+    expect(getManualPlaytestEntryForStage(entries, 'WestFall-6', 'druid_bear_t')).toMatchObject({
+      recommendedActiveSkillIds: [
+        'druid_bear_t_mangle',
+        'druid_bear_t_thrash',
+        'druid_bear_t_moonfire',
+        'druid_bear_t_ironfur',
+        'druid_bear_t_barkskin',
+        'druid_bear_t_rage_of_the_sleeper',
+        'druid_bear_t_growl',
+      ],
+      recommendedPassiveTalentIds: [
+        'druid_bear_t_savage_focus',
+        'druid_bear_t_pain_immunity',
+        'druid_bear_t_iron_thorns',
+      ],
+      source: 'manual_user_2026-07-29',
+    })
+    expect(getManualPlaytestEntryForStage(entries, 'WestFall-4', 'warrior_t')?.classId).toBe('warrior_t')
   })
 })

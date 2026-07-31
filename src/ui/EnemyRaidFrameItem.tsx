@@ -59,6 +59,7 @@ export function EnemyRaidFrameItem({
         'enemy-frame',
         isDead ? 'is-dead' : '',
         isThreatLocked ? 'threat-locked' : `threat-${enemy.threatState}`,
+        !isSelected ? 'is-unselected' : '',
         isSelected ? 'is-selected' : '',
         isHighDangerCastVisual(enemy) ? 'is-high-danger' : '',
       ]

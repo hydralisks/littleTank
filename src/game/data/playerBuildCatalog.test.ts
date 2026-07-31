@@ -974,4 +974,23 @@ describe('playerBuildCatalog class-aware build data', () => {
     ])
     expect(getNextPassiveTalentIdsForToggle('warrior_t_raise_banner', ['warrior_t_raise_banner'])).toEqual([])
   })
+
+  it('removes later talents from the same exclusive group during build normalization', () => {
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(XLSX.readFile('public/designer-data/player_build.xlsx')))
+
+    const normalized = normalizePersistedBuildForRule(
+      {
+        ...getDefaultPersistedBuildForRule('8slot_2', 'warrior_t'),
+        passiveTalentIds: ['warrior_t_reinforced_plates', 'warrior_t_raise_banner'],
+      },
+      '8slot_2',
+      'warrior_t',
+      3,
+    )
+
+    expect(normalized.build.passiveTalentIds).toEqual(['warrior_t_reinforced_plates'])
+    expect(normalized.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'removed_talent' }),
+    ]))
+  })
 })

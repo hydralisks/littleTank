@@ -10,6 +10,7 @@ import { getSkillEffectsForSkill, getStatusesForSkill } from '../game/data/playe
 import { lockedSkillIcon, skillIconMap } from './iconMaps'
 import { resolveIconAssetUrl } from './statusIconResolver'
 import { StatusBadge } from './StatusBadge'
+import { buildSkillDetailFacts } from './skillDetailFacts'
 
 interface SkillConfigPanelProps {
   isOpen: boolean
@@ -171,6 +172,7 @@ export function SkillConfigPanel({
                 const assignedHotkey = getAssignedHotkey(loadout, skill.id)
                 const canAssign = selectedHotkey ? canAssignToSelectedHotkey(skill.id) : false
                 const targetSelectorText = getSkillTargetSelectorText(skill.id)
+                const skillFacts = buildSkillDetailFacts(skill, getSkillEffectsForSkill(skill.id))
                 const actionLabel = !selectedHotkey
                   ? '先选择左侧栏位'
                   : assignedHotkey === selectedHotkey
@@ -193,6 +195,16 @@ export function SkillConfigPanel({
                         <span>{skill.pointCost} 点</span>
                       </div>
                       <p>{skill.description}</p>
+                      {skillFacts.length > 0 ? (
+                        <dl className="skill-library-card__facts" data-skill-detail-facts>
+                          {skillFacts.map((fact) => (
+                            <div key={fact.key} className="skill-library-card__fact">
+                              <dt>{fact.label}</dt>
+                              <dd>{fact.value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      ) : null}
                       {targetSelectorText ? (
                         <p className="skill-library-card__target">
                           作用目标：{targetSelectorText}

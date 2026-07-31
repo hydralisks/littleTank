@@ -41,7 +41,7 @@
 - `public/designer-data/player_build.xlsx`: clear build-rule class bindings only.
 - `scripts/generateDesignerWorkbooks.mjs`: keep generator source aligned without running it.
 - `scripts/validateDesignerData.mjs`: validate mainline and challenge workbooks together.
-- `docs/player-tank-class-expansion-handoff.md`, `开发更新日志.md`: phase-0 implementation record and next-entry contract.
+- `docs/玩家坦克职业扩展开发交接.md`, `开发更新日志.md`: phase-0 implementation record and next-entry contract.
 
 ### Task 1: Add The Strict Player-Class Runtime Registry
 
@@ -2714,7 +2714,7 @@ git commit -m "feat: validate multiclass challenge data boundaries"
 ### Task 12: Full Verification, Visual Inspection, And Handoff
 
 **Files:**
-- Modify: `docs/player-tank-class-expansion-handoff.md`
+- Modify: `docs/玩家坦克职业扩展开发交接.md`
 - Modify: `开发更新日志.md`
 - Verify only: `public/designer-data/*.xlsx`, `src-tauri/`, `release/`
 
@@ -2759,7 +2759,7 @@ Inspect both screenshots and confirm: CTA is exactly 240x82 CSS pixels at 100% z
 
 - [ ] **Step 4: Update implementation handoff**
 
-Append a dated phase-0 section to `docs/player-tank-class-expansion-handoff.md` recording:
+Append a dated phase-0 section to `docs/玩家坦克职业扩展开发交接.md` recording:
 
 ```markdown
 ## 2026-07-22 阶段0：多职业基础设施
@@ -2793,7 +2793,7 @@ Expected: no whitespace errors; the only `public/` change is `public/designer-da
 - [ ] **Step 7: Commit documentation and final verification record**
 
 ```powershell
-git add docs/player-tank-class-expansion-handoff.md 开发更新日志.md
+git add docs/玩家坦克职业扩展开发交接.md 开发更新日志.md
 git commit -m "docs: hand off multiclass foundation"
 ```
 

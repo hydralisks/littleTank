@@ -13,6 +13,8 @@ import {
 import {
   createPassiveDeltaVariants,
   runStageDeltaAnalysis,
+  selectBestActiveSkillPresenceScenarios,
+  type DeltaScenarioResult,
 } from './deltaAnalysis'
 
 beforeAll(() => {
@@ -97,5 +99,88 @@ describe('delta analysis', () => {
     expect(result.comparisons.length).toBe(result.scenarios.length - 1)
     expect(result.comparisons.every((comparison) => comparison.confidence)).toBe(true)
     expect(result.comparisons.every((comparison) => comparison.verdict)).toBe(true)
+  })
+
+  it('discovers legal Bear talents when no explicit passive list is provided', () => {
+    const variants = createPassiveDeltaVariants(getStageById('WestFall-1'), 'druid_bear_t', {
+      baseBuildId: 'default',
+      includePairs: false,
+    })
+
+    const talentIds = variants.flatMap((variant) => variant.build.passiveTalentIds)
+    expect(talentIds.some((talentId) => talentId.startsWith('druid_bear_t_'))).toBe(true)
+    expect(talentIds.some((talentId) => talentId.startsWith('warrior_t_'))).toBe(false)
+  })
+
+  it('compares the best builds containing and excluding each active skill', () => {
+    const stage = getStageById('WestFall-1')
+    const result = runStageDeltaAnalysis({
+      classId: 'druid_bear_t', stage,
+      type: 'active',
+      attemptsPerScenario: 1,
+      seedCount: 1,
+      profile: {
+        id: 'active-delta-test-profile',
+        tier: 'expert',
+        reactionDelayMs: 220,
+        mistakeRate: 0,
+        decisionIntervalMs: 140,
+        preserveKeyStopSkills: true,
+        evaluateEnemySkillImpact: true,
+        preferControlForChanneling: true,
+      },
+      maxDurationMs: 20_000,
+    })
+
+    expect(result.analysisType).toBe('active')
+    expect(result.comparisons.length).toBeGreaterThanOrEqual(7)
+    for (const comparison of result.comparisons) {
+      expect(comparison.activeSkillId).toMatch(/^druid_bear_t_/)
+      expect(Object.values(comparison.baselineLoadout ?? {})).not.toContain(comparison.activeSkillId)
+      expect(Object.values(comparison.comparedLoadout ?? {})).toContain(comparison.activeSkillId)
+    }
+  })
+
+  it('selects the highest-pass-rate containing and excluding builds independently', () => {
+    const skillId = 'druid_bear_t_mangle'
+    const scenario = (
+      variantId: string,
+      passRate: number,
+      loadout: Partial<DeltaScenarioResult['loadout']>,
+    ): DeltaScenarioResult => ({
+      stageId: 'WestFall-1',
+      classId: 'druid_bear_t',
+      baselineVariantId: 'candidate_pool',
+      variantId,
+      variantLabel: variantId,
+      variantKind: 'active_candidate',
+      attempts: 10,
+      victories: Math.round(passRate * 10),
+      passRate,
+      seedCount: 1,
+      passiveTalentIds: [],
+      loadout: {
+        '1': null,
+        '2': null,
+        '3': null,
+        '4': null,
+        Q: null,
+        E: null,
+        R: null,
+        F: null,
+        ...loadout,
+      },
+    })
+    const scenarios = [
+      scenario('lower_with', 0.4, { '1': skillId }),
+      scenario('best_with', 0.8, { '1': skillId, '2': 'druid_bear_t_thrash' }),
+      scenario('lower_without', 0.3, { '1': 'druid_bear_t_thrash' }),
+      scenario('best_without', 0.7, { '1': 'druid_bear_t_moonfire' }),
+    ]
+
+    expect(selectBestActiveSkillPresenceScenarios(scenarios, skillId)).toMatchObject({
+      containing: { variantId: 'best_with' },
+      excluding: { variantId: 'best_without' },
+    })
   })
 })

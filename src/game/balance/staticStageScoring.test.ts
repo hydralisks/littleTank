@@ -164,9 +164,9 @@ describe('static stage scoring', () => {
     expect(scoreStageStaticDifficulty(getStageById('RingingDeeps-6')).label).toBe('expert')
   })
 
-  it('calibrates WestFall first three static labels against manual playtest baselines', () => {
-    expect(scoreStageStaticDifficulty(getStageById('WestFall-1')).label).toBe('easy')
-    expect(scoreStageStaticDifficulty(getStageById('WestFall-2')).label).toBe('balanced')
-    expect(scoreStageStaticDifficulty(getStageById('WestFall-3')).label).toBe('balanced')
+  it('calibrates WestFall first three static labels against current designer data', () => {
+    expect(scoreStageStaticDifficulty(getStageById('WestFall-1')).label).toBe('hard')
+    expect(scoreStageStaticDifficulty(getStageById('WestFall-2')).label).toBe('expert')
+    expect(scoreStageStaticDifficulty(getStageById('WestFall-3')).label).toBe('hard')
   })
 })

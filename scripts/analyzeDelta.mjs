@@ -2,7 +2,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import XLSX from 'xlsx'
-import { applyEncounterWorkbookOverrides } from '../src/game/data/encounterTemplates.ts'
+import {
+  appendEncounterWorkbookOverrides,
+  applyEncounterWorkbookOverrides,
+} from '../src/game/data/encounterTemplates.ts'
 import { applyEnemyWorkbookOverrides } from '../src/game/data/enemyCatalog.ts'
 import { applyPlayerBuildWorkbookOverrides } from '../src/game/data/playerBuildCatalog.ts'
 import { applyStageWorkbookOverrides, getStageById } from '../src/game/data/stageTemplates.ts'
@@ -27,8 +30,8 @@ const SAMPLE_CONFIG = {
 }
 
 const LEARNING_PROFILE = {
-  id: 'delta-learning-220ms-low-error',
-  tier: 'average',
+  id: 'delta-expert-220ms-low-error',
+  tier: 'expert',
   reactionDelayMs: 220,
   reactionDelayJitterMs: 70,
   reactionDelayFastChance: 0.12,
@@ -62,6 +65,7 @@ function parseCliOptions(args) {
     attempts: null,
     seeds: null,
     classId: 'warrior_t',
+    outputSlug: 'analysis',
   }
 
   for (const arg of args) {
@@ -69,7 +73,7 @@ function parseCliOptions(args) {
       options.stages = parseList(arg.slice('--stages='.length))
     } else if (arg.startsWith('--type=')) {
       const type = arg.slice('--type='.length).trim()
-      if (type === 'passive' || type === 'build') {
+      if (type === 'passive' || type === 'active' || type === 'build') {
         options.type = type
       }
     } else if (arg.startsWith('--baseBuild=')) {
@@ -87,7 +91,13 @@ function parseCliOptions(args) {
       options.seeds = Number(arg.slice('--seeds='.length))
     } else if (arg.startsWith('--class=')) {
       options.classId = arg.slice('--class='.length).trim() || 'warrior_t'
+    } else if (arg.startsWith('--output=')) {
+      options.outputSlug = arg.slice('--output='.length).trim()
     }
+  }
+
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(options.outputSlug)) {
+    throw new Error(`Invalid delta output slug: ${options.outputSlug}`)
   }
 
   return options
@@ -102,6 +112,15 @@ function loadDesignerDataIntoCatalogs() {
   applyEncounterWorkbookOverrides(parseEncounterWorkbook(readWorkbook('encounter_balance.xlsx')))
   applyEnemyWorkbookOverrides(parseEnemyWorkbook(readWorkbook('enemy_data.xlsx')))
   applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(readWorkbook('player_build.xlsx')))
+  const challengeStageWorkbook = {
+    ...parseStageWorkbook(readWorkbook('challenge_stage_content.xlsx')),
+    updateCampaignOrder: false,
+  }
+  applyStageWorkbookOverrides(challengeStageWorkbook)
+  appendEncounterWorkbookOverrides(
+    parseEncounterWorkbook(readWorkbook('challenge_encounter_balance.xlsx')),
+    { stageIdPrefix: 'Challenge-' },
+  )
 }
 
 function readJsonIfExists(filePath) {
@@ -114,6 +133,8 @@ function readJsonIfExists(filePath) {
 function findStageReport(stageId, classId) {
   const candidates = [
     path.join(outputDir, 'latest.json'),
+    path.join(outputDir, 'story', 'latest.json'),
+    path.join(outputDir, 'challenge', 'latest.json'),
     path.join(outputDir, 'westfall-auto-scoring.json'),
     path.join(outputDir, 'chapter-one-auto-scoring.json'),
   ]
@@ -206,8 +227,9 @@ const report = {
 }
 
 fs.mkdirSync(outputDir, { recursive: true })
-const jsonPath = path.join(outputDir, `delta-analysis-${options.classId}.json`)
-const markdownPath = path.join(outputDir, `delta-analysis-${options.classId}.md`)
+const outputBaseName = `delta-${options.classId}-${options.outputSlug}-${options.type}`
+const jsonPath = path.join(outputDir, `${outputBaseName}.json`)
+const markdownPath = path.join(outputDir, `${outputBaseName}.md`)
 fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2), 'utf8')
 fs.writeFileSync(markdownPath, renderDeltaReportMarkdown(report), 'utf8')
 console.log(`[delta] wrote ${markdownPath}`)

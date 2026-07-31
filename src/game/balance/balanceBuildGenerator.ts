@@ -11,12 +11,13 @@ import {
   SKILL_HOTKEYS,
   canUseSkillInRule,
   canUseTalentInRule,
-  getActiveSkillCatalog,
+  getActiveSkillDefinition,
   getBuildRuleDefinition,
   getDefaultPersistedBuildForRule,
   getPassiveTalentDefinition,
   getPassiveTalentCatalog,
   getRemainingBuildPoints,
+  getTalentEffectsForTalent,
   normalizePersistedBuildForRule,
 } from '../data/playerBuildCatalog'
 import { getPassiveTalentUnlockTierForStage, getUnlockedActiveSkillIdsForStage } from '../data/stageTemplates'
@@ -67,16 +68,9 @@ function getOrderedLegalActiveSkillIds(
   unlockedSkillIds: readonly SkillId[],
 ) {
   const unlocked = [...new Set(unlockedSkillIds)]
-  const unlockedSet = new Set(unlocked)
-  const catalog = getActiveSkillCatalog()
-  const catalogOrder = new Map<string, number>()
-  for (let index = 0; index < catalog.length; index += 1) {
-    catalogOrder.set(catalog[index].id, index)
-  }
 
   return unlocked
-    .filter((skillId) => unlockedSet.has(skillId) && canUseSkillInRule(buildRuleId, classId, skillId, unlocked))
-    .sort((left, right) => (catalogOrder.get(left) ?? 99999) - (catalogOrder.get(right) ?? 99999) || left.localeCompare(right))
+    .filter((skillId) => canUseSkillInRule(buildRuleId, classId, skillId, unlocked))
 }
 
 function getOrderedLegalPassiveTalentIds(
@@ -107,19 +101,31 @@ function getPassiveTalentSearchScore(talentId: PassiveTalentId) {
   return tagScore + talent.cost * 0.2 + Math.max(0, talent.tier) * 0.1 - (talent.uiOrder ?? 999) * 0.01
 }
 
-function getPassiveVariantSearchScore(passiveTalentIds: readonly PassiveTalentId[]) {
+function getPassiveVariantSearchScore(
+  passiveTalentIds: readonly PassiveTalentId[],
+  equippedSkillSynergyTalentIds: ReadonlySet<PassiveTalentId> = new Set(),
+) {
   const tags = new Set<string>()
   let score = 0
+  let equippedSkillSynergyCount = 0
 
   for (const talentId of passiveTalentIds) {
     const talent = getPassiveTalentDefinition(talentId)
     score += getPassiveTalentSearchScore(talentId)
+    if (equippedSkillSynergyTalentIds.has(talentId)) {
+      equippedSkillSynergyCount += 1
+    }
     for (const tag of talent?.talentTags ?? []) {
       tags.add(tag)
     }
   }
 
-  return score + tags.size * 0.35 + passiveTalentIds.length * 0.2
+  return score + tags.size * 0.35 + passiveTalentIds.length * 0.2 + equippedSkillSynergyCount * 12
+}
+
+function getPassiveVariantUiOrderSpread(passiveTalentIds: readonly PassiveTalentId[]) {
+  const orders = passiveTalentIds.map((talentId) => getPassiveTalentDefinition(talentId)?.uiOrder ?? 0)
+  return orders.length > 1 ? Math.max(...orders) - Math.min(...orders) : 0
 }
 
 function generatePassiveVariants(
@@ -130,9 +136,28 @@ function generatePassiveVariants(
   maxPassiveVariants: number,
 ): PassiveTalentId[][] {
   const legalTalentIds = getOrderedLegalPassiveTalentIds(buildRuleId, classId, maxUnlockedTier)
+  const equippedSkillIds = new Set(
+    Object.values(loadout).filter((skillId): skillId is SkillId => Boolean(skillId)),
+  )
+  const equippedSkillSynergyTalentIds = new Set(
+    legalTalentIds.filter((talentId) =>
+      getTalentEffectsForTalent(talentId).some((effect) => effect.skillId && equippedSkillIds.has(effect.skillId)),
+    ),
+  )
   const variantsBySignature = new Map<string, PassiveTalentId[]>([['', []]])
 
+  const hasExclusiveGroupConflict = (passiveTalentIds: PassiveTalentId[]) => {
+    const groups = new Set<string>()
+    for (const talentId of passiveTalentIds) {
+      const group = getPassiveTalentDefinition(talentId)?.exclusiveGroup
+      if (!group) continue
+      if (groups.has(group)) return true
+      groups.add(group)
+    }
+    return false
+  }
   const canAffordVariant = (passiveTalentIds: PassiveTalentId[]) =>
+    !hasExclusiveGroupConflict(passiveTalentIds) &&
     getRemainingBuildPoints(buildRuleId, loadout, passiveTalentIds) >= 0
   const addVariant = (passiveTalentIds: PassiveTalentId[]) => {
     const signature = passiveTalentIds.join(',')
@@ -169,7 +194,7 @@ function generatePassiveVariants(
 
     frontier = nextFrontier
       .sort((left, right) =>
-        getPassiveVariantSearchScore(right) - getPassiveVariantSearchScore(left) ||
+        getPassiveVariantSearchScore(right, equippedSkillSynergyTalentIds) - getPassiveVariantSearchScore(left, equippedSkillSynergyTalentIds) ||
         left.join(',').localeCompare(right.join(',')),
       )
       .slice(0, maxBeamWidth)
@@ -178,7 +203,7 @@ function generatePassiveVariants(
   const rankedVariants = [...variantsBySignature.values()]
     .filter((variant) => variant.length > 0)
     .sort((left, right) =>
-      getPassiveVariantSearchScore(right) - getPassiveVariantSearchScore(left) ||
+      getPassiveVariantSearchScore(right, equippedSkillSynergyTalentIds) - getPassiveVariantSearchScore(left, equippedSkillSynergyTalentIds) ||
       left.join(',').localeCompare(right.join(',')),
     )
   const selectedVariants: PassiveTalentId[][] = [[]]
@@ -198,6 +223,29 @@ function generatePassiveVariants(
   pushSelected(rankedVariants.find((variant) => variant.length === 2))
   pushSelected(rankedVariants.find((variant) => variant.length >= 4))
 
+  const exclusiveTalentGroups = new Map<string, PassiveTalentId[]>()
+  for (const talentId of legalTalentIds) {
+    const group = getPassiveTalentDefinition(talentId)?.exclusiveGroup
+    if (!group) continue
+    exclusiveTalentGroups.set(group, [...(exclusiveTalentGroups.get(group) ?? []), talentId])
+  }
+  for (const talentIds of exclusiveTalentGroups.values()) {
+    if (talentIds.length < 2 || maxPassiveVariants < talentIds.length + 3) continue
+    for (const talentId of talentIds) {
+      pushSelected(rankedVariants.find((variant) => variant.includes(talentId)))
+    }
+  }
+
+  pushSelected(
+    rankedVariants
+      .filter((variant) => variant.length === 2)
+      .sort((left, right) =>
+        getPassiveVariantUiOrderSpread(right) - getPassiveVariantUiOrderSpread(left) ||
+        getPassiveVariantSearchScore(right, equippedSkillSynergyTalentIds) - getPassiveVariantSearchScore(left, equippedSkillSynergyTalentIds) ||
+        left.join(',').localeCompare(right.join(',')),
+      )[0],
+  )
+
   for (const passiveTalentIds of rankedVariants) {
     if (selectedVariants.length >= maxPassiveVariants) {
       break
@@ -206,6 +254,86 @@ function generatePassiveVariants(
   }
 
   return selectedVariants.slice(0, maxPassiveVariants)
+}
+
+function getRoleBalancedActiveSkillScore(skillIds: readonly SkillId[]) {
+  const tagCounts = new Map<string, number>()
+  let damageRageSkillCount = 0
+  for (const skillId of skillIds) {
+    const tags = new Set(getActiveSkillDefinition(skillId)?.skillTags ?? [])
+    if (tags.has('damage') && tags.has('rage')) {
+      damageRageSkillCount += 1
+    }
+    for (const tag of tags) {
+      tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1)
+    }
+  }
+
+  const capped = (tag: string, cap: number, weight: number) =>
+    Math.min(cap, tagCounts.get(tag) ?? 0) * weight
+  const tankRoleClosureTags = [
+    'damage',
+    'rage',
+    'anti-cast',
+    'survival',
+    'physical',
+    'heal',
+    'dispel',
+    'max-hp',
+    'party',
+  ]
+  const tankRoleClosureBonus = tankRoleClosureTags.every((tag) => tagCounts.has(tag)) ? 24 : 0
+
+  return (
+    capped('survival', 5, 7) +
+    capped('damage', 3, 5) +
+    capped('rage', 2, 5) +
+    capped('heal', 2, 4) +
+    capped('physical', 1, 3) +
+    capped('aoe', 2, 3) +
+    capped('anti-cast', 1, 6) +
+    capped('threat', 2, 2) +
+    capped('dispel', 1, 3) +
+    capped('max-hp', 2, 3) +
+    capped('party', 1, 8) +
+    damageRageSkillCount * 6 +
+    tagCounts.size * 0.05 +
+    tankRoleClosureBonus
+  )
+}
+
+function getRoleBalancedActiveSkillGroups(
+  skillIds: readonly SkillId[],
+  groupSize: number,
+  maxGroups = 2,
+) {
+  if (groupSize <= 0 || skillIds.length <= groupSize) {
+    return []
+  }
+
+  const groups: SkillId[][] = []
+  const selected: SkillId[] = []
+  const visit = (startIndex: number) => {
+    if (selected.length === groupSize) {
+      groups.push([...selected])
+      return
+    }
+
+    const remaining = groupSize - selected.length
+    for (let index = startIndex; index <= skillIds.length - remaining; index += 1) {
+      selected.push(skillIds[index])
+      visit(index + 1)
+      selected.pop()
+    }
+  }
+  visit(0)
+
+  return groups
+    .sort((left, right) =>
+      getRoleBalancedActiveSkillScore(right) - getRoleBalancedActiveSkillScore(left) ||
+      left.join(',').localeCompare(right.join(',')),
+    )
+    .slice(0, maxGroups)
 }
 
 function getActiveSkillCount(build: PersistedBuildState) {
@@ -332,6 +460,89 @@ export function generateStageBalanceBuilds(
   const enabledHotkeys = rule.enabledHotkeys
 
   let generatedActiveCount = 0
+  const appendActiveLoadout = (loadout: SkillLoadout) => {
+    if (generatedActiveCount >= maxActiveBuilds) return
+    const normalized = normalizePersistedBuildForRule(
+      { loadout, passiveTalentIds: [] },
+      buildRuleId, classId,
+      passiveTier,
+      unlockedSkillIds,
+      [],
+    ).build
+
+    generatedActiveCount += 1
+    const passiveVariants = generatePassiveVariants(
+      buildRuleId,
+      classId,
+      normalized.loadout,
+      passiveTier,
+      maxPassiveVariants,
+    )
+    for (let passiveIndex = 0; passiveIndex < passiveVariants.length; passiveIndex += 1) {
+      const normalizedWithPassives = normalizePersistedBuildForRule(
+        { loadout: normalized.loadout, passiveTalentIds: passiveVariants[passiveIndex] },
+        buildRuleId, classId,
+        passiveTier,
+        unlockedSkillIds,
+        [],
+      ).build
+
+      const variantSignature = getBuildSignature(normalizedWithPassives)
+      if (seen.has(variantSignature)) continue
+      seen.add(variantSignature)
+      results.push({
+        id: `generated_${generatedActiveCount}_${passiveIndex}`,
+        classId,
+        build: normalizedWithPassives,
+      })
+    }
+  }
+
+  const coverageWindowSize = Math.min(rule.maxActiveSlots, enabledHotkeys.length, legalSkillIds.length)
+  const coverageWindows: Array<{ startIndex: number; size: number }> = []
+  const coverageSignatures = new Set<string>()
+  const addCoverageWindow = (startIndex: number, size: number) => {
+    if (size <= 0) return
+    const boundedStart = Math.max(0, Math.min(startIndex, legalSkillIds.length - size))
+    const signature = `${boundedStart}:${size}`
+    if (coverageSignatures.has(signature)) return
+    coverageSignatures.add(signature)
+    coverageWindows.push({ startIndex: boundedStart, size })
+  }
+  if (coverageWindowSize > 0) {
+    const lastFullWindowStart = legalSkillIds.length - coverageWindowSize
+    addCoverageWindow(0, coverageWindowSize)
+    addCoverageWindow(lastFullWindowStart, coverageWindowSize)
+    addCoverageWindow(1, coverageWindowSize)
+    addCoverageWindow(lastFullWindowStart - 1, coverageWindowSize)
+  }
+  for (const size of [coverageWindowSize - 2, Math.ceil(coverageWindowSize / 2), 1]) {
+    if (size <= 0 || size >= coverageWindowSize) continue
+    addCoverageWindow(0, size)
+    addCoverageWindow(legalSkillIds.length - size, size)
+  }
+
+  const appendSkillGroup = (skillIds: readonly SkillId[]) => {
+    const loadout: SkillLoadout = { ...emptyLoadout }
+    for (let slotIndex = 0; slotIndex < skillIds.length; slotIndex += 1) {
+      loadout[enabledHotkeys[slotIndex]] = skillIds[slotIndex]
+    }
+    appendActiveLoadout(loadout)
+  }
+
+  for (const { startIndex, size } of coverageWindows.slice(0, 2)) {
+    if (generatedActiveCount >= maxActiveBuilds) break
+    appendSkillGroup(legalSkillIds.slice(startIndex, startIndex + size))
+  }
+  for (const skillIds of getRoleBalancedActiveSkillGroups(legalSkillIds, coverageWindowSize)) {
+    if (generatedActiveCount >= maxActiveBuilds) break
+    appendSkillGroup(skillIds)
+  }
+  for (const { startIndex, size } of coverageWindows.slice(2)) {
+    if (generatedActiveCount >= maxActiveBuilds) break
+    appendSkillGroup(legalSkillIds.slice(startIndex, startIndex + size))
+  }
+
   outer:
   for (let activeCount = 1; activeCount <= Math.min(rule.maxActiveSlots, enabledHotkeys.length, legalSkillIds.length); activeCount += 1) {
     for (let startIndex = 0; startIndex + activeCount <= legalSkillIds.length; startIndex += 1) {
@@ -343,44 +554,7 @@ export function generateStageBalanceBuilds(
       for (let slotIndex = 0; slotIndex < activeCount; slotIndex += 1) {
         loadout[enabledHotkeys[slotIndex]] = legalSkillIds[startIndex + slotIndex]
       }
-
-      const normalized = normalizePersistedBuildForRule(
-        { loadout, passiveTalentIds: [] },
-        buildRuleId, classId,
-        passiveTier,
-        unlockedSkillIds,
-        stage.unlockedActiveSkillIds,
-      ).build
-
-      generatedActiveCount += 1
-
-      const passiveVariants = generatePassiveVariants(
-        buildRuleId,
-        classId,
-        normalized.loadout,
-        passiveTier,
-        maxPassiveVariants,
-      )
-      for (let passiveIndex = 0; passiveIndex < passiveVariants.length; passiveIndex += 1) {
-        const normalizedWithPassives = normalizePersistedBuildForRule(
-          { loadout: normalized.loadout, passiveTalentIds: passiveVariants[passiveIndex] },
-          buildRuleId, classId,
-          passiveTier,
-          unlockedSkillIds,
-          stage.unlockedActiveSkillIds,
-        ).build
-
-        const variantSignature = getBuildSignature(normalizedWithPassives)
-        if (seen.has(variantSignature)) {
-          continue
-        }
-        seen.add(variantSignature)
-        results.push({
-          id: `generated_${generatedActiveCount}_${passiveIndex}`,
-          classId,
-          build: normalizedWithPassives,
-        })
-      }
+      appendActiveLoadout(loadout)
     }
   }
 

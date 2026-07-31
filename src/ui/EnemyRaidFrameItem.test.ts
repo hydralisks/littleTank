@@ -112,4 +112,21 @@ describe('EnemyRaidFrameItem danger visuals', () => {
     expect(markup).toContain('12.3/45')
     expect(markup).not.toContain('12.34/45.04')
   })
+
+  it('marks only unselected enemy frames for the inward threat border', () => {
+    const unselectedMarkup = renderToStaticMarkup(createElement(EnemyRaidFrameItem, {
+      enemy: enemyWithCast('low', 'tank'),
+      isSelected: false,
+      onSelect: () => undefined,
+    }))
+    const selectedMarkup = renderToStaticMarkup(createElement(EnemyRaidFrameItem, {
+      enemy: enemyWithCast('low', 'tank'),
+      isSelected: true,
+      onSelect: () => undefined,
+    }))
+
+    expect(unselectedMarkup).toContain('enemy-frame threat-safe is-unselected')
+    expect(selectedMarkup).not.toContain('is-unselected')
+    expect(selectedMarkup).toContain('is-selected')
+  })
 })

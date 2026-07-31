@@ -231,7 +231,7 @@ export function getStageSelectTutorialScript(stage: StageInfo): TutorialStep[] |
       {
         id: 'rd4-passive-entry',
         title: '打开被动天赋',
-        body: '被动天赋会改变你的数值、技能效果或队伍承压能力，适合在进关前根据压力类型调整。',
+        body: '被动天赋会改变你的数值、技能效果或队伍承压能力。主动技能配置中的技能详情显示天赋调整前的基础值，请结合已选天赋判断实际效果。',
         target: '[data-tutorial-id="stage-passive-config-button"]',
         placement: 'left',
       },

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import * as XLSX from 'xlsx'
-import { getStageBuildRuleId } from '../data/encounterTemplates'
+import { applyEncounterWorkbookOverrides, getStageBuildRuleId } from '../data/encounterTemplates'
 import {
   canUseSkillInRule,
   canUseTalentInRule,
@@ -14,7 +14,7 @@ import {
   applyPlayerBuildWorkbookOverrides,
   resetPlayerBuildCatalog,
 } from '../data/playerBuildCatalog'
-import { parsePlayerBuildWorkbook, parseStageWorkbook } from '../data/workbookLoader'
+import { parseEncounterWorkbook, parsePlayerBuildWorkbook, parseStageWorkbook } from '../data/workbookLoader'
 import {
   applyStageWorkbookOverrides,
   getPassiveTalentUnlockTierForStage,
@@ -31,6 +31,15 @@ describe('balance build generator', () => {
   afterEach(() => {
     resetPlayerBuildCatalog()
     applyStageWorkbookOverrides({ areaOverrides: [], stageOverrides: [], legendOverrides: [] })
+    applyEncounterWorkbookOverrides({
+      openingOverrides: {},
+      placementOverrides: {},
+      openingStatusOverrides: {},
+      affixBindings: {},
+      affixDefinitions: {},
+      specialRuleBindings: {},
+      specialRuleDefinitions: {},
+    })
   })
   it('generates only builds owned by the requested class', () => {
     const stage = getStageById('harbor-4')
@@ -139,7 +148,171 @@ describe('balance build generator', () => {
     expect(builds.length).toBeLessThanOrEqual(1 + 3 * 2)
   })
 
-  it('keeps late uiOrder passive pairs in the capped search space', () => {
+  it('covers every unlocked class skill even when the active candidate cap is smaller', () => {
+    applyStageWorkbookOverrides(parseStageWorkbook(XLSX.readFile('public/designer-data/stage_content.xlsx')))
+    applyEncounterWorkbookOverrides(parseEncounterWorkbook(XLSX.readFile('public/designer-data/encounter_balance.xlsx')))
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(XLSX.readFile('public/designer-data/player_build.xlsx')))
+    const stage = getStageById("Zul'Aman-5")
+    const unlockedBearSkills = getUnlockedActiveSkillIdsForStage(stage)
+      .filter((skillId) => getActiveSkillDefinition(skillId)?.classId === 'druid_bear_t')
+    const builds = generateStageBalanceBuilds(stage, 'druid_bear_t', {
+      maxActiveBuilds: 8,
+      maxPassiveVariants: 1,
+    })
+    const coveredSkillIds = new Set(builds.flatMap((variant) => (
+      Object.values(variant.build.loadout).filter((skillId): skillId is string => Boolean(skillId))
+    )))
+
+    expect(unlockedBearSkills.every((skillId) => coveredSkillIds.has(skillId))).toBe(true)
+    expect(builds.some((variant) => unlockedBearSkills.slice(-8).every(
+      (skillId) => Object.values(variant.build.loadout).includes(skillId),
+    ))).toBe(true)
+    expect(builds.some((variant) => {
+      const equipped = Object.values(variant.build.loadout).filter(Boolean)
+      return equipped.length === 6 && unlockedBearSkills.slice(-6).every((skillId) => equipped.includes(skillId))
+    })).toBe(true)
+  })
+
+  it('includes overlapping full-slot windows for mid-campaign class builds', () => {
+    applyStageWorkbookOverrides(parseStageWorkbook(XLSX.readFile('public/designer-data/stage_content.xlsx')))
+    applyEncounterWorkbookOverrides(parseEncounterWorkbook(XLSX.readFile('public/designer-data/encounter_balance.xlsx')))
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(XLSX.readFile('public/designer-data/player_build.xlsx')))
+    const stage = getStageById('WestFall-3')
+    const builds = generateStageBalanceBuilds(stage, 'druid_bear_t', {
+      maxActiveBuilds: 8,
+      maxPassiveVariants: 3,
+    })
+
+    expect(builds.some((variant) => {
+      const equipped = new Set(Object.values(variant.build.loadout).filter(Boolean))
+      return (
+        [
+          'druid_bear_t_mangle',
+          'druid_bear_t_thrash',
+          'druid_bear_t_ironfur',
+          'druid_bear_t_frenzied_regeneration',
+          'druid_bear_t_barkskin',
+        ].every((skillId) => equipped.has(skillId)) &&
+        variant.build.passiveTalentIds.includes('druid_bear_t_great_bear_vigor') &&
+        variant.build.passiveTalentIds.includes('druid_bear_t_broken_bark')
+      )
+    })).toBe(true)
+  })
+
+  it('never generates more than one Bear T party-offense talent per build', () => {
+    applyStageWorkbookOverrides(parseStageWorkbook(XLSX.readFile('public/designer-data/stage_content.xlsx')))
+    applyEncounterWorkbookOverrides(parseEncounterWorkbook(XLSX.readFile('public/designer-data/encounter_balance.xlsx')))
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(XLSX.readFile('public/designer-data/player_build.xlsx')))
+    const stage = getStageById('WestFall-6')
+    const exclusiveTalentIds = new Set([
+      'druid_bear_t_iron_thorns',
+      'druid_bear_t_natural_inspiration',
+      'druid_bear_t_mark_of_the_wild',
+    ])
+
+    const builds = generateStageBalanceBuilds(stage, 'druid_bear_t', {
+      maxActiveBuilds: 16,
+      maxPassiveVariants: 6,
+    })
+
+    expect(builds.length).toBeGreaterThan(1)
+    expect(builds.every((variant) => (
+      variant.build.passiveTalentIds.filter((talentId) => exclusiveTalentIds.has(talentId)).length <= 1
+    ))).toBe(true)
+    expect([...exclusiveTalentIds].every((talentId) => (
+      builds.some((variant) => variant.build.passiveTalentIds.includes(talentId))
+    ))).toBe(true)
+  })
+
+  it('surfaces both sides of each Bear T choice without generating conflicting pairs', () => {
+    applyStageWorkbookOverrides(parseStageWorkbook(XLSX.readFile('public/designer-data/stage_content.xlsx')))
+    applyEncounterWorkbookOverrides(parseEncounterWorkbook(XLSX.readFile('public/designer-data/encounter_balance.xlsx')))
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(XLSX.readFile('public/designer-data/player_build.xlsx')))
+    const stage = getStageById("Zul'Aman-5")
+    const exclusiveGroups = [
+      ['druid_bear_t_pain_rage', 'druid_bear_t_pain_immunity'],
+      ['druid_bear_t_thick_hide', 'druid_bear_t_water_fire_immunity'],
+    ]
+    const builds = generateStageBalanceBuilds(stage, 'druid_bear_t', {
+      maxActiveBuilds: 16,
+      maxPassiveVariants: 10,
+    })
+
+    expect(builds.length).toBeGreaterThan(1)
+    for (const talentIds of exclusiveGroups) {
+      expect(builds.every((variant) => (
+        variant.build.passiveTalentIds.filter((talentId) => talentIds.includes(talentId)).length <= 1
+      ))).toBe(true)
+      expect(talentIds.every((talentId) => (
+        builds.some((variant) => variant.build.passiveTalentIds.includes(talentId))
+      ))).toBe(true)
+    }
+  })
+
+  it('includes an eight-slot rage-damage and layered-survival build for late campaign stages', () => {
+    applyStageWorkbookOverrides(parseStageWorkbook(XLSX.readFile('public/designer-data/stage_content.xlsx')))
+    applyEncounterWorkbookOverrides(parseEncounterWorkbook(XLSX.readFile('public/designer-data/encounter_balance.xlsx')))
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(XLSX.readFile('public/designer-data/player_build.xlsx')))
+    const stage = getStageById("Zul'Aman-2")
+    const builds = generateStageBalanceBuilds(stage, 'druid_bear_t', {
+      maxActiveBuilds: 12,
+      maxPassiveVariants: 3,
+    })
+    const expectedSkillIds = [
+      'druid_bear_t_mangle',
+      'druid_bear_t_thrash',
+      'druid_bear_t_skull_bash',
+      'druid_bear_t_ironfur',
+      'druid_bear_t_frenzied_regeneration',
+      'druid_bear_t_barkskin',
+      'druid_bear_t_rage_of_the_sleeper',
+      'druid_bear_t_lunar_beam',
+    ]
+
+    expect(builds.some((variant) => {
+      const equipped = new Set(Object.values(variant.build.loadout).filter(Boolean))
+      return (
+        expectedSkillIds.every((skillId) => equipped.has(skillId)) &&
+        variant.build.passiveTalentIds.includes('druid_bear_t_regenerative_bond') &&
+        variant.build.passiveTalentIds.includes('druid_bear_t_ursoc_shelter')
+      )
+    })).toBe(true)
+  })
+
+  it('retains the eight-slot Bear core loop after all late-campaign skills unlock', () => {
+    applyStageWorkbookOverrides(parseStageWorkbook(XLSX.readFile('public/designer-data/stage_content.xlsx')))
+    applyEncounterWorkbookOverrides(parseEncounterWorkbook(XLSX.readFile('public/designer-data/encounter_balance.xlsx')))
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(XLSX.readFile('public/designer-data/player_build.xlsx')))
+    const stage = getStageById("Zul'Aman-5")
+    const builds = generateStageBalanceBuilds(stage, 'druid_bear_t', {
+      maxActiveBuilds: 8,
+      maxPassiveVariants: 3,
+    })
+    const requiredSkillIds = [
+      'druid_bear_t_mangle',
+      'druid_bear_t_thrash',
+      'druid_bear_t_skull_bash',
+      'druid_bear_t_ironfur',
+      'druid_bear_t_frenzied_regeneration',
+      'druid_bear_t_barkskin',
+      'druid_bear_t_rage_of_the_sleeper',
+    ]
+    const maxHpSkillIds = [
+      'druid_bear_t_lunar_beam',
+      'druid_bear_t_incarnation_ursoc',
+    ]
+
+    expect(builds.some((variant) => {
+      const equipped = new Set(Object.values(variant.build.loadout).filter(Boolean))
+      return (
+        requiredSkillIds.every((skillId) => equipped.has(skillId)) &&
+        maxHpSkillIds.some((skillId) => equipped.has(skillId)) &&
+        variant.build.passiveTalentIds.includes('druid_bear_t_broken_bark')
+      )
+    })).toBe(true)
+  })
+
+  it('keeps broad uiOrder passive pairs in the capped search space', () => {
     applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(XLSX.readFile('public/designer-data/player_build.xlsx')))
     const stage = getStageById('harbor-6')
     const builds = generateStageBalanceBuilds(stage, 'warrior_t', {
@@ -150,7 +323,7 @@ describe('balance build generator', () => {
     expect(
       builds.some((variant) =>
         variant.build.passiveTalentIds.includes('warrior_t_reinforced_plates') &&
-        variant.build.passiveTalentIds.includes('warrior_t_barbaric_training'),
+        variant.build.passiveTalentIds.includes('warrior_t_focused_vigor'),
       ),
     ).toBe(true)
   })
@@ -189,11 +362,13 @@ describe('balance build generator', () => {
         const activeCount = Object.values(variant.build.loadout).filter(Boolean).length
         return (
           activeCount <= 2 &&
-          variant.build.passiveTalentIds.includes('warrior_t_reinforced_plates') &&
+          variant.build.passiveTalentIds.includes('warrior_t_raise_banner') &&
           variant.build.passiveTalentIds.includes('warrior_t_barbaric_training') &&
-          variant.build.passiveTalentIds.includes('warrior_t_defensive_stance') &&
           variant.build.passiveTalentIds.includes('warrior_t_defenders_aegis') &&
-          variant.build.passiveTalentIds.includes('warrior_t_immortal_stance')
+          (
+            variant.build.passiveTalentIds.includes('warrior_t_defensive_stance') ||
+            variant.build.passiveTalentIds.includes('warrior_t_immortal_stance')
+          )
         )
       }),
     ).toBe(true)

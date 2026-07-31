@@ -237,32 +237,52 @@ const PASSIVE_TALENT_LOGIC_REGISTRY: Record<string, PassiveTalentLogicHandler> =
     ...modifiers,
     bearPhysicalDamageReduction: Math.max(
       modifiers.bearPhysicalDamageReduction,
-      firstNonZeroEffectValue(helpers.resolveTalentEffects(talent.id), 'valueA', 0.08),
+      firstNonZeroEffectValue(helpers.resolveTalentEffects(talent.id), 'valueA', 0.1),
     ),
   }),
   bear_threat_multiplier: (talent, modifiers, helpers) => ({
     ...modifiers,
     bearThreatMultiplier: modifiers.bearThreatMultiplier * (
-      1 + firstNonZeroEffectValue(helpers.resolveTalentEffects(talent.id), 'valueA', 0.2)
+      1 + firstNonZeroEffectValue(helpers.resolveTalentEffects(talent.id), 'valueA', 0.35)
     ),
   }),
   bear_generator_bonus: runtimeOnlyTalent,
+  bear_pain_rage: runtimeOnlyTalent,
+  bear_pain_immunity: runtimeOnlyTalent,
   bear_control_duration_reduction: (talent, modifiers, helpers) => ({
     ...modifiers,
     bearControlDurationMultiplier: modifiers.bearControlDurationMultiplier * (
       1 - firstNonZeroEffectValue(helpers.resolveTalentEffects(talent.id), 'valueA', 0.25)
     ),
   }),
-  bear_ironfur_reserve: runtimeOnlyTalent,
-  bear_blood_scent: runtimeOnlyTalent,
+  bear_iron_thorns: (talent, modifiers, helpers) => ({
+    ...modifiers,
+    bearIronThornsPartyDamagePerStack: Math.max(
+      modifiers.bearIronThornsPartyDamagePerStack,
+      firstNonZeroEffectValue(helpers.resolveTalentEffects(talent.id), 'valueA', 0.15),
+    ),
+  }),
+  bear_natural_inspiration: (talent, modifiers, helpers) => ({
+    ...modifiers,
+    partyAutoAttackIntervalMultiplier: modifiers.partyAutoAttackIntervalMultiplier * (
+      1 - firstNonZeroEffectValue(helpers.resolveTalentEffects(talent.id), 'valueA', 0.25)
+    ),
+  }),
   bear_skull_bash_instinct: runtimeOnlyTalent,
   bear_broken_bark: runtimeOnlyTalent,
-  bear_pack_presence: runtimeOnlyTalent,
+  bear_mark_of_the_wild: (talent, modifiers, helpers) => {
+    const damageBonus = firstNonZeroEffectValue(helpers.resolveTalentEffects(talent.id), 'valueA', 0.25)
+    return {
+      ...modifiers,
+      playerOutgoingDamageMultiplier: modifiers.playerOutgoingDamageMultiplier * (1 + damageBonus),
+      partyDamageMultiplier: modifiers.partyDamageMultiplier * (1 + damageBonus),
+    }
+  },
   bear_moonlit_resolve: runtimeOnlyTalent,
   bear_bark_dispelling: runtimeOnlyTalent,
   bear_regenerative_bond: runtimeOnlyTalent,
   bear_ursoc_shelter: runtimeOnlyTalent,
-  bear_wild_recovery: runtimeOnlyTalent,
+  bear_water_fire_immunity: runtimeOnlyTalent,
   bear_regrowth_of_the_pack: runtimeOnlyTalent,
   bear_guardian_of_the_grove: runtimeOnlyTalent,
   bear_feral_aftershock: runtimeOnlyTalent,

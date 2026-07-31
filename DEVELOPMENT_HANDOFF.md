@@ -31,7 +31,7 @@
 
 ## 2026-07-21 player tank expansion architecture baseline
 
-- The first architecture section is approved and recorded in `docs/player-tank-class-expansion-handoff.md`.
+- The first architecture section is approved and recorded in `docs/玩家坦克职业扩展开发交接.md`.
 - Canonical class IDs are `warrior_t`, `druid_bear_t`, and `dk_blood_t`. Class-specific content uses the matching prefix; semantically shared statuses such as `taunted` remain canonical shared definitions.
 - Chapter 1 / Ringing Deeps remains Warrior-only. Every later class is introduced through one dedicated three-challenge trial group and unlocks for campaign Chapters 2+ only after clearing all three challenges with that class.
 - Current groups are Bear T on challenges 1~3, Blood DK T on challenges 4~6, and the fourth class on challenges 7~9. Future classes should append challenge 10~12, 13~15, and so on instead of adding class-specific branching.
@@ -46,7 +46,7 @@
 
 ## 2026-07-20 player tank class expansion handoff
 
-- New class expansion entry document: `docs/player-tank-class-expansion-handoff.md`.
+- New class expansion entry document: `docs/玩家坦克职业扩展开发交接.md`.
 - The next recommended feature direction is to add new tank classes after `warrior_t`, starting with Guardian Druid / 熊T, then Blood Death Knight / 死亡骑士T.
 - Design stance:
   - `warrior_t`: predictive shield tank, already implemented as the baseline.

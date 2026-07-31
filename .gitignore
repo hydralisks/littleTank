@@ -12,6 +12,7 @@ node_modules
 dist
 dist-ssr
 .worktrees/
+.superpowers/
 release
 reports/balance
 src-tauri/target

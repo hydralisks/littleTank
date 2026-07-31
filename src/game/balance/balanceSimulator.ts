@@ -1032,6 +1032,26 @@ function tryUseFirstMatchingSkill(
   return state
 }
 
+function tryUsePrioritizedMatchingSkill(
+  state: EncounterState,
+  values: readonly string[],
+  traceEvents?: BalanceTraceEvent[],
+) {
+  const sortedSkills = sortSkillsForGenericUse(state.skills)
+  for (const value of values) {
+    const skill = sortedSkills.find((entry) => skillHasTagOrName(entry, [value]) && canActivate(state, entry.id))
+    if (!skill) continue
+    traceEvents?.push({
+      timeMs: state.timeMs,
+      type: 'skill-activated',
+      message: `activated ${skill.id}`,
+    })
+    return activateSkill(state, skill.id)
+  }
+
+  return state
+}
+
 function getBestTacticalTarget(
   state: EncounterState,
   profile: BalanceOperationProfile,
@@ -1292,28 +1312,34 @@ function runBearAutomatedDecision(
   const shouldUseDefense = hpRatio <= 0.72 || shouldUsePreemptiveDefense || nextState.player.resource >= 85
 
   if (shouldUseDefense && sampleProfileMistakeKind(profile, random) !== 'forget_skill') {
-    const defensiveState = tryUseFirstMatchingSkill(
+    if (nextState.player.resource < 20) {
+      const rageState = tryUsePrioritizedMatchingSkill(nextState, ['berserk'], traceEvents)
+      if (rageState !== nextState) {
+        return rageState
+      }
+    }
+    const defensiveState = tryUsePrioritizedMatchingSkill(
       nextState,
       hpRatio <= 0.45
         ? [
             'frenzied_regeneration',
             'regrowth',
-            'ironfur',
+            'lunar_beam',
             'survival_instincts',
             'barkskin',
             'rage_of_the_sleeper',
-            'lunar_beam',
             'incarnation_ursoc',
+            'ironfur',
           ]
         : [
-            'ironfur',
             'barkskin',
             'survival_instincts',
             'rage_of_the_sleeper',
-            'frenzied_regeneration',
             'lunar_beam',
             'incarnation_ursoc',
+            'frenzied_regeneration',
             'regrowth',
+            'ironfur',
           ],
       traceEvents,
     )
@@ -1328,7 +1354,7 @@ function runBearAutomatedDecision(
     if (areaTarget) {
       const targetState = maybeSelectEnemy(nextState, areaTarget, traceEvents)
       rememberSelectedTarget(memory, targetState, areaTarget.id)
-      const thrashState = tryUseFirstMatchingSkill(targetState, ['thrash'], traceEvents)
+      const thrashState = tryUsePrioritizedMatchingSkill(targetState, ['roar', 'thrash'], traceEvents)
       if (thrashState !== targetState) {
         memory.lockedTargetTickAtMs = thrashState.timeMs
         return thrashState

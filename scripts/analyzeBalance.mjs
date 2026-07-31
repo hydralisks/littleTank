@@ -151,7 +151,7 @@ const DATA_ESTIMATE_CHALLENGE_GROUPS = [
 const FULL_SAMPLE_CONFIG = {
   fixedPhaseOneAttempts: 20,
   fixedPhaseOneMaxActiveBuilds: 18,
-  fixedPhaseOneMaxPassiveVariants: 3,
+  fixedPhaseOneMaxPassiveVariants: 6,
   fixedFinalBuildCount: 6,
   fixedAttempts: 100,
   learningPhaseOneAttempts: 8,
@@ -162,7 +162,7 @@ const FULL_SAMPLE_CONFIG = {
 const QUICK_SAMPLE_CONFIG = {
   fixedPhaseOneAttempts: 3,
   fixedPhaseOneMaxActiveBuilds: 8,
-  fixedPhaseOneMaxPassiveVariants: 2,
+  fixedPhaseOneMaxPassiveVariants: 6,
   fixedFinalBuildCount: 3,
   fixedAttempts: 12,
   learningPhaseOneAttempts: 2,
@@ -173,7 +173,7 @@ const QUICK_SAMPLE_CONFIG = {
 const NORMAL_SAMPLE_CONFIG = {
   fixedPhaseOneAttempts: 8,
   fixedPhaseOneMaxActiveBuilds: 12,
-  fixedPhaseOneMaxPassiveVariants: 3,
+  fixedPhaseOneMaxPassiveVariants: 6,
   fixedFinalBuildCount: 4,
   fixedAttempts: 40,
   learningPhaseOneAttempts: 4,
@@ -349,8 +349,8 @@ const BALANCE_PROFILES = RAW_BALANCE_PROFILES.map((profile) => ({
 
 const LEARNING_BALANCE_PROFILES = [
   {
-    id: 'learning-220ms-low-error',
-    tier: 'average',
+    id: 'learning-expert-220ms-low-error',
+    tier: 'expert',
     reactionDelayMs: 220,
     reactionDelayJitterMs: 70,
     reactionDelayFastChance: 0.12,
@@ -673,6 +673,7 @@ function parseCliOptions(args) {
   const options = {
     area: null,
     stages: [],
+    classes: [],
     sample: 'full',
     budget: 'full',
     trace: false,
@@ -686,6 +687,8 @@ function parseCliOptions(args) {
       options.stages = [arg.slice('--stage='.length).trim()].filter(Boolean)
     } else if (arg.startsWith('--stages=')) {
       options.stages = arg.slice('--stages='.length).split(',').map((stageId) => stageId.trim()).filter(Boolean)
+    } else if (arg.startsWith('--classes=')) {
+      options.classes = arg.slice('--classes='.length).split(',').map((classId) => classId.trim()).filter(Boolean)
     } else if (arg === '--quick') {
       options.sample = 'quick'
       options.budget = 'quick'
@@ -1125,14 +1128,14 @@ function readPreviousReport(reportPath, legacyReportPath) {
   return null
 }
 
+function getStoryManualLabel(stageId, classId = 'warrior_t', fallbackLabel = getManualDifficultyBaseline(stageId)) {
+  return getManualPlaytestEntryForStage(manualPlaytestEntries, stageId, classId)?.manualDifficulty ?? fallbackLabel
+}
+
 function getRequestedStageEntries(stageWorkbook) {
   if (cliOptions.challenge) {
     return (stageWorkbook.challengeEntries ?? []).map((entry) => [entry.stageId, entry.manualLabel, entry])
   }
-
-  const getStoryManualLabel = (stageId) =>
-    getManualPlaytestEntryForStage(manualPlaytestEntries, stageId, 'warrior_t')?.manualDifficulty ??
-    getManualDifficultyBaseline(stageId)
 
   if (cliOptions.stages.length > 0) {
     return cliOptions.stages.map((stageId) => [stageId, getStoryManualLabel(stageId)])
@@ -1757,6 +1760,7 @@ function getAnalysisClassIds(stage) {
   const contentCap = stage.allowedClassIds?.length ? new Set(stage.allowedClassIds) : null
   return getPlayerClassRuntimeDefinitions()
     .map((entry) => entry.classId)
+    .filter((classId) => cliOptions.classes.length === 0 || cliOptions.classes.includes(classId))
     .filter((classId) => !contentCap || contentCap.has(classId))
 }
 
@@ -1793,9 +1797,10 @@ function buildReport() {
 
   const stages = stageEntries.flatMap(([stageId, manualLabel, stageEntry]) => {
     const stage = getStageById(stageId)
-    return getAnalysisClassIds(stage).map((classId) =>
-      analyzeStageEntry(stageId, classId, manualLabel, stageEntry, sampleConfig),
-    )
+    return getAnalysisClassIds(stage).map((classId) => {
+      const classManualLabel = stageEntry ? manualLabel : getStoryManualLabel(stageId, classId, manualLabel)
+      return analyzeStageEntry(stageId, classId, classManualLabel, stageEntry, sampleConfig)
+    })
   })
 
   return {

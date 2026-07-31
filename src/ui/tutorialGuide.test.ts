@@ -95,6 +95,7 @@ describe('tutorialGuide', () => {
       '[data-tutorial-id="passive-talent-list"]',
     ])
     expect(getStageSelectTutorialScript(stage4)?.[2]?.body).toContain('共用同一池技能点')
+    expect(getStageSelectTutorialScript(stage4)?.[1]?.body).toContain('天赋调整前的基础值')
   })
 
   it('marks build panel steps that should be opened before focusing nested controls', () => {

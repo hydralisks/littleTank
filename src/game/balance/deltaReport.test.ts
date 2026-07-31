@@ -119,4 +119,32 @@ describe('delta report renderer', () => {
     expect(report).toContain('Confidence')
     expect(report).toContain('为什么重要')
   })
+
+  it('renders active skill presence comparisons with both legal loadouts', () => {
+    const report = renderDeltaReportMarkdown({
+      generatedAt: '2026-07-25T00:00:00.000Z',
+      stages: [{
+        classId: 'druid_bear_t', stageId: 'WestFall-1', buildRuleId: 'standard_5slot',
+        title: 'WestFall', analysisType: 'active', baselineVariantId: 'best_without_each_skill',
+        scenarios: [],
+        comparisons: [{
+          classId: 'druid_bear_t', stageId: 'WestFall-1',
+          baselineVariantId: 'without_druid_bear_t_frenzied_regeneration',
+          comparedVariantId: 'with_druid_bear_t_frenzied_regeneration',
+          comparedVariantLabel: '狂暴回复', activeSkillId: 'druid_bear_t_frenzied_regeneration',
+          baselinePassRate: 0.45, comparedPassRate: 0.7, passRateDelta: 0.25,
+          relativeDelta: 0.56, confidence: 'medium', verdict: 'strong_gain',
+          reasons: ['delta 25 percentage points'],
+          baselineLoadout: { '1': 'druid_bear_t_growl', '2': null, '3': null, '4': null, Q: null, E: null, R: null, F: null },
+          comparedLoadout: { '1': 'druid_bear_t_frenzied_regeneration', '2': null, '3': null, '4': null, Q: null, E: null, R: null, F: null },
+        }],
+      } satisfies StageDeltaAnalysis],
+    })
+
+    expect(report).toContain('druid_bear_t_frenzied_regeneration')
+    expect(report).toContain('不含技能构筑')
+    expect(report).toContain('包含技能构筑')
+    expect(report).toContain('1=druid_bear_t_growl')
+    expect(report).toContain('1=druid_bear_t_frenzied_regeneration')
+  })
 })

@@ -24,6 +24,15 @@ function createPlaceholderStatus(label: string): StatusEffect {
 export function PlayerStatusPanel({ player }: PlayerStatusPanelProps) {
   const hpPercent = Math.round((player.hp / player.maxHp) * 100)
   const resourcePercent = Math.round((player.resource / player.maxResource) * 100)
+  const absorbTotal = [...player.buffs, ...(player.mitigation ? [player.mitigation] : [])]
+    .reduce((total, status) => {
+      const absorbRemaining = status.absorbRemaining ?? 0
+      return total + (Number.isFinite(absorbRemaining) ? Math.max(0, absorbRemaining) : 0)
+    }, 0)
+  const absorbPercent = player.maxHp > 0
+    ? Math.max(0, Math.min(100, (absorbTotal / player.maxHp) * 100))
+    : 0
+  const absorbLabelValue = Math.round(absorbTotal * 10) / 10
   const visibleDebuffs = player.debuffs.filter((status) => status.id !== 'stable')
   const visibleBuffs = [...player.buffs, ...(player.mitigation ? [player.mitigation] : [])].filter(
     (status): status is StatusEffect => status.id !== 'stable',
@@ -35,8 +44,18 @@ export function PlayerStatusPanel({ player }: PlayerStatusPanelProps) {
         <div className="status-card">
           <span className="status-label">玩家生命值</span>
           <strong>{Math.round(player.hp)}/{player.maxHp}</strong>
-          <div className="meter">
-            <div className="meter__fill meter__fill--hp" style={{ width: `${hpPercent}%` }} />
+          <div className="player-health-meters">
+            {absorbTotal > 0 ? (
+              <div
+                className="player-absorb-meter"
+                data-player-absorb
+                aria-label={`当前吸收盾 ${absorbLabelValue}`}
+                style={{ width: `${absorbPercent}%` }}
+              />
+            ) : null}
+            <div className="meter player-health-meters__hp">
+              <div className="meter__fill meter__fill--hp" style={{ width: `${hpPercent}%` }} />
+            </div>
           </div>
           <span className="status-detail">公共冷却 {asSeconds(player.gcdRemainingMs)}</span>
         </div>

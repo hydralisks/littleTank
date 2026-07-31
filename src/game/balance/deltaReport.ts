@@ -16,7 +16,7 @@ function formatPercent(value: number) {
   return `${Math.round(value * 100)}%`
 }
 
-function renderLoadout(loadout: StageDeltaAnalysis['scenarios'][number]['loadout']) {
+function renderLoadout(loadout: Partial<StageDeltaAnalysis['scenarios'][number]['loadout']>) {
   return Object.entries(loadout)
     .flatMap(([hotkey, skillId]) => (skillId ? [`${hotkey}=${skillId}`] : []))
     .join(', ') || 'none'
@@ -124,6 +124,7 @@ function renderFieldGuide() {
     '| `Victories` | 该变体通关次数。 | 与 Attempts 一起构成 Pass rate，也能看出 1 场胜负对结果影响多大。 |',
     '| `Passives` | 当前变体携带的被动天赋 ID。 | 用来核对测试内容是否正是要比较的天赋或组合。 |',
     '| `Loadout` | 当前变体携带的主动技能配置。 | delta 对照必须确认主动配置一致，否则无法判断差异来自被动还是主动技能。 |',
+    '| `Active presence` | 同一候选池中最佳不含技能构筑与最佳包含技能构筑的差异。 | 避免用任意固定槽位替换来误判主动技能价值。 |',
     '',
   ]
 }
@@ -181,6 +182,18 @@ export function renderDeltaReportMarkdown(report: DeltaReport) {
     )
 
     const needsRerun = stage.comparisons.filter((comparison) => comparison.confidence === 'low')
+    if (stage.analysisType === 'active') {
+      lines.push(
+        '### Active loadout evidence',
+        '',
+        '| Skill | 不含技能构筑 | 包含技能构筑 |',
+        '| --- | --- | --- |',
+        ...stage.comparisons.map((comparison) =>
+          `| \`${comparison.activeSkillId ?? comparison.comparedVariantId}\` | ${renderLoadout(comparison.baselineLoadout ?? {})} | ${renderLoadout(comparison.comparedLoadout ?? {})} |`,
+        ),
+        '',
+      )
+    }
     if (needsRerun.length > 0) {
       lines.push(
         '### Needs rerun',

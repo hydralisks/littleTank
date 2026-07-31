@@ -1472,6 +1472,7 @@ export function createStatusEffectFromDefinition(definition: PlayerBuildStatusDe
     kind: presentation.kind,
     effectLogicId: definition.effectLogicId,
     maxStacks: definition.maxStacks,
+    dispellable: definition.dispellable,
   }
 }
 
@@ -1742,6 +1743,7 @@ const emptyModifiers: PassiveTalentModifiers = {
   playerMaxHpMultiplier: 1,
   playerMaxResourceBonus: 0,
   playerResourceRegenMultiplier: 1,
+  playerOutgoingDamageMultiplier: 1,
   playerDamageTakenMultiplier: 1,
   playerPassiveBuffs: [],
   stunHitsCross: false,
@@ -1760,6 +1762,7 @@ const emptyModifiers: PassiveTalentModifiers = {
   partyPressureCanDriftDown: true,
   partyDamageMultiplier: 1,
   partyThreatMultiplier: 1,
+  partyAutoAttackIntervalMultiplier: 1,
   periodicPlayerStunIntervalMs: 0,
   periodicPlayerStunDurationMs: 0,
   tauntCooldownMultiplier: 1,
@@ -1782,6 +1785,7 @@ const emptyModifiers: PassiveTalentModifiers = {
   bearPhysicalDamageReduction: 0,
   bearThreatMultiplier: 1,
   bearControlDurationMultiplier: 1,
+  bearIronThornsPartyDamagePerStack: 0,
 }
 
 export function getPassiveModifiers(selectedPassiveTalentIds: PassiveTalentId[]) {
@@ -1889,6 +1893,7 @@ export function normalizePersistedBuildForRule(
     nextLoadout[hotkey] = skillId
   }
 
+  const selectedExclusiveGroups = new Set<string>()
   let nextPassiveTalentIds = sourceBuild.passiveTalentIds.filter((talentId, index, array) => {
     if (array.indexOf(talentId) !== index) {
       return false
@@ -1896,6 +1901,15 @@ export function normalizePersistedBuildForRule(
     if (!isTalentAllowedByRule(buildRuleId, classId, talentId, maxUnlockedPassiveTalentTier)) {
       warnings.push(createWarning('removed_talent', `Talent ${passiveTalentsById[talentId]?.name ?? talentId} is not allowed by this stage build rule.`))
       return false
+    }
+
+    const exclusiveGroup = passiveTalentsById[talentId]?.exclusiveGroup
+    if (exclusiveGroup && selectedExclusiveGroups.has(exclusiveGroup)) {
+      warnings.push(createWarning('removed_talent', `Talent ${passiveTalentsById[talentId]?.name ?? talentId} conflicts with another selected talent.`))
+      return false
+    }
+    if (exclusiveGroup) {
+      selectedExclusiveGroups.add(exclusiveGroup)
     }
 
     return true

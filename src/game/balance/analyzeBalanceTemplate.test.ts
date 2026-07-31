@@ -58,4 +58,34 @@ describe('analyze balance report template', () => {
     expect(script).toContain('## 每关敌人数值建议')
     expect(script).toContain('| 关卡 | 敌人建议 |')
   })
+
+  it('labels the only learning profile as expert simulation', () => {
+    const script = fs.readFileSync(path.join(process.cwd(), 'scripts', 'analyzeBalance.mjs'), 'utf8')
+
+    expect(script).toContain("id: 'learning-expert-220ms-low-error'")
+    expect(script).toContain("id: 'learning-expert-220ms-low-error',\n    tier: 'expert'")
+  })
+
+  it('keeps six passive variants per active build so exclusive branches remain represented', () => {
+    const script = fs.readFileSync(path.join(process.cwd(), 'scripts', 'analyzeBalance.mjs'), 'utf8')
+
+    expect(script).toMatch(/const QUICK_SAMPLE_CONFIG = \{[^}]*fixedPhaseOneMaxPassiveVariants: 6,/)
+    expect(script).toMatch(/const NORMAL_SAMPLE_CONFIG = \{[^}]*fixedPhaseOneMaxPassiveVariants: 6,/)
+    expect(script).toMatch(/const FULL_SAMPLE_CONFIG = \{[^}]*fixedPhaseOneMaxPassiveVariants: 6,/)
+  })
+
+  it('supports narrowing long balance runs to explicit class ids', () => {
+    const script = fs.readFileSync(path.join(process.cwd(), 'scripts', 'analyzeBalance.mjs'), 'utf8')
+
+    expect(script).toContain("arg.startsWith('--classes=')")
+    expect(script).toContain('cliOptions.classes')
+  })
+
+  it('uses the class-specific manual difficulty for story analysis rows', () => {
+    const script = fs.readFileSync(path.join(process.cwd(), 'scripts', 'analyzeBalance.mjs'), 'utf8')
+
+    expect(script).toContain('getStoryManualLabel(stageId, classId, manualLabel)')
+    expect(script).toContain("getManualPlaytestEntryForStage(manualPlaytestEntries, stageId, classId)")
+    expect(script).toContain('analyzeStageEntry(stageId, classId, classManualLabel, stageEntry, sampleConfig)')
+  })
 })

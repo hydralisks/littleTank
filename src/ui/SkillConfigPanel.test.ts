@@ -134,4 +134,54 @@ describe('SkillConfigPanel', () => {
 
     expect(statusIcon?.getAttribute('src')).toBe('/status-icons/shieldBlock.svg')
   })
+
+  it('renders structured base-value facts and omits empty fact grids', () => {
+    const workbook = XLSX.readFile('public/designer-data/player_build.xlsx')
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(workbook))
+    const thrash = getActiveSkillDefinition('druid_bear_t_thrash')
+
+    if (!thrash) {
+      throw new Error('Expected current designer workbook to define Bear Thrash')
+    }
+
+    const unknownSkill = {
+      ...thrash,
+      id: 'test_unknown_skill',
+      name: '无数值测试技能',
+      shortName: '无数值',
+      cooldownMs: 0,
+      resourceCost: 0,
+      skillLogicId: 'unknown_logic',
+    }
+    const markup = renderToStaticMarkup(
+      createElement(SkillConfigPanel, {
+        isOpen: true,
+        loadout: emptyLoadout,
+        selectedHotkey: '1',
+        buildRule: testBuildRule,
+        activeSkills: [thrash, unknownSkill],
+        totalPoints: 20,
+        activePoints: 0,
+        passivePoints: 0,
+        remainingPoints: 20,
+        onClose: vi.fn(),
+        onSelectHotkey: vi.fn(),
+        onAssignSkill: vi.fn(),
+        onClearHotkey: vi.fn(),
+        canAssignToSelectedHotkey: () => true,
+      }),
+    )
+    const dom = new JSDOM(markup, { url: 'http://localhost/' })
+    const cards = [...dom.window.document.querySelectorAll('.skill-library-card')]
+    const thrashCard = cards.find((card) => card.textContent?.includes('痛击'))
+    const unknownCard = cards.find((card) => card.textContent?.includes('无数值测试技能'))
+
+    expect(thrashCard?.querySelector('[data-skill-detail-facts]')?.textContent).toContain('技能冷却')
+    expect(thrashCard?.querySelector('[data-skill-detail-facts]')?.textContent).toContain('9 秒')
+    expect(thrashCard?.querySelector('[data-skill-detail-facts]')?.textContent).toContain('技能伤害')
+    expect(thrashCard?.querySelector('[data-skill-detail-facts]')?.textContent).toContain('仇恨倍数')
+    expect(thrashCard?.querySelector('[data-skill-detail-facts]')?.textContent).toContain('×5')
+    expect(thrashCard?.querySelector('[data-skill-detail-facts]')?.textContent).toContain('怒气获取')
+    expect(unknownCard?.querySelector('[data-skill-detail-facts]')).toBeNull()
+  })
 })

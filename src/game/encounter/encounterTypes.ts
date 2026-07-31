@@ -45,13 +45,16 @@ export interface StatusEffect {
   tone: StatusTone
   kind: StatusKind
   effectLogicId?: string
+  dispellable?: boolean
   valueA?: number
   valueB?: number
   tickIntervalMs?: number
   absorbRemaining?: number
   absorbRatio?: number
   damageReductionRatio?: number
+  magicDamageReductionRatio?: number
   damageReductionTypes?: EnemySkillDamageType[]
+  threatMultiplier?: number
   damageMultiplierBonus?: number
   damageTakenMultiplierBonus?: number
   outgoingDamageReductionRatio?: number
@@ -199,6 +202,7 @@ export interface PassiveTalentModifiers {
   playerMaxHpMultiplier: number
   playerMaxResourceBonus: number
   playerResourceRegenMultiplier: number
+  playerOutgoingDamageMultiplier: number
   playerDamageTakenMultiplier: number
   playerPassiveBuffs: StatusEffect[]
   stunHitsCross: boolean
@@ -217,6 +221,7 @@ export interface PassiveTalentModifiers {
   partyPressureCanDriftDown: boolean
   partyDamageMultiplier: number
   partyThreatMultiplier: number
+  partyAutoAttackIntervalMultiplier: number
   periodicPlayerStunIntervalMs: number
   periodicPlayerStunDurationMs: number
   tauntCooldownMultiplier: number
@@ -239,6 +244,7 @@ export interface PassiveTalentModifiers {
   bearPhysicalDamageReduction: number
   bearThreatMultiplier: number
   bearControlDurationMultiplier: number
+  bearIronThornsPartyDamagePerStack: number
 }
 
 export interface PlayerBuildStatusDefinition {
@@ -434,6 +440,7 @@ export interface CombatAbsorbCreatedEvent extends CombatLogEventBase {
 
 export interface CombatAbsorbConsumedEvent extends CombatLogEventBase {
   type: 'absorb-consumed'
+  ability: CombatLogAbility
   amount: number
   fullyConsumed?: boolean
 }

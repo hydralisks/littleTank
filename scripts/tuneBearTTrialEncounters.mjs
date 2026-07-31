@@ -106,15 +106,23 @@ updateRow(encounter, 'spawnId', 'Challenge-3-e03', {
   nameOverride: '鱼人猎潮者',
 })
 updateRow(encounter, 'spawnId', 'Challenge-3-e04', {
-  enemyId: 'murloc_tidehunter',
-  nameOverride: '鱼人猎潮者',
+  enemyId: 'coldlight_seer',
+  nameOverride: '寒光先知',
+})
+
+selectSheet(encounter, '关卡词缀绑定')
+updateRow(encounter, 'stageId', 'Challenge-1', {
+  affixIdsCsv: 'affix_oldGrudge',
 })
 
 selectSheet(encounter, '关卡开场')
+updateRow(encounter, 'stageId', 'Challenge-1', {
+  playerAutoHeal: 3,
+})
 updateRow(encounter, 'stageId', 'Challenge-2', {
   playerHp: 140,
   playerMaxHp: 140,
-  playerAutoHeal: 5,
+  playerAutoHeal: 3,
 })
 updateRow(encounter, 'stageId', 'Challenge-3', {
   playerHp: 180,
@@ -124,19 +132,24 @@ updateRow(encounter, 'stageId', 'Challenge-3', {
 save(encounter)
 
 const stageContent = openSheet('challenge_stage_content.xlsx', '关卡')
+updateRow(stageContent, 'stageId', 'Challenge-1', {
+  affix2Title: '',
+  affix2Description: '',
+  affix2IconId: '',
+})
 updateRow(stageContent, 'stageId', 'Challenge-2', {
   affix1Description: '你的队伍开场的三次攻击会产生2倍仇恨',
   enemySummary: '狗头人矿工、狗头人学徒、鱼人猎潮者、寒光先知、狗头人拾荒者',
 })
 updateRow(stageContent, 'stageId', 'Challenge-3', {
-  enemySummary: '老瞎眼、鱼人领军、鱼人猎潮者、鱼人斥候',
+  enemySummary: '老瞎眼、寒光先知、鱼人领军、鱼人猎潮者、鱼人斥候',
 })
 save(stageContent)
 
 const playerBuild = openSheet('player_build.xlsx', '主动技能效果')
 updateRow(playerBuild, 'skillEffectId', 'druid_bear_t_ironfur_main', {
-  valueA: 20,
-  notes: '每层20%物理减伤，最多3层。',
+  valueA: 18,
+  notes: '每层18%物理减伤，最多3层。',
 })
 save(playerBuild)
 

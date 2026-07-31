@@ -200,6 +200,135 @@ describe('balance simulator', () => {
     expect(firstSkill?.message).toContain('druid_bear_t_ironfur')
   })
 
+  it('uses Frenzied Regeneration before Ironfur when both are available at critical health', () => {
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(
+      XLSX.readFile('public/designer-data/player_build.xlsx'),
+    ))
+    const stage = getStageById('harbor-1')
+    const build = {
+      loadout: {
+        '1': 'druid_bear_t_ironfur',
+        '2': 'druid_bear_t_frenzied_regeneration',
+        '3': null,
+        '4': null,
+        Q: null,
+        E: null,
+        R: null,
+        F: null,
+      },
+      passiveTalentIds: [],
+    }
+
+    const result = runBalanceScenario({
+      stage,
+      classId: 'druid_bear_t',
+      build,
+      buildId: 'bear-critical-heal-priority',
+      profile: noMistakeProfile,
+      attempts: 1,
+      maxDurationMs: 500,
+      collectTrace: true,
+      initialStateMutator: (state) => ({
+        ...state,
+        enemies: state.enemies.map((enemy) => ({ ...enemy, cast: null })),
+        player: {
+          ...state.player,
+          hp: state.player.maxHp * 0.4,
+          resource: 100,
+        },
+      }),
+    })
+
+    const firstSkill = result.trace?.events.find((event) => event.type === 'skill-activated')
+    expect(firstSkill?.message).toContain('druid_bear_t_frenzied_regeneration')
+  })
+
+  it('uses Lunar Beam before repeatable Ironfur at pressured health', () => {
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(
+      XLSX.readFile('public/designer-data/player_build.xlsx'),
+    ))
+    const stage = getStageById('harbor-1')
+    const build = {
+      loadout: {
+        '1': 'druid_bear_t_ironfur',
+        '2': 'druid_bear_t_lunar_beam',
+        '3': null,
+        '4': null,
+        Q: null,
+        E: null,
+        R: null,
+        F: null,
+      },
+      passiveTalentIds: [],
+    }
+
+    const result = runBalanceScenario({
+      stage,
+      classId: 'druid_bear_t',
+      build,
+      buildId: 'bear-long-cooldown-priority',
+      profile: noMistakeProfile,
+      attempts: 1,
+      maxDurationMs: 500,
+      collectTrace: true,
+      initialStateMutator: (state) => ({
+        ...state,
+        enemies: state.enemies.map((enemy) => ({ ...enemy, cast: null })),
+        player: {
+          ...state.player,
+          hp: state.player.maxHp * 0.5,
+          resource: 100,
+        },
+      }),
+    })
+
+    const firstSkill = result.trace?.events.find((event) => event.type === 'skill-activated')
+    expect(firstSkill?.message).toContain('druid_bear_t_lunar_beam')
+  })
+
+  it('uses Berserk to restart the defensive loop when pressured and rage-starved', () => {
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(
+      XLSX.readFile('public/designer-data/player_build.xlsx'),
+    ))
+    const stage = getStageById('harbor-1')
+    const build = {
+      loadout: {
+        '1': 'druid_bear_t_ironfur',
+        '2': 'druid_bear_t_berserk',
+        '3': null,
+        '4': null,
+        Q: null,
+        E: null,
+        R: null,
+        F: null,
+      },
+      passiveTalentIds: [],
+    }
+
+    const result = runBalanceScenario({
+      stage,
+      classId: 'druid_bear_t',
+      build,
+      buildId: 'bear-rage-starved-defense',
+      profile: noMistakeProfile,
+      attempts: 1,
+      maxDurationMs: 500,
+      collectTrace: true,
+      initialStateMutator: (state) => ({
+        ...state,
+        enemies: state.enemies.map((enemy) => ({ ...enemy, cast: null })),
+        player: {
+          ...state.player,
+          hp: state.player.maxHp * 0.5,
+          resource: 0,
+        },
+      }),
+    })
+
+    const firstSkill = result.trace?.events.find((event) => event.type === 'skill-activated')
+    expect(firstSkill?.message).toContain('druid_bear_t_berserk')
+  })
+
   it('uses Thrash before Growl when several enemies have lost threat', () => {
     applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(
       XLSX.readFile('public/designer-data/player_build.xlsx'),
@@ -228,6 +357,52 @@ describe('balance simulator', () => {
 
     const firstSkill = result.trace?.events.find((event) => event.type === 'skill-activated')
     expect(firstSkill?.message).toContain('druid_bear_t_thrash')
+  })
+
+  it('uses Roar before Thrash when several enemies have lost threat and Roar is equipped', () => {
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(
+      XLSX.readFile('public/designer-data/player_build.xlsx'),
+    ))
+    const stage = getStageById('harbor-1')
+    const build = {
+      loadout: {
+        '1': 'druid_bear_t_thrash',
+        '2': 'druid_bear_t_roar',
+        '3': null,
+        '4': null,
+        Q: null,
+        E: null,
+        R: null,
+        F: null,
+      },
+      passiveTalentIds: [],
+    }
+
+    const result = runBalanceScenario({
+      stage,
+      classId: 'druid_bear_t',
+      build,
+      buildId: 'bear-area-roar',
+      profile: noMistakeProfile,
+      attempts: 1,
+      maxDurationMs: 500,
+      collectTrace: true,
+      initialStateMutator: (state) => ({
+        ...state,
+        enemies: state.enemies.map((enemy) => ({
+          ...enemy,
+          cast: null,
+          threatState: 'lost',
+        })),
+        player: {
+          ...state.player,
+          resource: 100,
+        },
+      }),
+    })
+
+    const firstSkill = result.trace?.events.find((event) => event.type === 'skill-activated')
+    expect(firstSkill?.message).toContain('druid_bear_t_roar')
   })
 
   it('uses Growl for a single lost-threat target after target optimization', () => {
