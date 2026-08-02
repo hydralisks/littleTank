@@ -86,6 +86,14 @@ describe('analyze balance report template', () => {
     expect(script).toContain('cliOptions.classes')
   })
 
+  it('supports an isolated designer-data directory for candidate scans', () => {
+    const script = readAnalyzeBalanceScript()
+
+    expect(script).toContain("arg.startsWith('--designer-data-dir=')")
+    expect(script).toContain('cliOptions.designerDataDir')
+    expect(script).toContain('Designer data directory must stay inside project root')
+  })
+
   it('uses the class-specific manual difficulty for story analysis rows', () => {
     const script = readAnalyzeBalanceScript()
 
