@@ -60,7 +60,7 @@ import {
   buildStageSelectConflictModal,
   shouldShowBuildConflictButton,
 } from './stageSelectViewModel'
-import { resolveIconAssetUrl } from './statusIconResolver'
+import { resolveStatusAssetUrl } from './statusIconResolver'
 import { MonsterCodexPanel } from './MonsterCodexPanel'
 import { PassiveTalentPanel } from './PassiveTalentPanel'
 import { SkillConfigPanel } from './SkillConfigPanel'
@@ -165,7 +165,7 @@ function createStageLegendRows(entries: StageLegendEntry[]): StageInfoRow[] {
 }
 
 function StageInfoIcon({ iconId, title }: { iconId?: string; title: string }) {
-  const iconUrl = iconId ? resolveIconAssetUrl(iconId) : null
+  const iconUrl = iconId ? resolveStatusAssetUrl(iconId) : null
   const fallbackText = title.trim().slice(0, 1) || '?'
 
   return (

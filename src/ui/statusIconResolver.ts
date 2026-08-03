@@ -8,23 +8,30 @@ export function sanitizeIconAssetKey(assetKey: string) {
 }
 
 export function resolveIconAssetUrl(iconId: string) {
-  const enemyAssetKey = getEnemyIconAssetKey(iconId)
-  if (enemyAssetKey) {
-    return `/status-icons/${sanitizeIconAssetKey(enemyAssetKey)}.svg`
-  }
-
   const definition = getBuildIconDefinition(iconId)
   if (definition) {
     const folder = definition.iconType === 'skill' ? 'skill-icons' : 'status-icons'
     return `/${folder}/${sanitizeIconAssetKey(definition.assetKey)}.svg`
   }
 
+  const enemyAssetKey = getEnemyIconAssetKey(iconId)
+  if (enemyAssetKey) {
+    return `/status-icons/${sanitizeIconAssetKey(enemyAssetKey)}.svg`
+  }
+
   return null
+}
+
+export function resolveStatusAssetUrl(iconId: string) {
+  const enemyAssetKey = getEnemyIconAssetKey(iconId)
+  return enemyAssetKey
+    ? `/status-icons/${sanitizeIconAssetKey(enemyAssetKey)}.svg`
+    : resolveIconAssetUrl(iconId)
 }
 
 export function resolveStatusIconUrl(status: Pick<StatusEffect, 'id' | 'iconId'>) {
   const iconId = status.iconId ?? status.id
-  const resolvedUrl = resolveIconAssetUrl(iconId)
+  const resolvedUrl = resolveStatusAssetUrl(iconId)
 
   if (resolvedUrl) {
     return resolvedUrl
