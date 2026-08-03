@@ -98,4 +98,40 @@ describe('PassiveTalentPanel', () => {
 
     expect(statusIcon?.getAttribute('src')).toBe('/status-icons/immortalStance.svg')
   })
+
+  it('renders a bear talent icon with an oval-shield emblem and carries it into derived statuses', () => {
+    const workbook = XLSX.readFile('public/designer-data/player_build.xlsx')
+    applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(workbook))
+    const bearTalent = getPassiveTalentDefinition('druid_bear_t_moonlit_resolve')
+
+    if (!bearTalent) {
+      throw new Error('Expected current designer workbook to define moonlit resolve')
+    }
+
+    const markup = renderToStaticMarkup(
+      createElement(PassiveTalentPanel, {
+        isOpen: true,
+        buildRule: testBuildRule,
+        talents: [bearTalent],
+        selectedPassiveTalentIds: [],
+        totalPoints: 20,
+        activePoints: 8,
+        passivePoints: 0,
+        remainingPoints: 12,
+        onClose: vi.fn(),
+        onToggleTalent: vi.fn(),
+        canToggleTalent: () => true,
+      }),
+    )
+    const dom = new JSDOM(markup, { url: 'http://localhost/' })
+    const talentIcon = dom.window.document.querySelector('.passive-talent-card__icon')
+    const derivedStatus = dom.window.document.querySelector('.passive-chip .status-square')
+
+    expect(talentIcon?.querySelector('img')?.getAttribute('src'))
+      .toBe('/status-icons/bear-talent-moonlit-resolve.svg')
+    expect(talentIcon?.querySelector('[data-source-shape="oval-shield"]')).not.toBeNull()
+    expect(talentIcon?.querySelector('[data-class-motif="bear-claw"]')).not.toBeNull()
+    expect(derivedStatus?.querySelector('[data-source-shape="oval-shield"]')).not.toBeNull()
+    expect(derivedStatus?.querySelector('[data-class-motif="bear-claw"]')).not.toBeNull()
+  })
 })

@@ -6,6 +6,8 @@ import type {
 } from '../game/encounter/encounterTypes'
 import { getStatusesForTalent } from '../game/data/playerBuildCatalog'
 import { StatusBadge } from './StatusBadge'
+import { StatusSourceEmblem } from './StatusSourceEmblem'
+import { resolveIconAssetUrl } from './statusIconResolver'
 
 interface PassiveTalentPanelProps {
   isOpen: boolean
@@ -102,6 +104,7 @@ export function PassiveTalentPanel({
                   .map((talent) => {
                     const selected = selectedPassiveTalentIds.includes(talent.id)
                     const canToggle = canToggleTalent(talent.id)
+                    const iconUrl = resolveIconAssetUrl(talent.iconId)
 
                     return (
                       <article
@@ -115,7 +118,13 @@ export function PassiveTalentPanel({
                           .join(' ')}
                       >
                         <div className="passive-talent-card__head">
-                          <strong>{talent.name}</strong>
+                          <div className="passive-talent-card__identity">
+                            <div className="passive-talent-card__icon">
+                              {iconUrl ? <img src={iconUrl} alt="" aria-hidden="true" /> : null}
+                              <StatusSourceEmblem sourceKind="passiveTalent" sourceClassId={talent.classId} />
+                            </div>
+                            <strong>{talent.name}</strong>
+                          </div>
                           <span>{talent.cost} 点</span>
                         </div>
                         <p>{talent.description}</p>
@@ -131,10 +140,12 @@ export function PassiveTalentPanel({
                                         label: status.statusName,
                                         shortLabel: '',
                                         remainingMs: 0,
-                                      totalMs: 0,
-                                      tone: 'neutral',
-                                      kind: 'neutral',
-                                    }}
+                                        totalMs: 0,
+                                        tone: 'neutral',
+                                        kind: 'neutral',
+                                        sourceKind: 'passiveTalent',
+                                        sourceClassId: talent.classId,
+                                      }}
                                     size="small"
                                   />
                                   <strong>{status.statusName}</strong>

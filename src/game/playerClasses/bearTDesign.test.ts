@@ -203,8 +203,8 @@ describe('guardian druid bear tank design contract', () => {
       effectLogicId: 'bear_rage_exhaustion',
       enabled: true,
     })
-    expect(icons.get('druid_bear_t_pain_rage_pic')).toBe('bear-pain-rage')
-    expect(icons.get('druid_bear_t_rage_exhaustion_pic')).toBe('bear-rage-lock')
+    expect(icons.get('druid_bear_t_pain_rage_pic')).toBe('bear-talent-pain-rage')
+    expect(icons.get('druid_bear_t_rage_exhaustion_pic')).toBe('bear-status-rage-exhaustion')
 
     const defaultWestFallBuild = getDefaultPersistedBuildForRule('8slot_0', 'druid_bear_t')
     expect(defaultWestFallBuild.passiveTalentIds).toContain('druid_bear_t_mark_of_the_wild')

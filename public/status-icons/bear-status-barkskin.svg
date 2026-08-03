@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" data-icon-canvas="full" data-icon-kind="status" data-icon-key="bear-status-barkskin">
+  <title>druid_bear_t_barkskin_status_pic</title>
+  <defs>
+    <linearGradient id="bg" x1="8" y1="4" x2="57" y2="62" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#23664d"/>
+      <stop offset="0.58" stop-color="#102b24"/>
+      <stop offset="1" stop-color="#081012"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(23 18) rotate(48) scale(38)">
+      <stop stop-color="#57d49a" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#57d49a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <path fill="url(#bg)" d="M0 0h64v64H0z"/>
+  <path fill="url(#glow)" d="M0 0h64v64H0z"/>
+  <path d="M4 4h56v56H4z" fill="none" stroke="#c8f5a5" stroke-opacity=".24"/>
+  <g fill="none" stroke="#57d49a" stroke-opacity=".4" stroke-width="1.2"><circle cx="32" cy="32" r="27" stroke-dasharray="2 4"/></g>
+  <g fill="#57d49a" fill-opacity=".13" stroke="#c8f5a5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M26 13h12l5 11-4 27H25l-4-27Z"/><path d="M32 15v34m-9-22 8 5-7 8m17-14-8 6 7 9"/></g>
+  <path d="M8 57h48" stroke="#57d49a" stroke-opacity=".36" stroke-width="2"/>
+</svg>

@@ -48,6 +48,7 @@ describe('SkillBar', () => {
     ]
     const markup = renderToStaticMarkup(
       createElement(SkillBar, {
+        classId: 'warrior_t',
         slots,
         currentResource: 100,
         gcdRemainingMs: 750,
@@ -81,6 +82,7 @@ describe('SkillBar', () => {
     ]
     const markup = renderToStaticMarkup(
       createElement(SkillBar, {
+        classId: 'warrior_t',
         slots,
         currentResource: 100,
         gcdRemainingMs: 0,
@@ -94,5 +96,29 @@ describe('SkillBar', () => {
     const chargeBadge = container.querySelector('.skill-icon-charge-count')
 
     expect(chargeBadge?.textContent).toBe('1')
+  })
+
+  it('marks a bear active skill with the banner-shaped bear emblem', () => {
+    const markup = renderToStaticMarkup(
+      createElement(SkillBar, {
+        classId: 'druid_bear_t',
+        slots: [{
+          hotkey: '1',
+          skill: createSkill({
+            id: 'druid_bear_t_growl',
+            iconId: 'druid_bear_t_growl_pic',
+          }),
+        }],
+        currentResource: 100,
+        gcdRemainingMs: 0,
+        combatLocked: false,
+        onActivateSkill: vi.fn(),
+      }),
+    )
+    const dom = new JSDOM(markup)
+    const iconBox = dom.window.document.querySelector('.skill-icon-box')
+
+    expect(iconBox?.querySelector('[data-source-shape="banner"]')).not.toBeNull()
+    expect(iconBox?.querySelector('[data-class-motif="bear-claw"]')).not.toBeNull()
   })
 })

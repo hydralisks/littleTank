@@ -28,6 +28,11 @@ function loadWorkbookIconDefinitions() {
   return [...enemyIcons, ...playerBuildIcons, ...challengeIcons].filter((icon) => icon.enabled)
 }
 
+function loadPlayerBuildIconDefinitions() {
+  const workbook = XLSX.readFile(path.join(designerDataDir, 'player_build.xlsx'))
+  return parsePlayerBuildWorkbook(workbook).iconDefinitions.filter((icon) => icon.enabled)
+}
+
 function loadChallengeEncounterIconDefinitions(workbook: XLSX.WorkBook) {
   const sheet = workbook.Sheets['图标资源映射']
   expect(sheet, 'challenge_encounter_balance.xlsx should include 图标资源映射').toBeTruthy()
@@ -50,5 +55,20 @@ describe('designer workbook icon assets', () => {
       .filter((entry) => !fs.existsSync(entry.filePath))
 
     expect(missingAssets).toEqual([])
+  })
+
+  it('gives every enabled bear skill, talent, and status its own full-canvas asset', () => {
+    const bearIcons = loadPlayerBuildIconDefinitions().filter((icon) =>
+      icon.iconId.startsWith('druid_bear_t_') && ['skill', 'talent', 'status'].includes(icon.iconType),
+    )
+
+    expect(bearIcons.length).toBeGreaterThan(40)
+    expect(new Set(bearIcons.map((icon) => icon.assetKey)).size).toBe(bearIcons.length)
+
+    for (const icon of bearIcons) {
+      const filePath = expectedIconAssetPath(icon)
+      expect(fs.existsSync(filePath), `missing ${icon.iconId}: ${filePath}`).toBe(true)
+      expect(fs.readFileSync(filePath, 'utf8')).toContain('data-icon-canvas="full"')
+    }
   })
 })

@@ -1,7 +1,8 @@
 import type { CSSProperties } from 'react'
-import type { SkillHotkey, SkillId, SkillState } from '../game/encounter/encounterTypes'
+import type { PlayerClassId, SkillHotkey, SkillId, SkillState } from '../game/encounter/encounterTypes'
 import { lockedSkillIcon, skillIconMap } from './iconMaps'
 import { resolveIconAssetUrl } from './statusIconResolver'
+import { StatusSourceEmblem } from './StatusSourceEmblem'
 
 export interface SkillBarSlotView {
   hotkey: SkillHotkey
@@ -9,6 +10,7 @@ export interface SkillBarSlotView {
 }
 
 interface SkillBarProps {
+  classId: PlayerClassId
   slots: SkillBarSlotView[]
   currentResource: number
   gcdRemainingMs: number
@@ -47,6 +49,7 @@ function formatCooldownDigits(remainingCooldownMs: number) {
 }
 
 export function SkillBar({
+  classId,
   slots,
   currentResource,
   gcdRemainingMs,
@@ -125,6 +128,7 @@ export function SkillBar({
                   alt=""
                   aria-hidden="true"
                 />
+                <StatusSourceEmblem sourceKind="activeSkill" sourceClassId={classId} />
                 {hasCooldown ? <span className="skill-icon-cooldown" aria-hidden="true" /> : null}
                 {hasGcdOverlay ? <span className="skill-icon-gcd" aria-hidden="true" /> : null}
                 {cooldownDigits ? (

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" data-icon-canvas="full" data-icon-kind="status" data-icon-key="bear-status-pain-immunity">
+  <title>druid_bear_t_pain_immunity_status_pic</title>
+  <defs>
+    <linearGradient id="bg" x1="8" y1="4" x2="57" y2="62" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#873725"/>
+      <stop offset="0.58" stop-color="#351713"/>
+      <stop offset="1" stop-color="#081012"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(23 18) rotate(48) scale(38)">
+      <stop stop-color="#f06a45" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#f06a45" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <path fill="url(#bg)" d="M0 0h64v64H0z"/>
+  <path fill="url(#glow)" d="M0 0h64v64H0z"/>
+  <path d="M4 4h56v56H4z" fill="none" stroke="#ffd083" stroke-opacity=".24"/>
+  <g fill="none" stroke="#f06a45" stroke-opacity=".4" stroke-width="1.2"><circle cx="32" cy="32" r="27" stroke-dasharray="2 4"/></g>
+  <g fill="#f06a45" fill-opacity=".13" stroke="#ffd083" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M32 12l16 7v12c0 11-6 17-16 22-10-5-16-11-16-22V19Z"/><path d="M36 18l-7 13 7 4-8 13"/></g>
+  <path d="M8 57h48" stroke="#f06a45" stroke-opacity=".36" stroke-width="2"/>
+</svg>

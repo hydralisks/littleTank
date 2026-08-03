@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" data-icon-canvas="full" data-icon-kind="skill" data-icon-key="bear-skill-swipe">
+  <title>druid_bear_t_swipe_pic</title>
+  <defs>
+    <linearGradient id="bg" x1="8" y1="4" x2="57" y2="62" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#31505a"/>
+      <stop offset="0.58" stop-color="#172329"/>
+      <stop offset="1" stop-color="#081012"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(23 18) rotate(48) scale(38)">
+      <stop stop-color="#7bd5a5" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#7bd5a5" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <path fill="url(#bg)" d="M0 0h64v64H0z"/>
+  <path fill="url(#glow)" d="M0 0h64v64H0z"/>
+  <path d="M4 4h56v56H4z" fill="none" stroke="#e3f2d1" stroke-opacity=".24"/>
+  <g fill="none" stroke="#7bd5a5" stroke-opacity=".4" stroke-width="1.2"><path d="M5 15V5h10M49 5h10v10M5 49v10h10M59 49v10H49"/></g>
+  <g fill="#7bd5a5" fill-opacity=".13" stroke="#e3f2d1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 44c9-1 19-8 26-20m-25 10c9-1 17-6 22-15m-20 6c6-1 11-4 15-10"/><path d="M42 22l3-7 4 7m-10 9 4-7 5 5m-13 11 2-8 6 4"/></g>
+  <path d="M8 57h48" stroke="#7bd5a5" stroke-opacity=".36" stroke-width="2"/>
+</svg>
