@@ -1,18 +1,22 @@
 import type { StatusEffect } from '../game/encounter/encounterTypes'
 import { getEnemyIconAssetKey } from '../game/data/enemyCatalog'
-import { getIconAssetKey } from '../game/data/playerBuildCatalog'
+import { getBuildIconDefinition } from '../game/data/playerBuildCatalog'
 import { statusIconMap } from './iconMaps'
 
 export function sanitizeIconAssetKey(assetKey: string) {
   return assetKey.replace(/[^A-Za-z0-9_-]/g, '-')
 }
 
-export function resolveIconAssetUrl(iconId: string, preferredType: 'skill' | 'status' = 'status') {
-  const assetKey = getEnemyIconAssetKey(iconId) ?? getIconAssetKey(iconId)
+export function resolveIconAssetUrl(iconId: string) {
+  const enemyAssetKey = getEnemyIconAssetKey(iconId)
+  if (enemyAssetKey) {
+    return `/status-icons/${sanitizeIconAssetKey(enemyAssetKey)}.svg`
+  }
 
-  if (assetKey) {
-    const folder = preferredType === 'skill' ? 'skill-icons' : 'status-icons'
-    return `/${folder}/${sanitizeIconAssetKey(assetKey)}.svg`
+  const definition = getBuildIconDefinition(iconId)
+  if (definition) {
+    const folder = definition.iconType === 'skill' ? 'skill-icons' : 'status-icons'
+    return `/${folder}/${sanitizeIconAssetKey(definition.assetKey)}.svg`
   }
 
   return null
@@ -20,7 +24,7 @@ export function resolveIconAssetUrl(iconId: string, preferredType: 'skill' | 'st
 
 export function resolveStatusIconUrl(status: Pick<StatusEffect, 'id' | 'iconId'>) {
   const iconId = status.iconId ?? status.id
-  const resolvedUrl = resolveIconAssetUrl(iconId, 'status')
+  const resolvedUrl = resolveIconAssetUrl(iconId)
 
   if (resolvedUrl) {
     return resolvedUrl

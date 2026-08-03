@@ -121,7 +121,7 @@ export function SkillBar({
               >
                 <img
                   className="skill-icon-image"
-                  src={resolveIconAssetUrl(skill.iconId, 'skill') ?? skillIconMap[skill.id]}
+                  src={resolveIconAssetUrl(skill.iconId) ?? skillIconMap[skill.id]}
                   alt=""
                   aria-hidden="true"
                 />

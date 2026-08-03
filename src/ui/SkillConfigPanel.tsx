@@ -136,7 +136,7 @@ export function SkillConfigPanel({
                       <div className="loadout-slot__main">
                         <img
                           className="loadout-slot__icon"
-                          src={skill ? resolveIconAssetUrl(skill.iconId, 'skill') ?? skillIconMap[skill.id] : lockedSkillIcon}
+                          src={skill ? resolveIconAssetUrl(skill.iconId) ?? skillIconMap[skill.id] : lockedSkillIcon}
                           alt=""
                           aria-hidden="true"
                         />
@@ -185,7 +185,7 @@ export function SkillConfigPanel({
                   <article key={skill.id} className="skill-library-card">
                     <img
                       className="skill-library-card__icon"
-                      src={resolveIconAssetUrl(skill.iconId, 'skill') ?? skillIconMap[skill.id]}
+                      src={resolveIconAssetUrl(skill.iconId) ?? skillIconMap[skill.id]}
                       alt=""
                       aria-hidden="true"
                     />

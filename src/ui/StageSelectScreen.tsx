@@ -165,7 +165,7 @@ function createStageLegendRows(entries: StageLegendEntry[]): StageInfoRow[] {
 }
 
 function StageInfoIcon({ iconId, title }: { iconId?: string; title: string }) {
-  const iconUrl = iconId ? resolveIconAssetUrl(iconId, 'status') : null
+  const iconUrl = iconId ? resolveIconAssetUrl(iconId) : null
   const fallbackText = title.trim().slice(0, 1) || '?'
 
   return (

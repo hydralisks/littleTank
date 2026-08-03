@@ -2,6 +2,7 @@ import { getEnemyStatusDefinition } from '../data/enemyCatalog'
 import {
   createStatusEffectFromDefinition as createPlayerBuildStatusEffectFromDefinition,
   getPlayerBuildStatusDefinition,
+  type StatusSourceContext,
 } from '../data/skillTemplates'
 import type { StatusEffect } from './encounterTypes'
 
@@ -22,6 +23,7 @@ export function createEnemyStatusEffect(statusId: string, durationMs?: number): 
     totalMs: resolvedDurationMs,
     tone: 'danger',
     kind: definition.kind,
+    sourceKind: 'encounter',
     effectLogicId: definition.effectLogicId,
     ...(typeof definition.valueA === 'number' ? { valueA: definition.valueA } : {}),
     ...(typeof definition.valueB === 'number' ? { valueB: definition.valueB } : {}),
@@ -38,6 +40,7 @@ export function createEnemyStatusEffect(statusId: string, durationMs?: number): 
 export function createPlayerBuildStatusEffect(
   statusId: string,
   durationMs?: number,
+  sourceOverride: StatusSourceContext = {},
 ): StatusEffect | null {
   const definition = getPlayerBuildStatusDefinition(statusId)
 
@@ -45,8 +48,11 @@ export function createPlayerBuildStatusEffect(
     return null
   }
 
-  return createPlayerBuildStatusEffectFromDefinition({
-    ...definition,
-    ...(typeof durationMs === 'number' ? { durationMs } : {}),
-  })
+  return createPlayerBuildStatusEffectFromDefinition(
+    {
+      ...definition,
+      ...(typeof durationMs === 'number' ? { durationMs } : {}),
+    },
+    sourceOverride,
+  )
 }
