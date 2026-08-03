@@ -246,6 +246,7 @@ function App() {
   function resetTutorials() {
     setTutorialState((current) => ({
       ...current,
+      seenIconGrammarTutorial: false,
       seenPreparationTutorial: false,
       seenStageSelectStageIds: [],
       seenEncounterStageIds: [],
@@ -306,7 +307,14 @@ function App() {
       unlockedActiveSkillIds={getUnlockedActiveSkillIdsForStage(encounterStage)}
       tutorialEnabled={!tutorialState.seenEncounterStageIds.includes(stageId)}
       preparationTutorialEnabled={!tutorialState.seenPreparationTutorial}
+      iconGrammarTutorialEnabled={!tutorialState.seenIconGrammarTutorial}
       onTutorialComplete={() => markEncounterTutorialSeen(stageId)}
+      onIconGrammarTutorialComplete={() => {
+        setTutorialState((current) => ({
+          ...current,
+          seenIconGrammarTutorial: true,
+        }))
+      }}
       onPreparationTutorialComplete={() => {
         setTutorialState((current) => ({
           ...current,

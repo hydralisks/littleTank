@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
+import { CircleHelp } from 'lucide-react'
 import type { StageInfo } from '../game/data/stageTemplates'
 import {
   ACTIVE_SKILL_POINT_COST,
@@ -56,7 +57,11 @@ import { SkillConfigPanel } from './SkillConfigPanel'
 import { StageStatusPanel } from './StageStatusPanel'
 import { TeamStatusPanel } from './TeamStatusPanel'
 import { TutorialOverlay } from './TutorialOverlay'
-import { getEncounterTutorialScript, getPreparationTutorialScript } from './tutorialGuide'
+import {
+  getEncounterTutorialScript,
+  getIconGrammarTutorialScript,
+  getPreparationTutorialScript,
+} from './tutorialGuide'
 
 interface EncounterScreenProps {
   stage: StageInfo
@@ -67,8 +72,10 @@ interface EncounterScreenProps {
   unlockedActiveSkillIds: readonly SkillId[]
   tutorialEnabled?: boolean
   preparationTutorialEnabled?: boolean
+  iconGrammarTutorialEnabled?: boolean
   onTutorialComplete?: () => void
   onPreparationTutorialComplete?: () => void
+  onIconGrammarTutorialComplete?: () => void
   onBuildChange: (build: PersistedBuildState) => void
   onReturnToStageSelect: (outcome?: 'victory' | 'defeat') => void
   onRetryStage: () => void
@@ -199,8 +206,10 @@ export function EncounterScreen({
   unlockedActiveSkillIds,
   tutorialEnabled = true,
   preparationTutorialEnabled = false,
+  iconGrammarTutorialEnabled = false,
   onTutorialComplete,
   onPreparationTutorialComplete,
+  onIconGrammarTutorialComplete,
   onBuildChange,
   onReturnToStageSelect,
   onRetryStage,
@@ -217,6 +226,11 @@ export function EncounterScreen({
   const selectedPassiveTalentIds = buildState.passiveTalentIds
   const tutorialScript = getEncounterTutorialScript(stage) ?? []
   const preparationTutorialScript = getPreparationTutorialScript()
+  const iconGrammarTutorialScript = getIconGrammarTutorialScript(classId)
+  const iconGrammarMarksSeenRef = useRef(iconGrammarTutorialEnabled)
+  const [iconGrammarTutorialStepIndex, setIconGrammarTutorialStepIndex] = useState(() => (
+    iconGrammarTutorialEnabled ? 0 : -1
+  ))
   const [preparationTutorialStepIndex, setPreparationTutorialStepIndex] = useState(() => (
     initialPhase === 'preparation' && preparationTutorialEnabled ? 0 : -1
   ))
@@ -240,7 +254,12 @@ export function EncounterScreen({
     preparationTutorialStepIndex >= 0 && preparationTutorialStepIndex < preparationTutorialScript.length
       ? preparationTutorialScript[preparationTutorialStepIndex]
       : null
-  const tutorialStep = phase === 'preparation' ? preparationTutorialStep : encounterTutorialStep
+  const iconGrammarTutorialStep =
+    iconGrammarTutorialStepIndex >= 0 && iconGrammarTutorialStepIndex < iconGrammarTutorialScript.length
+      ? iconGrammarTutorialScript[iconGrammarTutorialStepIndex]
+      : null
+  const tutorialStep = iconGrammarTutorialStep
+    ?? (phase === 'preparation' ? preparationTutorialStep : encounterTutorialStep)
   const tutorialVisible = Boolean(tutorialStep)
   const tutorialVisibleRef = useRef(tutorialVisible)
 
@@ -350,7 +369,7 @@ export function EncounterScreen({
   }
 
   function startBattle() {
-    if (preparationTutorialStep) {
+    if (tutorialStep) {
       return
     }
 
@@ -441,6 +460,21 @@ export function EncounterScreen({
   }
 
   function advanceTutorial() {
+    if (iconGrammarTutorialStep) {
+      setIconGrammarTutorialStepIndex((current) => {
+        const next = current + 1
+        const hasNextStep = next < iconGrammarTutorialScript.length
+        if (!hasNextStep && iconGrammarMarksSeenRef.current) {
+          onIconGrammarTutorialComplete?.()
+          iconGrammarMarksSeenRef.current = false
+        }
+        tutorialVisibleRef.current = hasNextStep
+          || Boolean(phaseRef.current === 'preparation' ? preparationTutorialStep : encounterTutorialStep)
+        return hasNextStep ? next : -1
+      })
+      return
+    }
+
     if (phaseRef.current === 'preparation') {
       setPreparationTutorialStepIndex((current) => {
         const next = current + 1
@@ -466,6 +500,18 @@ export function EncounterScreen({
   }
 
   function skipTutorial() {
+    if (iconGrammarTutorialStep) {
+      if (iconGrammarMarksSeenRef.current) {
+        onIconGrammarTutorialComplete?.()
+        iconGrammarMarksSeenRef.current = false
+      }
+      tutorialVisibleRef.current = Boolean(
+        phaseRef.current === 'preparation' ? preparationTutorialStep : encounterTutorialStep,
+      )
+      setIconGrammarTutorialStepIndex(-1)
+      return
+    }
+
     if (phaseRef.current === 'preparation') {
       onPreparationTutorialComplete?.()
       tutorialVisibleRef.current = false
@@ -478,6 +524,13 @@ export function EncounterScreen({
     setTutorialStepIndex(-1)
   }
 
+  function replayIconGrammarTutorial() {
+    setOpenPanel(null)
+    iconGrammarMarksSeenRef.current = false
+    tutorialVisibleRef.current = true
+    setIconGrammarTutorialStepIndex(0)
+  }
+
   return (
     <main className="encounter-shell">
       <div className="encounter-stage">
@@ -486,6 +539,15 @@ export function EncounterScreen({
             <p className="eyebrow">Little Tank 原型</p>
             <div className="encounter-header__title-row">
               <h1>{stage.title}</h1>
+              <button
+                type="button"
+                className="icon-grammar-help-button"
+                onClick={replayIconGrammarTutorial}
+                aria-label="图标说明"
+                title="图标说明"
+              >
+                <CircleHelp aria-hidden="true" />
+              </button>
               <button
                 type="button"
                 className="header-pause-button"
@@ -583,7 +645,7 @@ export function EncounterScreen({
         {phase === 'preparation' ? (
           <EncounterNavigationControls
             className="encounter-preparation-controls"
-            startDisabled={Boolean(preparationTutorialStep)}
+            startDisabled={Boolean(tutorialStep)}
             continueDisabled
             onReturn={() => onReturnToStageSelect()}
             onStart={startBattle}

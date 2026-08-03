@@ -63,6 +63,29 @@
   gap: 10px;
 }
 
+.icon-grammar-help-button {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(126, 205, 220, 0.34);
+  border-radius: 50%;
+  background: rgba(36, 72, 82, 0.32);
+  color: #bceaf1;
+}
+
+.icon-grammar-help-button:hover {
+  border-color: rgba(156, 229, 240, 0.58);
+  background: rgba(43, 91, 103, 0.46);
+}
+
+.icon-grammar-help-button svg {
+  width: 17px;
+  height: 17px;
+}
+
 .header-pause-button {
   min-width: 92px;
   height: 34px;
