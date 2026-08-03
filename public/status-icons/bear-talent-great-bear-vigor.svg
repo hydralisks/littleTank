@@ -12,7 +12,6 @@
   </defs>
   <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
   <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#glow)"/>
-  <g data-icon-layer="core" fill="#7bd5a5" stroke="#091116" stroke-width="4" stroke-linejoin="round"><path d="m32 7 21 12v26L32 57 11 45V19Z"/></g>
-  <g data-icon-layer="symbol-outline" transform="translate(7 7) scale(.78)" fill="#e3f2d1" stroke="#091116" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 49S17 41 17 29c0-9 11-11 15-4 4-7 15-5 15 4 0 12-15 20-15 20Z"/><circle cx="24" cy="17" r="3"/><circle cx="32" cy="14" r="3"/><circle cx="40" cy="17" r="3"/></g>
-  <g data-icon-layer="highlight" transform="translate(7 7) scale(.78)" fill="#e3f2d1" stroke="#e3f2d1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M32 49S17 41 17 29c0-9 11-11 15-4 4-7 15-5 15 4 0 12-15 20-15 20Z"/><circle cx="24" cy="17" r="3"/><circle cx="32" cy="14" r="3"/><circle cx="40" cy="17" r="3"/></g>
+  <g data-icon-layer="core" transform="translate(1.5 1.5) scale(.953)" fill="#e3f2d1" fill-opacity=".88" stroke="#091116" stroke-width="4" stroke-linejoin="round"><path d="m32 7 21 12v26L32 57 11 45V19Z"/></g>
+  <g data-icon-layer="symbol-outline" transform="translate(5.5 8.5) scale(.78)" fill="#7bd5a5" stroke="#091116" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 49S17 41 17 29c0-9 11-11 15-4 4-7 15-5 15 4 0 12-15 20-15 20Z"/><circle cx="24" cy="17" r="3"/><circle cx="32" cy="14" r="3"/><circle cx="40" cy="17" r="3"/></g>
 </svg>

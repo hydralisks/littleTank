@@ -43,6 +43,13 @@ function loadChallengeEncounterIconDefinitions(workbook: XLSX.WorkBook) {
   })
 }
 
+function normalizeBearSvgPresentation(svg: string) {
+  return svg
+    .replace(/<title>.*?<\/title>/g, '')
+    .replace(/ data-icon-kind="[^"]+"/g, '')
+    .replace(/ data-icon-key="[^"]+"/g, '')
+}
+
 describe('designer workbook icon assets', () => {
   it('has a generated temporary SVG for every enabled mapped icon asset', () => {
     const missingAssets = loadWorkbookIconDefinitions()
@@ -75,8 +82,31 @@ describe('designer workbook icon assets', () => {
       expect(svg).toContain('data-icon-layer="core"')
       expect(svg).not.toContain('data-icon-layer="frame"')
       expect(svg).not.toContain('data-icon-layer="platform"')
+      expect(svg).not.toContain('data-icon-layer="highlight"')
       expect(svg).not.toContain('M5 15V5h10')
       expect(svg).not.toContain('M8 57h48')
     }
+  })
+
+  it('keeps related bear skill, talent, and status artwork visually distinct', () => {
+    const bearIcons = loadPlayerBuildIconDefinitions().filter((icon) =>
+      icon.iconId.startsWith('druid_bear_t_') && ['skill', 'talent', 'status'].includes(icon.iconType),
+    )
+    const collisions: string[] = []
+    const presentations = new Map<string, BuildIconDefinition>()
+
+    for (const icon of bearIcons) {
+      const svg = fs.readFileSync(expectedIconAssetPath(icon), 'utf8')
+      const presentation = normalizeBearSvgPresentation(svg)
+      const existing = presentations.get(presentation)
+
+      if (existing && existing.iconType !== icon.iconType) {
+        collisions.push(`${existing.assetKey} = ${icon.assetKey}`)
+      } else {
+        presentations.set(presentation, icon)
+      }
+    }
+
+    expect(collisions).toEqual([])
   })
 })

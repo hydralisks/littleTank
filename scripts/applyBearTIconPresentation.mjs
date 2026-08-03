@@ -161,11 +161,43 @@ function corePlateFor(slug) {
   return '<path d="m32 7 21 12v26L32 57 11 45V19Z"/>'
 }
 
+function treatmentFor(iconType, light, accent) {
+  if (iconType === 'talent') {
+    return {
+      coreFill: light,
+      coreOpacity: '.88',
+      coreTransform: 'translate(1.5 1.5) scale(.953)',
+      symbolFill: accent,
+      symbolTransform: 'translate(5.5 8.5) scale(.78)',
+    }
+  }
+
+  if (iconType === 'status') {
+    return {
+      coreFill: accent,
+      coreOpacity: '1',
+      coreTransform: 'translate(2.5 2.5) scale(.922)',
+      symbolFill: light,
+      symbolTransform: 'translate(9 9) scale(.72)',
+    }
+  }
+
+  return {
+    coreFill: accent,
+    coreOpacity: '1',
+    coreTransform: '',
+    symbolFill: light,
+    symbolTransform: 'translate(7 7) scale(.78)',
+  }
+}
+
 function makeSvg({ iconId, iconType, assetKey }) {
   const slug = assetKey.replace(`bear-${iconType}-`, '')
   const [deep, mid, light, accent] = paletteFor(slug)
   const glyph = glyphs[slug] ?? fallbackGlyph(slug)
   const corePlate = corePlateFor(slug)
+  const treatment = treatmentFor(iconType, light, accent)
+  const coreTransform = treatment.coreTransform ? ` transform="${treatment.coreTransform}"` : ''
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" data-icon-canvas="full" data-icon-style="warrior-block" data-icon-kind="${iconType}" data-icon-key="${escapeXml(assetKey)}">
   <title>${escapeXml(iconId)}</title>
@@ -181,9 +213,8 @@ function makeSvg({ iconId, iconType, assetKey }) {
   </defs>
   <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
   <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#glow)"/>
-  <g data-icon-layer="core" fill="${accent}" stroke="#091116" stroke-width="4" stroke-linejoin="round">${corePlate}</g>
-  <g data-icon-layer="symbol-outline" transform="translate(7 7) scale(.78)" fill="${light}" stroke="#091116" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>
-  <g data-icon-layer="highlight" transform="translate(7 7) scale(.78)" fill="${light}" stroke="${light}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>
+  <g data-icon-layer="core"${coreTransform} fill="${treatment.coreFill}" fill-opacity="${treatment.coreOpacity}" stroke="#091116" stroke-width="4" stroke-linejoin="round">${corePlate}</g>
+  <g data-icon-layer="symbol-outline" transform="${treatment.symbolTransform}" fill="${treatment.symbolFill}" stroke="#091116" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>
 </svg>
 `
 }
