@@ -11,3 +11,9 @@
 - In particular, do not run `npm run generate:designer-data` or `node scripts/generateDesignerWorkbooks.mjs` by default.
 - Treat files under `public/designer-data/` as user/planner-owned working content. Reading them is allowed; regenerating or overwriting them requires explicit user approval.
 - This rule also applies to public art/resource sample generators if added later.
+
+## Local Workflow And Demo Defaults
+
+- Unless the user explicitly requests isolation, make changes directly on the local `main` branch without creating a Git worktree.
+- For local demo and visual-review sessions, unlock all currently available stages and player classes in the browser save by default.
+- Keep demo unlocks local to the browser save; do not change the production new-player progression defaults unless the user explicitly requests that product behavior.
