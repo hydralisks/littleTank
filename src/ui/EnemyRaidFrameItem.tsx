@@ -84,19 +84,19 @@ export function EnemyRaidFrameItem({
         >
           <rect
             className="enemy-selection-ring__base"
-            x="1.5"
-            y="1.5"
-            width="97"
-            height="97"
+            x="3"
+            y="3"
+            width="94"
+            height="94"
             rx="0"
             ry="0"
           />
           <rect
             className="enemy-selection-ring__dash"
-            x="1.5"
-            y="1.5"
-            width="97"
-            height="97"
+            x="3"
+            y="3"
+            width="94"
+            height="94"
             rx="0"
             ry="0"
           />
