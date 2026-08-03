@@ -3347,6 +3347,71 @@ button.stage-class-entry__slot.is-selected {
   line-height: 1.55;
 }
 
+.icon-grammar-legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.icon-grammar-legend__item {
+  min-width: 0;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 9px;
+  border-left: 2px solid rgba(244, 201, 94, 0.5);
+  background: rgba(255, 255, 255, 0.035);
+  color: #e8edf3;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.icon-grammar-legend__class-mark,
+.icon-grammar-legend__source-preview {
+  position: relative;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+}
+
+.icon-grammar-legend__class-mark > svg {
+  width: 25px;
+  height: 25px;
+  color: var(--class-emblem-color);
+  stroke-width: 2.2;
+}
+
+.icon-grammar-legend__source-preview .status-source-emblem {
+  left: 7px;
+  top: 6px;
+  width: 16px;
+  height: 18px;
+}
+
+.icon-grammar-legend__source-preview .status-source-emblem--oval-shield {
+  height: 19px;
+}
+
+.icon-grammar-legend__source-preview .status-source-emblem__motif {
+  width: 11px;
+  height: 11px;
+}
+
+.icon-grammar-legend--statuses {
+  grid-template-columns: repeat(3, 36px);
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  min-height: 50px;
+  padding: 10px 12px 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .tutorial-overlay__actions {
   display: flex;
   justify-content: space-between;

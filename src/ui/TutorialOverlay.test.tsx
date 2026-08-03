@@ -48,6 +48,52 @@ function createHarness() {
 }
 
 describe('TutorialOverlay', () => {
+  it('renders the real source-emblem components carried by an icon legend step', async () => {
+    const { dom, window, container } = createHarness()
+    const previousWindow = globalThis.window
+    const previousDocument = globalThis.document
+    const previousIsActEnvironment = (globalThis as typeof globalThis & {
+      IS_REACT_ACT_ENVIRONMENT?: boolean
+    }).IS_REACT_ACT_ENVIRONMENT
+    let root: Root | null = null
+
+    setGlobalProperty('window', window)
+    setGlobalProperty('document', window.document)
+    setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', true)
+
+    try {
+      root = createRoot(container)
+      const step: TutorialStep = {
+        id: 'icon-source-shapes',
+        title: '辨认状态来源',
+        body: '来源形状。',
+        target: '[data-tutorial-id="enemy-frames"]',
+        placement: 'center',
+        legend: { kind: 'source-shapes', classId: 'warrior_t' },
+        skipLabel: '跳过图标说明',
+      }
+
+      await act(async () => {
+        root!.render(createElement(TutorialOverlay, { step, onNext: vi.fn(), onSkip: vi.fn() }))
+      })
+
+      expect(container.querySelector('[data-icon-grammar-legend="source-shapes"]')).not.toBeNull()
+      expect(container.querySelector('[data-source-shape="banner"]')).not.toBeNull()
+      expect(container.querySelector('[data-source-shape="oval-shield"]')).not.toBeNull()
+      expect(container.querySelector('.tutorial-overlay__skip')?.textContent).toContain('跳过图标说明')
+    } finally {
+      if (root) {
+        await act(async () => {
+          root!.unmount()
+        })
+      }
+      setGlobalProperty('window', previousWindow)
+      setGlobalProperty('document', previousDocument)
+      setGlobalProperty('IS_REACT_ACT_ENVIRONMENT', previousIsActEnvironment)
+      dom.window.close()
+    }
+  })
+
   it('renders focus, arrow, and controls for the active tutorial step', async () => {
     const { dom, window, container } = createHarness()
     const previousWindow = globalThis.window
