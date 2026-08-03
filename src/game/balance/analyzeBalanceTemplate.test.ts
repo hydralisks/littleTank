@@ -63,7 +63,7 @@ describe('analyze balance report template', () => {
     const script = fs.readFileSync(path.join(process.cwd(), 'scripts', 'analyzeBalance.mjs'), 'utf8')
 
     expect(script).toContain("id: 'learning-expert-220ms-low-error'")
-    expect(script).toContain("id: 'learning-expert-220ms-low-error',\n    tier: 'expert'")
+    expect(script).toMatch(/id: 'learning-expert-220ms-low-error',\r?\n    tier: 'expert'/)
   })
 
   it('keeps six passive variants per active build so exclusive branches remain represented', () => {
