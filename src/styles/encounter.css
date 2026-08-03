@@ -3702,6 +3702,94 @@ button.stage-class-entry__slot.is-selected {
 }
 
 @media (max-width: 760px) {
+  .encounter-shell {
+    align-items: flex-start;
+    padding: 8px;
+  }
+
+  .encounter-stage {
+    width: calc(100vw - 16px);
+    height: calc(100vh - 16px);
+    aspect-ratio: auto;
+    grid-template-rows: auto max-content;
+    align-content: start;
+    padding: 12px;
+    border-radius: 16px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .encounter-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .header-action-row {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-self: stretch;
+  }
+
+  .header-action-button {
+    min-width: 0;
+    padding: 0 8px;
+  }
+
+  .header-chip-row {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .encounter-board {
+    grid-template-rows: auto auto auto;
+  }
+
+  .encounter-top-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .enemy-panel {
+    min-height: 360px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .enemy-list {
+    min-width: 760px;
+    min-height: 360px;
+    height: 360px;
+  }
+
+  .status-grid--player {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .skill-panel {
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .skill-grid {
+    width: max-content;
+    padding-bottom: 4px;
+  }
+
+  .skill-card {
+    flex: 0 0 160px;
+    width: 160px;
+    grid-template-columns: minmax(0, 1fr) 56px;
+    padding: 8px;
+  }
+
+  .skill-icon-box {
+    width: 56px;
+    height: 56px;
+  }
+
+  .skill-icon-timer {
+    font-size: 1rem;
+  }
+
   .challenge-list {
     grid-template-columns: 1fr;
   }
