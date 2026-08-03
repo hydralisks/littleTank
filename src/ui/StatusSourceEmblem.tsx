@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { PlayerClassId, StatusSourceKind } from '../game/encounter/encounterTypes'
-import { ClassEmblemIcon, tryGetClassEmblemDefinition } from './classEmblemRegistry'
+import { ClassEmblemIcon } from './ClassEmblemIcon'
+import { tryGetClassEmblemDefinition } from './classEmblemRegistry'
 import { getSourceShape } from './statusIconPresentation'
 
 interface StatusSourceEmblemProps {

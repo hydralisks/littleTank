@@ -1,10 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import {
-  ClassEmblemIcon,
-  getClassEmblemDefinition,
-  tryGetClassEmblemDefinition,
-} from './classEmblemRegistry'
+import { ClassEmblemIcon } from './ClassEmblemIcon'
+import { getClassEmblemDefinition, tryGetClassEmblemDefinition } from './classEmblemRegistry'
 
 describe('classEmblemRegistry', () => {
   it.each([

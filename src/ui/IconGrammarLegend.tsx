@@ -1,6 +1,7 @@
 import type { StatusEffect } from '../game/encounter/encounterTypes'
 import type { IconGrammarLegendPayload } from './tutorialGuide'
-import { ClassEmblemIcon, getClassEmblemDefinition } from './classEmblemRegistry'
+import { ClassEmblemIcon } from './ClassEmblemIcon'
+import { getClassEmblemDefinition } from './classEmblemRegistry'
 import { StatusBadge } from './StatusBadge'
 import { StatusSourceEmblem } from './StatusSourceEmblem'
 
