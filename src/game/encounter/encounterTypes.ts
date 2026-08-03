@@ -3,6 +3,7 @@ export type ThreatState = 'safe' | 'warning' | 'lost'
 export type StatusTone = 'neutral' | 'buff' | 'danger'
 
 export type StatusKind = 'enemyBuff' | 'playerBuff' | 'playerDebuff' | 'partyDebuff' | 'neutral'
+export type StatusSourceKind = 'activeSkill' | 'passiveTalent' | 'encounter' | 'system'
 
 export type DangerLevel = 'low' | 'medium' | 'high'
 export type EnemyThreatLogic = 'normal' | 'irregular' | 'bloodlust'
@@ -44,6 +45,8 @@ export interface StatusEffect {
   totalMs?: number
   tone: StatusTone
   kind: StatusKind
+  sourceKind?: StatusSourceKind
+  sourceClassId?: PlayerClassId
   effectLogicId?: string
   dispellable?: boolean
   valueA?: number
