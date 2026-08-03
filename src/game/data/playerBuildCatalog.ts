@@ -20,6 +20,7 @@
   SkillLoadout,
   SkillState,
   StatusEffect,
+  StatusSourceKind,
 } from '../encounter/encounterTypes'
 import { applySkillTemplateMutation } from './playerSkillLogicRegistry'
 import { applyPassiveTalentLogic } from './playerTalentLogicRegistry'
@@ -1443,7 +1444,7 @@ function createEmptyLoadout(): SkillLoadout {
 
 function normalizeStatusEffectKind(statusCategory: PlayerBuildStatusDefinition['statusCategory']) {
   if (statusCategory === 'enemyDebuff') {
-    return { tone: 'buff' as const, kind: 'playerDebuff' as const }
+    return { tone: 'danger' as const, kind: 'playerDebuff' as const }
   }
 
   if (statusCategory === 'partyBuff') {
@@ -1457,9 +1458,58 @@ function normalizeStatusEffectKind(statusCategory: PlayerBuildStatusDefinition['
   return { tone: 'buff' as const, kind: 'playerBuff' as const }
 }
 
-export function createStatusEffectFromDefinition(definition: PlayerBuildStatusDefinition): StatusEffect {
+export interface StatusSourceContext {
+  sourceKind?: StatusSourceKind
+  sourceClassId?: PlayerClassId
+}
+
+function getUniqueSourceClassId(classIds: Array<PlayerClassId | undefined>) {
+  const uniqueClassIds = [...new Set(classIds.filter((classId): classId is PlayerClassId => Boolean(classId)))]
+  return uniqueClassIds.length === 1 ? uniqueClassIds[0] : undefined
+}
+
+function resolveStatusSource(definition: PlayerBuildStatusDefinition): StatusSourceContext {
+  const statusId = definition.statusId
+  if (activeStatusesById[statusId]) {
+    const skillIds = new Set(
+      Object.values(activeSkillEffectDefinitionsById)
+        .filter((effect) => effect.enabled && effect.statusId === statusId)
+        .map((effect) => effect.skillId),
+    )
+    const sourceClassId = getUniqueSourceClassId(
+      Object.values(activeSkillsById)
+        .filter((skill) => skill.enabled !== false)
+        .filter((skill) => skill.grantedStatusIds.includes(statusId) || skillIds.has(skill.id))
+        .map((skill) => skill.classId),
+    )
+    return { sourceKind: 'activeSkill', ...(sourceClassId ? { sourceClassId } : {}) }
+  }
+
+  if (passiveStatusesById[statusId]) {
+    const talentIds = new Set(
+      Object.values(passiveTalentEffectDefinitionsById)
+        .filter((effect) => effect.enabled && effect.statusId === statusId)
+        .map((effect) => effect.talentId),
+    )
+    const sourceClassId = getUniqueSourceClassId(
+      Object.values(passiveTalentsById)
+        .filter((talent) => talent.enabled !== false)
+        .filter((talent) => talent.grantedStatusIds.includes(statusId) || talentIds.has(talent.id))
+        .map((talent) => talent.classId),
+    )
+    return { sourceKind: 'passiveTalent', ...(sourceClassId ? { sourceClassId } : {}) }
+  }
+
+  return {}
+}
+
+export function createStatusEffectFromDefinition(
+  definition: PlayerBuildStatusDefinition,
+  sourceOverride: StatusSourceContext = {},
+): StatusEffect {
   const presentation = normalizeStatusEffectKind(definition.statusCategory)
   const durationMs = definition.durationMs < 0 ? -1 : definition.durationMs
+  const source = { ...resolveStatusSource(definition), ...sourceOverride }
 
   return {
     id: definition.statusId,
@@ -1470,6 +1520,7 @@ export function createStatusEffectFromDefinition(definition: PlayerBuildStatusDe
     totalMs: durationMs,
     tone: presentation.tone,
     kind: presentation.kind,
+    ...source,
     effectLogicId: definition.effectLogicId,
     maxStacks: definition.maxStacks,
     dispellable: definition.dispellable,
@@ -1676,6 +1727,11 @@ export function getBuildIconDefinitions() {
   return iconDefinitions.filter((entry) => entry.enabled).map((entry) => ({ ...entry }))
 }
 
+export function getBuildIconDefinition(iconId: string) {
+  const definition = iconDefinitions.find((entry) => entry.enabled && entry.iconId === iconId)
+  return definition ? { ...definition } : undefined
+}
+
 export function getSkillEffectsForSkill(skillId: SkillId) {
   return Object.values(activeSkillEffectDefinitionsById)
     .filter((definition) => definition.enabled && definition.skillId === skillId)
@@ -1691,7 +1747,7 @@ export function getTalentEffectsForTalent(talentId: PassiveTalentId) {
 }
 
 export function getIconAssetKey(iconId: string) {
-  return iconDefinitions.find((entry) => entry.iconId === iconId && entry.enabled)?.assetKey
+  return getBuildIconDefinition(iconId)?.assetKey
 }
 
 function getDefaultActiveEntries(buildRuleId: string, classId: PlayerClassId) {
@@ -1797,7 +1853,10 @@ export function getPassiveModifiers(selectedPassiveTalentIds: PassiveTalentId[])
 
     return applyPassiveTalentLogic(talent, modifiers, {
       resolveStatusDefinition: getPlayerBuildStatusDefinition,
-      createStatusEffectFromDefinition,
+      createStatusEffectFromDefinition: (definition) => createStatusEffectFromDefinition(definition, {
+        sourceKind: 'passiveTalent',
+        ...(talent.classId ? { sourceClassId: talent.classId } : {}),
+      }),
       resolveTalentEffects: getTalentEffectsForTalent,
     })
   }, emptyModifiers)

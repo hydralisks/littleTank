@@ -68,7 +68,7 @@ describe('analyze balance report template', () => {
     const script = readAnalyzeBalanceScript()
 
     expect(script).toContain("id: 'learning-expert-220ms-low-error'")
-    expect(script).toContain("id: 'learning-expert-220ms-low-error',\n    tier: 'expert'")
+    expect(script).toMatch(/id: 'learning-expert-220ms-low-error',\r?\n {4}tier: 'expert'/)
   })
 
   it('keeps six passive variants per active build so exclusive branches remain represented', () => {

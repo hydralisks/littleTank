@@ -45,6 +45,7 @@ describe('saveGame', () => {
       campaignUnlockedClassIds: ['warrior_t'],
       seenEnemyDefinitionIds: ['kobold_miner', 'kobold_apprentice'],
       tutorial: {
+        seenIconGrammarTutorial: true,
         seenPreparationTutorial: true,
         seenStageSelectStageIds: ['RingingDeeps-2'],
         seenEncounterStageIds: ['RingingDeeps-1'],
@@ -64,6 +65,7 @@ describe('saveGame', () => {
       campaignUnlockedClassIds: ['warrior_t'],
       seenEnemyDefinitionIds: ['kobold_miner', 'kobold_apprentice'],
       tutorial: {
+        seenIconGrammarTutorial: true,
         seenPreparationTutorial: true,
         seenStageSelectStageIds: ['RingingDeeps-2'],
         seenEncounterStageIds: ['RingingDeeps-1'],
@@ -102,6 +104,7 @@ describe('saveGame', () => {
       campaignUnlockedClassIds: ['warrior_t'],
       seenEnemyDefinitionIds: ['kobold_miner'],
       tutorial: {
+        seenIconGrammarTutorial: false,
         seenPreparationTutorial: false,
         seenStageSelectStageIds: ['RingingDeeps-1'],
         seenEncounterStageIds: [],
@@ -133,6 +136,7 @@ describe('saveGame', () => {
     const firstLoad = loadSaveGame(storage, 'completed-bear')
     const secondLoad = loadSaveGame(storage, 'completed-bear')
     expect(firstLoad?.tutorial.seenPreparationTutorial).toBe(false)
+    expect(firstLoad?.tutorial.seenIconGrammarTutorial).toBe(false)
     expect(firstLoad?.campaignUnlockedClassIds).toEqual(['warrior_t', 'druid_bear_t'])
     expect(firstLoad?.challengeVictoriesByClass.druid_bear_t).toEqual([
       'Challenge-1', 'Challenge-2', 'Challenge-3',
@@ -154,6 +158,7 @@ describe('saveGame', () => {
       campaignUnlockedClassIds: ['warrior_t'],
       seenEnemyDefinitionIds: [],
       tutorial: {
+        seenIconGrammarTutorial: false,
         seenPreparationTutorial: false,
         seenStageSelectStageIds: [],
         seenEncounterStageIds: [],
@@ -170,6 +175,7 @@ describe('saveGame', () => {
 
   it('tracks stage-entry auto equip independently for each class', () => {
     const tutorial = {
+      seenIconGrammarTutorial: false,
       seenPreparationTutorial: false,
       seenStageSelectStageIds: [],
       seenEncounterStageIds: [],

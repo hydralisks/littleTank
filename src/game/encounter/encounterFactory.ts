@@ -4038,15 +4038,20 @@ export function tickEncounter(state: EncounterState, deltaMs = TICK_INTERVAL_MS)
   }
 
   if (modifiers.periodicPlayerStunIntervalMs > 0 && periodicPlayerStunRemainingMs <= 0) {
-    nextPlayer = appendOrReplacePlayerDebuff(nextPlayer, {
-      id: 'stunned',
-      label: '战术眩晕',
-      shortLabel: '晕',
-      remainingMs: modifiers.periodicPlayerStunDurationMs,
-      totalMs: modifiers.periodicPlayerStunDurationMs,
-      tone: 'danger',
-      kind: 'playerDebuff',
-    }, commandFlushedState.passiveTalentIds)
+    const periodicStun = createPlayerBuildStatusEffect(
+      'stunned',
+      modifiers.periodicPlayerStunDurationMs,
+      {
+        sourceKind: 'passiveTalent',
+        sourceClassId: commandFlushedState.player.classId,
+      },
+    )
+    if (periodicStun) {
+      nextPlayer = appendOrReplacePlayerDebuff(nextPlayer, {
+        ...periodicStun,
+        label: '战术眩晕',
+      }, commandFlushedState.passiveTalentIds)
+    }
     periodicPlayerStunRemainingMs = modifiers.periodicPlayerStunIntervalMs
   }
 

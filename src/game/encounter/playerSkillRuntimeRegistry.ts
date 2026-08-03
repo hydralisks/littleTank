@@ -373,6 +373,16 @@ type RuntimeSkillHandler = (
   helpers: RuntimeSkillHelpers,
 ) => EncounterState
 
+function createPlayerStatusForState(
+  state: EncounterState,
+  statusId: string,
+  durationMs?: number,
+) {
+  return createPlayerBuildStatusEffect(statusId, durationMs, {
+    sourceClassId: state.player.classId,
+  })
+}
+
 function applyTauntToTargets(
   state: EncounterState,
   skillId: SkillId,
@@ -382,7 +392,7 @@ function applyTauntToTargets(
   const threatDelta = (effect?.threatDelta ?? TAUNT_THREAT_BOOST) * getBearSkillThreatMultiplier(state)
   const durationMs = effect?.durationMs ?? 3_000
   const statusId = effect?.statusId ?? 'taunted'
-  const status = createPlayerBuildStatusEffect(statusId, durationMs)
+  const status = createPlayerStatusForState(state, statusId, durationMs)
 
   if (!status) {
     return state
@@ -424,7 +434,7 @@ function applyStunToTargets(
 
     return helpers.canStopCast(enemy, skillId)
   })
-  const status = createPlayerBuildStatusEffect(statusId, durationMs)
+  const status = createPlayerStatusForState(state, statusId, durationMs)
 
   if (!status) {
     return state
@@ -467,7 +477,7 @@ function applyPlayerBuffFromPrimaryEffect(
     (skillId === 'warrior_t_shield_block'
       ? getPassiveModifiers(state.passiveTalentIds).shieldBlockDurationBonusMs
       : 0)
-  const status = createPlayerBuildStatusEffect(statusId, durationMs)
+  const status = createPlayerStatusForState(state, statusId, durationMs)
 
   if (!status) {
     return state
@@ -540,7 +550,8 @@ function withBearThreatMultiplier(effect: ActiveSkillEffectDefinition | undefine
 
 function applyBearBuffStatus(state: EncounterState, skillId: SkillId, statusId: string, durationMs?: number): EncounterState {
   const effect = getPrimarySkillEffect(skillId)
-  const status = createPlayerBuildStatusEffect(
+  const status = createPlayerStatusForState(
+    state,
     statusId,
     durationMs ?? effect?.durationMs,
   )
@@ -624,7 +635,7 @@ function applyBearPainImmunityShield(
   skillId: SkillId,
   targetCount: number,
 ) {
-  const status = createPlayerBuildStatusEffect('druid_bear_t_pain_immunity_shield', 9000)
+  const status = createPlayerStatusForState(state, 'druid_bear_t_pain_immunity_shield', 9000)
   if (!status || targetCount <= 0) return state
   const amountPerTarget = Math.max(0, getBearTalentValue('druid_bear_t_pain_immunity', 'valueA', 5))
   const cap = Math.max(0, getBearTalentValue('druid_bear_t_pain_immunity', 'valueB', 20))
@@ -767,7 +778,7 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
   bear_ironfur: (state, skillId) => {
     const effect = getPrimarySkillEffect(skillId)
     const existing = state.player.mitigation?.id === 'druid_bear_t_ironfur' ? state.player.mitigation : null
-    const status = createPlayerBuildStatusEffect('druid_bear_t_ironfur', effect?.durationMs ?? 8000)
+    const status = createPlayerStatusForState(state, 'druid_bear_t_ironfur', effect?.durationMs ?? 8000)
     if (!status) return state
     const hasWaterFireImmunity = state.passiveTalentIds.includes('druid_bear_t_water_fire_immunity')
     const maxStacks = status.maxStacks ?? 3
@@ -796,7 +807,7 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
   bear_moonfire: (state, skillId, helpers) => {
     const targetIds = helpers.getEnemyTargetIdsBySelector(state, 'current')
     const effect = getPrimarySkillEffect(skillId)
-    const status = createPlayerBuildStatusEffect('druid_bear_t_moonfire', effect?.durationMs ?? 12000)
+    const status = createPlayerStatusForState(state, 'druid_bear_t_moonfire', effect?.durationMs ?? 12000)
     if (!status) return state
     const affected = state.enemies.filter((enemy) => targetIds.has(enemy.id))
     const tickDamage = (effect?.valueA ?? 5) * getPlayerDamageMultiplier(state)
@@ -832,7 +843,7 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
       helpers.changePlayerResource,
     )
     return state.passiveTalentIds.includes('druid_bear_t_ursoc_shelter')
-      ? { ...nextState, party: { ...nextState.party, statuses: [...nextState.party.statuses.filter((entry) => entry.id !== 'druid_bear_t_ursoc_shelter'), createPlayerBuildStatusEffect('druid_bear_t_ursoc_shelter', 8000)].filter((entry): entry is StatusEffect => Boolean(entry)).map((entry) => entry.id === 'druid_bear_t_ursoc_shelter' ? { ...entry, damageTakenMultiplierBonus: -getBearTalentValue('druid_bear_t_ursoc_shelter', 'valueA', 0.12) } : entry) } }
+      ? { ...nextState, party: { ...nextState.party, statuses: [...nextState.party.statuses.filter((entry) => entry.id !== 'druid_bear_t_ursoc_shelter'), createPlayerStatusForState(state, 'druid_bear_t_ursoc_shelter', 8000)].filter((entry): entry is StatusEffect => Boolean(entry)).map((entry) => entry.id === 'druid_bear_t_ursoc_shelter' ? { ...entry, damageTakenMultiplierBonus: -getBearTalentValue('druid_bear_t_ursoc_shelter', 'valueA', 0.12) } : entry) } }
       : nextState
   },
   bear_regrowth: (state, skillId, helpers) => {
@@ -859,7 +870,7 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
   bear_barkskin: (state, skillId) => {
     const barkskin = applyBearBuffStatus(state, skillId, 'druid_bear_t_barkskin')
     if (!state.passiveTalentIds.includes('druid_bear_t_broken_bark')) return barkskin
-    const shield = createPlayerBuildStatusEffect('druid_bear_t_broken_bark_shield', 5000)
+    const shield = createPlayerStatusForState(state, 'druid_bear_t_broken_bark_shield', 5000)
     if (!shield) return barkskin
     return {
       ...barkskin,
@@ -928,7 +939,8 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
     })
 
     if (modifiers.interruptVulnerabilityDurationMs > 0) {
-      const vulnerability = createPlayerBuildStatusEffect(
+      const vulnerability = createPlayerStatusForState(
+        state,
         'honedReflexesed',
         modifiers.interruptVulnerabilityDurationMs,
       )
@@ -983,7 +995,7 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
     const durationMs = effect?.durationMs ?? 2_000
     const statusId = effect?.statusId ?? 'mass-taunt'
     const affectedEnemies = state.enemies.filter((enemy) => targetIds.has(enemy.id))
-    const status = createPlayerBuildStatusEffect(statusId, durationMs)
+    const status = createPlayerStatusForState(state, statusId, durationMs)
 
     if (!status) {
       return state
@@ -1007,7 +1019,7 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
     const durationMs = effect?.durationMs ?? 4_000
     const remainingMs = Math.round(durationMs * modifiers.shieldWallDurationMultiplier)
     const statusId = effect?.statusId ?? 'shieldWall'
-    const mitigationStatus = createPlayerBuildStatusEffect(statusId, remainingMs)
+    const mitigationStatus = createPlayerStatusForState(state, statusId, remainingMs)
 
     if (!mitigationStatus) {
       return state
@@ -1102,7 +1114,7 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
       return damagedState
     }
 
-    const status = createPlayerBuildStatusEffect('punished', modifiers.shieldSlamPunishDurationMs)
+    const status = createPlayerStatusForState(state, 'punished', modifiers.shieldSlamPunishDurationMs)
     if (!status) {
       return damagedState
     }
@@ -1133,7 +1145,8 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
       'skill_logic',
       skillId,
     )
-    const status = createPlayerBuildStatusEffect(
+    const status = createPlayerStatusForState(
+      state,
       buffEffect?.statusId ?? 'avatar',
       buffEffect?.durationMs ?? 16_000,
     )
@@ -1248,7 +1261,8 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
   },
   intervene: (state, skillId) => {
     const effect = getPrimarySkillEffect(skillId)
-    const status = createPlayerBuildStatusEffect(
+    const status = createPlayerStatusForState(
+      state,
       effect?.statusId ?? 'intervened',
       effect?.durationMs ?? 5_000,
     )
@@ -1271,7 +1285,8 @@ const PLAYER_SKILL_RUNTIME_REGISTRY: Record<string, RuntimeSkillHandler> = {
   demoralizing_shout: (state, skillId, helpers) => {
     const modifiers = getPassiveModifiers(state.passiveTalentIds)
     const effect = getPrimarySkillEffect(skillId)
-    const status = createPlayerBuildStatusEffect(
+    const status = createPlayerStatusForState(
+      state,
       effect?.statusId ?? 'demoralized',
       effect?.durationMs ?? 5_000,
     )

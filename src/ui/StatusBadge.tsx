@@ -1,6 +1,10 @@
 import type { CSSProperties } from 'react'
 import type { StatusEffect } from '../game/encounter/encounterTypes'
-import { resolveStatusIconUrl } from './statusIconResolver'
+import { StatusIconArtwork } from './StatusIconArtwork'
+import { StatusSemanticFrame } from './StatusSemanticFrame'
+import { StatusSourceEmblem } from './StatusSourceEmblem'
+import { StatusStackBadge } from './StatusStackBadge'
+import { getStatusSemantic } from './statusIconPresentation'
 
 interface StatusBadgeProps {
   status: StatusEffect
@@ -26,19 +30,14 @@ export function StatusBadge({
   size = 'small',
 }: StatusBadgeProps) {
   const hasCountdown = (status.totalMs ?? status.remainingMs) > 0 && status.remainingMs > 0
+  const semantic = getStatusSemantic(status)
 
   return (
     <span
       className={[
         'status-square',
         `status-square--${size}`,
-        status.kind === 'enemyBuff'
-          ? 'is-enemy-buff'
-          : status.kind === 'playerDebuff'
-            ? 'is-player-debuff'
-            : status.kind === 'partyDebuff'
-              ? 'is-party-debuff'
-            : 'is-neutral',
+        `status-square--${semantic}`,
       ].join(' ')}
       style={
         {
@@ -48,15 +47,10 @@ export function StatusBadge({
       }
       title={status.label}
     >
-      <img
-        className="status-square__icon"
-        src={resolveStatusIconUrl(status)}
-        alt=""
-        aria-hidden="true"
-      />
-      {hasCountdown ? (
-        <span className="status-square__overlay" aria-hidden="true" />
-      ) : null}
+      <StatusIconArtwork status={status} hasCountdown={hasCountdown} />
+      <StatusSemanticFrame semantic={semantic} />
+      <StatusSourceEmblem sourceKind={status.sourceKind} sourceClassId={status.sourceClassId} />
+      <StatusStackBadge status={status} />
     </span>
   )
 }

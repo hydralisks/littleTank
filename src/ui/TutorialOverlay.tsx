@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import type { TutorialStep } from './tutorialGuide'
+import { IconGrammarLegend } from './IconGrammarLegend'
 
 interface TutorialOverlayProps {
   step: TutorialStep | null
@@ -22,6 +23,7 @@ interface CardPosition {
 const SPOTLIGHT_PADDING = 10
 const CARD_WIDTH = 360
 const CARD_ESTIMATED_HEIGHT = 150
+const LEGEND_CARD_ESTIMATED_HEIGHT = 280
 const CARD_MARGIN = 24
 const CARD_GAP = 18
 const ARROW_GAP = 16
@@ -72,10 +74,11 @@ function getViewportSize() {
 
 function getCardPosition(step: TutorialStep | null, spotlight: SpotlightRect): CardPosition {
   const viewport = getViewportSize()
+  const cardHeight = step?.legend ? LEGEND_CARD_ESTIMATED_HEIGHT : CARD_ESTIMATED_HEIGHT
   const maxLeft = Math.max(CARD_MARGIN, viewport.width - CARD_WIDTH - CARD_MARGIN)
-  const maxTop = Math.max(CARD_MARGIN, viewport.height - CARD_ESTIMATED_HEIGHT - CARD_MARGIN)
+  const maxTop = Math.max(CARD_MARGIN, viewport.height - cardHeight - CARD_MARGIN)
   const centeredLeft = spotlight.left + spotlight.width / 2 - CARD_WIDTH / 2
-  const centeredTop = spotlight.top + spotlight.height / 2 - CARD_ESTIMATED_HEIGHT / 2
+  const centeredTop = spotlight.top + spotlight.height / 2 - cardHeight / 2
   const preferredPlacement = step?.placement ?? 'right'
 
   if (preferredPlacement === 'left') {
@@ -88,7 +91,7 @@ function getCardPosition(step: TutorialStep | null, spotlight: SpotlightRect): C
   if (preferredPlacement === 'top') {
     return {
       left: clamp(centeredLeft, CARD_MARGIN, maxLeft),
-      top: clamp(spotlight.top - CARD_ESTIMATED_HEIGHT - CARD_GAP, CARD_MARGIN, maxTop),
+      top: clamp(spotlight.top - cardHeight - CARD_GAP, CARD_MARGIN, maxTop),
     }
   }
 
@@ -112,11 +115,11 @@ function getCardPosition(step: TutorialStep | null, spotlight: SpotlightRect): C
   }
 }
 
-function getArrowPosition(spotlight: SpotlightRect, cardPosition: CardPosition) {
+function getArrowPosition(step: TutorialStep | null, spotlight: SpotlightRect, cardPosition: CardPosition) {
   const spotlightCenterX = spotlight.left + spotlight.width / 2
   const spotlightCenterY = spotlight.top + spotlight.height / 2
   const cardCenterX = cardPosition.left + CARD_WIDTH / 2
-  const cardCenterY = cardPosition.top + CARD_ESTIMATED_HEIGHT / 2
+  const cardCenterY = cardPosition.top + (step?.legend ? LEGEND_CARD_ESTIMATED_HEIGHT : CARD_ESTIMATED_HEIGHT) / 2
 
   return {
     left: clamp((spotlightCenterX + cardCenterX) / 2 - ARROW_GAP, CARD_MARGIN, Math.max(CARD_MARGIN, getViewportSize().width - CARD_MARGIN - 32)),
@@ -167,7 +170,7 @@ export function TutorialOverlay({ step, onNext, onSkip }: TutorialOverlayProps) 
     }) as CSSProperties,
     [cardPosition],
   )
-  const arrowPosition = useMemo(() => getArrowPosition(spotlight, cardPosition), [cardPosition, spotlight])
+  const arrowPosition = useMemo(() => getArrowPosition(step, spotlight, cardPosition), [cardPosition, spotlight, step])
   const arrowStyle = useMemo(
     () => ({
       left: `${arrowPosition.left}px`,
@@ -193,9 +196,10 @@ export function TutorialOverlay({ step, onNext, onSkip }: TutorialOverlayProps) 
         <p className="tutorial-overlay__kicker">教学</p>
         <h2 id="tutorial-title" className="tutorial-overlay__title">{step.title}</h2>
         <p className="tutorial-overlay__body">{step.body}</p>
+        {step.legend ? <IconGrammarLegend legend={step.legend} /> : null}
         <div className="tutorial-overlay__actions">
           <button type="button" className="tutorial-overlay__skip" onClick={onSkip}>
-            跳过本关教学
+            {step.skipLabel ?? '跳过本关教学'}
           </button>
           <button type="button" className="tutorial-overlay__next" onClick={onNext}>
             下一步

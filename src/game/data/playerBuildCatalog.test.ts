@@ -17,6 +17,7 @@ import {
   normalizePersistedBuildForRule,
   applyPlayerBuildWorkbookOverrides,
   canUseTalentInRule,
+  createStatusEffectFromDefinition,
   resetPlayerBuildCatalog,
 } from './playerBuildCatalog'
 import {
@@ -105,6 +106,27 @@ function applyTestBearBuildOverrides() {
 describe('playerBuildCatalog class-aware build data', () => {
   afterEach(() => {
     resetPlayerBuildCatalog()
+  })
+
+  it('derives active and passive status provenance from build definitions', () => {
+    expect(createStatusEffectFromDefinition(getPlayerBuildStatusDefinition('shieldWall')!)).toMatchObject({
+      sourceKind: 'activeSkill',
+      sourceClassId: 'warrior_t',
+      tone: 'buff',
+      kind: 'playerBuff',
+    })
+    expect(createStatusEffectFromDefinition(getPlayerBuildStatusDefinition('vanguard-oath')!)).toMatchObject({
+      sourceKind: 'passiveTalent',
+    })
+    expect(getPassiveModifiers(['warrior_t_vanguard_oath']).playerPassiveBuffs[0]).toMatchObject({
+      sourceKind: 'passiveTalent',
+      sourceClassId: 'warrior_t',
+    })
+    expect(createStatusEffectFromDefinition(getPlayerBuildStatusDefinition('taunted')!)).toMatchObject({
+      sourceKind: 'activeSkill',
+      tone: 'danger',
+      kind: 'playerDebuff',
+    })
   })
 
   it('exposes warrior_t as the first formal playable class', () => {

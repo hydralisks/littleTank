@@ -2017,8 +2017,10 @@ describe('encounterFactory hand-cast flow', () => {
           shortLabel: '被',
           remainingMs: 3000,
           totalMs: 3000,
-          tone: 'buff',
+          tone: 'danger',
           kind: 'playerDebuff',
+          sourceKind: 'activeSkill',
+          sourceClassId: 'warrior_t',
         }),
       },
       {
@@ -8224,6 +8226,28 @@ describe('encounterFactory hand-cast flow', () => {
       encounter.party.statuses.some((status) => status.effectLogicId === 'steady_relief'),
     ).toBe(true)
     expect(getPassiveModifiers(['warrior_t_pressure_valve']).partyPressureDriftPerSecond).toBe(0)
+  })
+
+  it('marks the pressure-valve periodic stun as a warrior passive talent status', () => {
+    const encounter = createInitialEncounterState(
+      getStageById('harbor-1'), 'warrior_t',
+      {
+        ...getDefaultPersistedBuildForRule('standard_5slot', 'warrior_t'),
+        passiveTalentIds: ['warrior_t_pressure_valve'],
+      },
+    )
+    const triggered = tickEncounter({
+      ...encounter,
+      runtime: {
+        ...encounter.runtime,
+        periodicPlayerStunRemainingMs: 1,
+      },
+    }, 1)
+
+    expect(triggered.player.debuffs.find((status) => status.id === 'stunned')).toMatchObject({
+      sourceKind: 'passiveTalent',
+      sourceClassId: 'warrior_t',
+    })
   })
 
   it('keeps buildRuleId and stage special rules when creating an encounter', () => {

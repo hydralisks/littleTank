@@ -97,6 +97,7 @@ async function mountEncounterScreen(overrides: Partial<ComponentProps<typeof Enc
     onRetryStage: vi.fn(),
     onAdvanceStage: vi.fn(),
     onPreparationTutorialComplete: vi.fn(),
+    onIconGrammarTutorialComplete: vi.fn(),
   }
 
   vi.useFakeTimers()
@@ -582,6 +583,89 @@ describe('EncounterScreen keydown handling', () => {
 })
 
 describe('EncounterScreen component keyboard integration', () => {
+  it('shows the icon grammar tutorial before the preparation tutorial and records completion once', async () => {
+    const stage = makeRingingDeepsStage(1)
+    const { window, container, callbacks, cleanup } = await mountEncounterScreen({
+      stage,
+      entrySource: 'map',
+      tutorialEnabled: true,
+      preparationTutorialEnabled: true,
+      iconGrammarTutorialEnabled: true,
+    })
+
+    try {
+      expect(container.querySelector('.tutorial-overlay')?.textContent).toContain('先看职业纹章')
+      expect(container.querySelector('[data-icon-grammar-legend="class-emblems"]')).not.toBeNull()
+
+      for (let step = 0; step < 3; step += 1) {
+        await act(async () => {
+          container.querySelector('.tutorial-overlay__next')?.dispatchEvent(
+            new window.MouseEvent('click', { bubbles: true }),
+          )
+        })
+      }
+
+      expect(callbacks.onIconGrammarTutorialComplete).toHaveBeenCalledTimes(1)
+      expect(container.querySelector('.tutorial-overlay')?.textContent).toContain('观察敌方初始信息')
+    } finally {
+      await cleanup()
+    }
+  })
+
+  it('reopens icon grammar from the help button without marking it complete again', async () => {
+    const { window, container, callbacks, cleanup } = await mountEncounterScreen({
+      tutorialEnabled: false,
+      iconGrammarTutorialEnabled: false,
+    })
+
+    try {
+      expect(container.querySelector('.tutorial-overlay')).toBeNull()
+      const helpButton = container.querySelector('[aria-label="图标说明"]') as HTMLButtonElement | null
+      expect(helpButton?.title).toBe('图标说明')
+
+      await act(async () => {
+        helpButton?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+      })
+
+      expect(container.querySelector('.tutorial-overlay')?.textContent).toContain('先看职业纹章')
+
+      await act(async () => {
+        container.querySelector('.tutorial-overlay__skip')?.dispatchEvent(
+          new window.MouseEvent('click', { bubbles: true }),
+        )
+      })
+
+      expect(container.querySelector('.tutorial-overlay')).toBeNull()
+      expect(callbacks.onIconGrammarTutorialComplete).not.toHaveBeenCalled()
+    } finally {
+      await cleanup()
+    }
+  })
+
+  it('still records first-run completion when help is clicked while the icon tutorial is open', async () => {
+    const { window, container, callbacks, cleanup } = await mountEncounterScreen({
+      tutorialEnabled: false,
+      iconGrammarTutorialEnabled: true,
+    })
+
+    try {
+      const helpButton = container.querySelector('[aria-label="图标说明"]') as HTMLButtonElement | null
+
+      await act(async () => {
+        helpButton?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+      })
+      await act(async () => {
+        container.querySelector('.tutorial-overlay__skip')?.dispatchEvent(
+          new window.MouseEvent('click', { bubbles: true }),
+        )
+      })
+
+      expect(callbacks.onIconGrammarTutorialComplete).toHaveBeenCalledTimes(1)
+    } finally {
+      await cleanup()
+    }
+  })
+
   it('freezes map entries until battle starts while allowing target preselection', async () => {
     const { window, container, cleanup } = await mountEncounterScreen({ entrySource: 'map' })
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { StageInfo } from '../game/data/stageTemplates'
 import {
   getEncounterTutorialScript,
+  getIconGrammarTutorialScript,
   getMonsterCodexTutorialScript,
   getStageSelectTutorialScript,
   isRingingDeepsTutorialStage,
@@ -23,6 +24,21 @@ function makeStage(id: string, areaId: string, stageNumber: StageInfo['stageNumb
 }
 
 describe('tutorialGuide', () => {
+  it('builds the three-step icon grammar tutorial for published classes', () => {
+    const script = getIconGrammarTutorialScript('warrior_t')
+
+    expect(script.map((step) => step.legend?.kind)).toEqual([
+      'class-emblems',
+      'source-shapes',
+      'status-layers',
+    ])
+    expect(script[0]?.legend).toMatchObject({
+      classIds: ['warrior_t', 'druid_bear_t'],
+    })
+    expect(script.every((step) => step.placement === 'center')).toBe(true)
+    expect(script.every((step) => step.skipLabel === '跳过图标说明')).toBe(true)
+  })
+
   it('recognizes only RingingDeeps stages 1-4 as tutorial stages', () => {
     expect(isRingingDeepsTutorialStage(makeStage('RingingDeeps-1', 'RingingDeeps', 1))).toBe(true)
     expect(isRingingDeepsTutorialStage(makeStage('RingingDeeps-4', 'RingingDeeps', 4))).toBe(true)
