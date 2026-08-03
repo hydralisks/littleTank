@@ -642,6 +642,30 @@ describe('EncounterScreen component keyboard integration', () => {
     }
   })
 
+  it('still records first-run completion when help is clicked while the icon tutorial is open', async () => {
+    const { window, container, callbacks, cleanup } = await mountEncounterScreen({
+      tutorialEnabled: false,
+      iconGrammarTutorialEnabled: true,
+    })
+
+    try {
+      const helpButton = container.querySelector('[aria-label="图标说明"]') as HTMLButtonElement | null
+
+      await act(async () => {
+        helpButton?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+      })
+      await act(async () => {
+        container.querySelector('.tutorial-overlay__skip')?.dispatchEvent(
+          new window.MouseEvent('click', { bubbles: true }),
+        )
+      })
+
+      expect(callbacks.onIconGrammarTutorialComplete).toHaveBeenCalledTimes(1)
+    } finally {
+      await cleanup()
+    }
+  })
+
   it('freezes map entries until battle starts while allowing target preselection', async () => {
     const { window, container, cleanup } = await mountEncounterScreen({ entrySource: 'map' })
 

@@ -525,6 +525,9 @@ export function EncounterScreen({
   }
 
   function replayIconGrammarTutorial() {
+    if (iconGrammarTutorialStep) {
+      return
+    }
     setOpenPanel(null)
     iconGrammarMarksSeenRef.current = false
     tutorialVisibleRef.current = true
