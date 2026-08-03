@@ -3339,6 +3339,7 @@ button.stage-class-entry__slot.is-selected {
 .tutorial-overlay__card {
   position: absolute;
   z-index: 1;
+  box-sizing: border-box;
   width: min(360px, calc(100vw - 48px));
   padding: 16px 18px 14px;
   border: 1px solid rgba(255, 213, 79, 0.26);
