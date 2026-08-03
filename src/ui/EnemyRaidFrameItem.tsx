@@ -76,31 +76,10 @@ export function EnemyRaidFrameItem({
       {isDead ? <span className="enemy-death-ghost" aria-hidden="true">👻</span> : null}
 
       {isSelected ? (
-        <svg
-          className="enemy-selection-ring"
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          <rect
-            className="enemy-selection-ring__base"
-            x="3"
-            y="3"
-            width="94"
-            height="94"
-            rx="0"
-            ry="0"
-          />
-          <rect
-            className="enemy-selection-ring__dash"
-            x="3"
-            y="3"
-            width="94"
-            height="94"
-            rx="0"
-            ry="0"
-          />
-        </svg>
+        <span className="enemy-selection-ring" aria-hidden="true">
+          <span className="enemy-selection-ring__base" />
+          <span className="enemy-selection-ring__dash" />
+        </span>
       ) : null}
 
       <div className="enemy-frame__line enemy-frame__line--title">

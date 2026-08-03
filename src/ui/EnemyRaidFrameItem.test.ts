@@ -131,21 +131,18 @@ describe('EnemyRaidFrameItem danger visuals', () => {
     expect(selectedMarkup).toContain('is-selected')
   })
 
-  it('keeps the selected target strokes inside the enemy frame bounds', () => {
+  it('uses pixel-sized selection layers instead of a stretched SVG viewBox', () => {
     const markup = renderToStaticMarkup(createElement(EnemyRaidFrameItem, {
       enemy: enemyWithCast('low', 'tank'),
       isSelected: true,
       onSelect: () => undefined,
     }))
     const document = new JSDOM(markup, { url: 'http://localhost/' }).window.document
-    const base = document.querySelector('.enemy-selection-ring__base')
-    const dash = document.querySelector('.enemy-selection-ring__dash')
+    const ring = document.querySelector('.enemy-selection-ring')
 
-    for (const rect of [base, dash]) {
-      expect(rect?.getAttribute('x')).toBe('3')
-      expect(rect?.getAttribute('y')).toBe('3')
-      expect(rect?.getAttribute('width')).toBe('94')
-      expect(rect?.getAttribute('height')).toBe('94')
-    }
+    expect(ring?.tagName).toBe('SPAN')
+    expect(ring?.querySelector('.enemy-selection-ring__base')?.tagName).toBe('SPAN')
+    expect(ring?.querySelector('.enemy-selection-ring__dash')?.tagName).toBe('SPAN')
+    expect(ring?.querySelector('svg')).toBeNull()
   })
 })
