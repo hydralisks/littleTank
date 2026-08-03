@@ -25,7 +25,7 @@ function renderStatus(status: StatusEffect, size: 'small' | 'large' = 'small') {
 }
 
 describe('StatusBadge layered presentation', () => {
-  it('composes active source, class motif, semantic frame, stacks, and timer', () => {
+  it('composes semantic frame, stacks, and timer without rendering source metadata', () => {
     const document = renderStatus(createStatus({
       kind: 'playerDebuff',
       tone: 'danger',
@@ -36,20 +36,24 @@ describe('StatusBadge layered presentation', () => {
     }), 'large')
 
     expect(document.querySelector('.status-square--harmful')).not.toBeNull()
-    expect(document.querySelector('[data-source-shape="banner"]')).not.toBeNull()
-    expect(document.querySelector('[data-class-motif="sword"]')).not.toBeNull()
+    expect(document.querySelector('[data-status-semantic="harmful"]')).not.toBeNull()
+    expect(document.querySelector('[data-status-source]')).toBeNull()
+    expect(document.querySelector('[data-source-shape]')).toBeNull()
+    expect(document.querySelector('[data-class-motif]')).toBeNull()
     expect(document.querySelector('[data-status-stacks]')?.textContent).toBe('5')
     expect(document.querySelector('.status-square__overlay')).not.toBeNull()
   })
 
-  it('uses the oval shield source shape for passive talents', () => {
+  it('ignores passive source metadata in the visual presentation', () => {
     const document = renderStatus(createStatus({
       sourceKind: 'passiveTalent',
       sourceClassId: 'druid_bear_t',
     }))
 
-    expect(document.querySelector('[data-source-shape="oval-shield"]')).not.toBeNull()
-    expect(document.querySelector('[data-class-motif="bear-claw"]')).not.toBeNull()
+    expect(document.querySelector('[data-status-source]')).toBeNull()
+    expect(document.querySelector('[data-source-shape]')).toBeNull()
+    expect(document.querySelector('[data-class-motif]')).toBeNull()
+    expect(document.querySelector('[data-status-semantic="beneficial"]')).not.toBeNull()
   })
 
   it('keeps legacy and permanent statuses readable without fabricated overlays', () => {

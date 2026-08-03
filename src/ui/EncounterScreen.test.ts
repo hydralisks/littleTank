@@ -594,16 +594,14 @@ describe('EncounterScreen component keyboard integration', () => {
     })
 
     try {
-      expect(container.querySelector('.tutorial-overlay')?.textContent).toContain('先看职业纹章')
-      expect(container.querySelector('[data-icon-grammar-legend="class-emblems"]')).not.toBeNull()
+      expect(container.querySelector('.tutorial-overlay')?.textContent).toContain('最后看战斗状态')
+      expect(container.querySelector('[data-icon-grammar-legend="status-layers"]')).not.toBeNull()
 
-      for (let step = 0; step < 3; step += 1) {
-        await act(async () => {
-          container.querySelector('.tutorial-overlay__next')?.dispatchEvent(
-            new window.MouseEvent('click', { bubbles: true }),
-          )
-        })
-      }
+      await act(async () => {
+        container.querySelector('.tutorial-overlay__next')?.dispatchEvent(
+          new window.MouseEvent('click', { bubbles: true }),
+        )
+      })
 
       expect(callbacks.onIconGrammarTutorialComplete).toHaveBeenCalledTimes(1)
       expect(container.querySelector('.tutorial-overlay')?.textContent).toContain('观察敌方初始信息')
@@ -627,7 +625,7 @@ describe('EncounterScreen component keyboard integration', () => {
         helpButton?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
       })
 
-      expect(container.querySelector('.tutorial-overlay')?.textContent).toContain('先看职业纹章')
+      expect(container.querySelector('.tutorial-overlay')?.textContent).toContain('最后看战斗状态')
 
       await act(async () => {
         container.querySelector('.tutorial-overlay__skip')?.dispatchEvent(

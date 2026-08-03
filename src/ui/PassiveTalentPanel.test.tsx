@@ -99,7 +99,7 @@ describe('PassiveTalentPanel', () => {
     expect(statusIcon?.getAttribute('src')).toBe('/status-icons/immortalStance.svg')
   })
 
-  it('renders a bear talent icon with an oval-shield emblem and carries it into derived statuses', () => {
+  it('renders a bear talent icon and derived statuses without source emblems', () => {
     const workbook = XLSX.readFile('public/designer-data/player_build.xlsx')
     applyPlayerBuildWorkbookOverrides(parsePlayerBuildWorkbook(workbook))
     const bearTalent = getPassiveTalentDefinition('druid_bear_t_moonlit_resolve')
@@ -129,9 +129,11 @@ describe('PassiveTalentPanel', () => {
 
     expect(talentIcon?.querySelector('img')?.getAttribute('src'))
       .toBe('/status-icons/bear-talent-moonlit-resolve.svg')
-    expect(talentIcon?.querySelector('[data-source-shape="oval-shield"]')).not.toBeNull()
-    expect(talentIcon?.querySelector('[data-class-motif="bear-claw"]')).not.toBeNull()
-    expect(derivedStatus?.querySelector('[data-source-shape="oval-shield"]')).not.toBeNull()
-    expect(derivedStatus?.querySelector('[data-class-motif="bear-claw"]')).not.toBeNull()
+    expect(talentIcon?.querySelector('[data-status-source]')).toBeNull()
+    expect(talentIcon?.querySelector('[data-source-shape]')).toBeNull()
+    expect(talentIcon?.querySelector('[data-class-motif]')).toBeNull()
+    expect(derivedStatus?.querySelector('[data-status-source]') ?? null).toBeNull()
+    expect(derivedStatus?.querySelector('[data-source-shape]') ?? null).toBeNull()
+    expect(derivedStatus?.querySelector('[data-class-motif]') ?? null).toBeNull()
   })
 })

@@ -49,7 +49,7 @@ export function getIconGrammarTutorialScript(classId: PlayerClassId): TutorialSt
       legend: { kind: 'status-layers', classId },
       skipLabel: '跳过图标说明',
     },
-  ]
+  ].filter((step) => step.legend?.kind === 'status-layers')
 }
 
 export function getPreparationTutorialScript(): TutorialStep[] {

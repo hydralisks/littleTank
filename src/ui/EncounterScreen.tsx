@@ -637,7 +637,6 @@ export function EncounterScreen({
           <PlayerStatusPanel player={encounter.player} />
 
           <SkillBar
-            classId={classId}
             slots={skillSlots}
             currentResource={encounter.player.resource}
             gcdRemainingMs={encounter.player.gcdRemainingMs}

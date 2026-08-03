@@ -48,7 +48,7 @@ function createHarness() {
 }
 
 describe('TutorialOverlay', () => {
-  it('renders the real source-emblem components carried by an icon legend step', async () => {
+  it('renders status layers without source-emblem components', async () => {
     const { dom, window, container } = createHarness()
     const previousWindow = globalThis.window
     const previousDocument = globalThis.document
@@ -64,12 +64,12 @@ describe('TutorialOverlay', () => {
     try {
       root = createRoot(container)
       const step: TutorialStep = {
-        id: 'icon-source-shapes',
-        title: '辨认状态来源',
-        body: '来源形状。',
+        id: 'icon-status-layers',
+        title: '辨认状态层级',
+        body: '状态语义。',
         target: '[data-tutorial-id="enemy-frames"]',
         placement: 'center',
-        legend: { kind: 'source-shapes', classId: 'warrior_t' },
+        legend: { kind: 'status-layers', classId: 'warrior_t' },
         skipLabel: '跳过图标说明',
       }
 
@@ -77,9 +77,10 @@ describe('TutorialOverlay', () => {
         root!.render(createElement(TutorialOverlay, { step, onNext: vi.fn(), onSkip: vi.fn() }))
       })
 
-      expect(container.querySelector('[data-icon-grammar-legend="source-shapes"]')).not.toBeNull()
-      expect(container.querySelector('[data-source-shape="banner"]')).not.toBeNull()
-      expect(container.querySelector('[data-source-shape="oval-shield"]')).not.toBeNull()
+      expect(container.querySelector('[data-icon-grammar-legend="status-layers"]')).not.toBeNull()
+      expect(container.querySelector('[data-status-semantic]')).not.toBeNull()
+      expect(container.querySelector('[data-status-source]')).toBeNull()
+      expect(container.querySelector('[data-source-shape]')).toBeNull()
       expect(container.querySelector('.tutorial-overlay__skip')?.textContent).toContain('跳过图标说明')
     } finally {
       if (root) {

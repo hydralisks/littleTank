@@ -24,17 +24,14 @@ function makeStage(id: string, areaId: string, stageNumber: StageInfo['stageNumb
 }
 
 describe('tutorialGuide', () => {
-  it('builds the three-step icon grammar tutorial for published classes', () => {
+  it('builds a status-layer-only icon grammar tutorial', () => {
     const script = getIconGrammarTutorialScript('warrior_t')
 
-    expect(script.map((step) => step.legend?.kind)).toEqual([
-      'class-emblems',
-      'source-shapes',
-      'status-layers',
-    ])
-    expect(script[0]?.legend).toMatchObject({
-      classIds: ['warrior_t', 'druid_bear_t'],
-    })
+    expect(script.map((step) => step.legend?.kind)).toEqual(['status-layers'])
+    expect(script[0]?.body).toContain('外框')
+    expect(script[0]?.body).not.toContain('职业')
+    expect(script[0]?.body).not.toContain('战旗')
+    expect(script[0]?.body).not.toContain('椭圆盾')
     expect(script.every((step) => step.placement === 'center')).toBe(true)
     expect(script.every((step) => step.skipLabel === '跳过图标说明')).toBe(true)
   })

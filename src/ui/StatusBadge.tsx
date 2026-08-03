@@ -2,7 +2,6 @@ import type { CSSProperties } from 'react'
 import type { StatusEffect } from '../game/encounter/encounterTypes'
 import { StatusIconArtwork } from './StatusIconArtwork'
 import { StatusSemanticFrame } from './StatusSemanticFrame'
-import { StatusSourceEmblem } from './StatusSourceEmblem'
 import { StatusStackBadge } from './StatusStackBadge'
 import { getStatusSemantic } from './statusIconPresentation'
 
@@ -49,7 +48,6 @@ export function StatusBadge({
     >
       <StatusIconArtwork status={status} hasCountdown={hasCountdown} />
       <StatusSemanticFrame semantic={semantic} />
-      <StatusSourceEmblem sourceKind={status.sourceKind} sourceClassId={status.sourceClassId} />
       <StatusStackBadge status={status} />
     </span>
   )

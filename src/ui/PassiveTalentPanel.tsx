@@ -6,7 +6,6 @@ import type {
 } from '../game/encounter/encounterTypes'
 import { getStatusesForTalent } from '../game/data/playerBuildCatalog'
 import { StatusBadge } from './StatusBadge'
-import { StatusSourceEmblem } from './StatusSourceEmblem'
 import { resolveIconAssetUrl } from './statusIconResolver'
 
 interface PassiveTalentPanelProps {
@@ -121,7 +120,6 @@ export function PassiveTalentPanel({
                           <div className="passive-talent-card__identity">
                             <div className="passive-talent-card__icon">
                               {iconUrl ? <img src={iconUrl} alt="" aria-hidden="true" /> : null}
-                              <StatusSourceEmblem sourceKind="passiveTalent" sourceClassId={talent.classId} />
                             </div>
                             <strong>{talent.name}</strong>
                           </div>
