@@ -1,0 +1,3100 @@
+{
+  "generatedAt": "2026-08-02T16:10:45.277Z",
+  "results": [
+    {
+      "id": "c1-candle-king-for-seer",
+      "stageId": "Challenge-1",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-1-e05",
+          "values": {
+            "enemyId": "The_Candle_King",
+            "nameOverride": "蜡烛之王",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:09:17.191Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.8333333333333334,
+          "skilledBestPassRate": 0.8055555555555555,
+          "expertBestPassRate": 0.8888888888888888,
+          "overallBestPassRate": 0.8888888888888888,
+          "difficulty": "trivial",
+          "average2PassRate": 0.75,
+          "skilled2PassRate": 0.9166666666666666,
+          "learningBestPassRate": 0.9166666666666666
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c2-candle-king-for-rummager",
+      "stageId": "Challenge-2",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-2-e05",
+          "values": {
+            "enemyId": "The_Candle_King",
+            "nameOverride": "蜡烛之王",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:10:59.605Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 0.8333333333333334
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 0.8333333333333334
+        }
+      ]
+    },
+    {
+      "id": "c3-candle-king-for-seer",
+      "stageId": "Challenge-3",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-3-e04",
+          "values": {
+            "enemyId": "The_Candle_King",
+            "nameOverride": "蜡烛之王",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:12:01.094Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.75,
+          "skilledBestPassRate": 0.888888888888889,
+          "expertBestPassRate": 0.9444444444444445,
+          "overallBestPassRate": 0.9444444444444445,
+          "difficulty": "easy",
+          "average2PassRate": 0.9166666666666666,
+          "skilled2PassRate": 0.8333333333333334,
+          "learningBestPassRate": 0.5833333333333334
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.4166666666666667,
+          "skilledBestPassRate": 0.5555555555555556,
+          "expertBestPassRate": 0.38888888888888884,
+          "overallBestPassRate": 0.5555555555555556,
+          "difficulty": "hard",
+          "average2PassRate": 0.4166666666666667,
+          "skilled2PassRate": 0.4166666666666667,
+          "learningBestPassRate": 0.4166666666666667
+        }
+      ]
+    },
+    {
+      "id": "wf1-tidehunter-for-scout",
+      "stageId": "WestFall-1",
+      "fileName": "encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "WestFall-1-e05",
+          "values": {
+            "enemyId": "murloc_tidehunter",
+            "nameOverride": "鱼人猎潮者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:13:19.904Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.9444444444444445,
+          "skilledBestPassRate": 0.9722222222222222,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "easy",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c4-oracle-for-apprentice",
+      "stageId": "Challenge-4",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-4-e01",
+          "values": {
+            "enemyId": "coldlight_oracle",
+            "nameOverride": "寒光智者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:16:02.207Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.861111111111111,
+          "skilledBestPassRate": 0.8888888888888888,
+          "expertBestPassRate": 0.9166666666666666,
+          "overallBestPassRate": 0.9166666666666666,
+          "difficulty": "easy",
+          "average2PassRate": 0.9166666666666666,
+          "skilled2PassRate": 0.9166666666666666,
+          "learningBestPassRate": 0.75
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0.3333333333333333
+        }
+      ]
+    },
+    {
+      "id": "c5-oracle-for-rummager",
+      "stageId": "Challenge-5",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-5-e01",
+          "values": {
+            "enemyId": "coldlight_oracle",
+            "nameOverride": "寒光智者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:18:18.135Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.2777777777777778,
+          "skilledBestPassRate": 0.27777777777777773,
+          "expertBestPassRate": 0.36111111111111116,
+          "overallBestPassRate": 0.36111111111111116,
+          "difficulty": "hard",
+          "average2PassRate": 0.3333333333333333,
+          "skilled2PassRate": 0.25,
+          "learningBestPassRate": 0.3333333333333333
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        }
+      ]
+    },
+    {
+      "id": "c6-murk-eye-for-seer",
+      "stageId": "Challenge-6",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-6-e05",
+          "values": {
+            "enemyId": "Old_Murk-Eye",
+            "nameOverride": "老瞎眼",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:19:36.402Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.5833333333333334,
+          "skilledBestPassRate": 0.75,
+          "expertBestPassRate": 0.8055555555555555,
+          "overallBestPassRate": 0.8055555555555555,
+          "difficulty": "balanced",
+          "average2PassRate": 0.6666666666666666,
+          "skilled2PassRate": 0.9166666666666666,
+          "learningBestPassRate": 0.6666666666666666
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.05555555555555555,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0.05555555555555555,
+          "difficulty": "near_impossible",
+          "average2PassRate": 0.08333333333333333,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        }
+      ]
+    },
+    {
+      "id": "wf2-blowgiller-for-scout",
+      "stageId": "WestFall-2",
+      "fileName": "encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "WestFall-2-e04",
+          "values": {
+            "enemyId": "murloc_blowgiller",
+            "nameOverride": "鱼人吹箭者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:21:17.432Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.8888888888888888,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "easy",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c7-shadow-priest-for-seer",
+      "stageId": "Challenge-7",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-7-e03",
+          "values": {
+            "enemyId": "troll_shadow_priest",
+            "nameOverride": "巨魔暗影牧师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:23:40.204Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        }
+      ]
+    },
+    {
+      "id": "c8-shadow-priest-for-seer",
+      "stageId": "Challenge-8",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-8-e03",
+          "values": {
+            "enemyId": "troll_shadow_priest",
+            "nameOverride": "巨魔暗影牧师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:25:00.733Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        }
+      ]
+    },
+    {
+      "id": "c9-shieldmasta-for-high-priest",
+      "stageId": "Challenge-9",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-9-e04",
+          "values": {
+            "enemyId": "troll_shieldmasta",
+            "nameOverride": "巨魔持盾卫士",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:26:55.858Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.8333333333333334,
+          "skilledBestPassRate": 0.7222222222222222,
+          "expertBestPassRate": 0.75,
+          "overallBestPassRate": 0.8333333333333334,
+          "difficulty": "easy",
+          "average2PassRate": 0.8333333333333334,
+          "skilled2PassRate": 0.75,
+          "learningBestPassRate": 0.8333333333333334
+        }
+      ]
+    },
+    {
+      "id": "wf3-warleader-for-blowgiller",
+      "stageId": "WestFall-3",
+      "fileName": "encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "WestFall-3-e02",
+          "values": {
+            "enemyId": "murloc_warleader",
+            "nameOverride": "鱼人领军",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:28:26.554Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.9722222222222222,
+          "skilledBestPassRate": 0.9722222222222222,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 0.9166666666666666,
+          "learningBestPassRate": 0.9166666666666666
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.027777777777777776,
+          "skilledBestPassRate": 0.1111111111111111,
+          "expertBestPassRate": 0.08333333333333333,
+          "overallBestPassRate": 0.1111111111111111,
+          "difficulty": "near_impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0.16666666666666666,
+          "learningBestPassRate": 0.6666666666666666
+        }
+      ]
+    },
+    {
+      "id": "c1-candle-plus-geomancer",
+      "stageId": "Challenge-1",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-1-e05",
+          "values": {
+            "enemyId": "The_Candle_King",
+            "nameOverride": "蜡烛之王",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 1000
+          }
+        },
+        {
+          "spawnId": "Challenge-1-e04",
+          "values": {
+            "enemyId": "kobold_geomancer",
+            "nameOverride": "狗头人地卜师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:31:30.510Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.7222222222222222,
+          "skilledBestPassRate": 0.6388888888888888,
+          "expertBestPassRate": 0.6944444444444443,
+          "overallBestPassRate": 0.7222222222222222,
+          "difficulty": "easy",
+          "average2PassRate": 0.6666666666666666,
+          "skilled2PassRate": 0.6666666666666666,
+          "learningBestPassRate": 0.75
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.27777777777777773,
+          "skilledBestPassRate": 0.3611111111111111,
+          "expertBestPassRate": 0.6666666666666666,
+          "overallBestPassRate": 0.6666666666666666,
+          "difficulty": "hard",
+          "average2PassRate": 0.25,
+          "skilled2PassRate": 0.5,
+          "learningBestPassRate": 0.6666666666666666
+        }
+      ]
+    },
+    {
+      "id": "c2-candle-plus-monk",
+      "stageId": "Challenge-2",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-2-e05",
+          "values": {
+            "enemyId": "The_Candle_King",
+            "nameOverride": "蜡烛之王",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 1000
+          }
+        },
+        {
+          "spawnId": "Challenge-2-e03",
+          "values": {
+            "enemyId": "kobold_monk",
+            "nameOverride": "狗头人武僧",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 5,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:32:38.592Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.5833333333333334,
+          "skilledBestPassRate": 0.6388888888888888,
+          "expertBestPassRate": 0.75,
+          "overallBestPassRate": 0.75,
+          "difficulty": "balanced",
+          "average2PassRate": 0.6666666666666666,
+          "skilled2PassRate": 0.6666666666666666,
+          "learningBestPassRate": 0.5833333333333334
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.05555555555555555,
+          "skilledBestPassRate": 0.05555555555555555,
+          "expertBestPassRate": 0.027777777777777776,
+          "overallBestPassRate": 0.05555555555555555,
+          "difficulty": "near_impossible",
+          "average2PassRate": 0.08333333333333333,
+          "skilled2PassRate": 0.16666666666666666,
+          "learningBestPassRate": 0
+        }
+      ]
+    },
+    {
+      "id": "c3-monk-for-scout",
+      "stageId": "Challenge-3",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-3-e02",
+          "values": {
+            "enemyId": "kobold_monk",
+            "nameOverride": "狗头人武僧",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 5,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:33:12.495Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.027777777777777776,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0.027777777777777776,
+          "difficulty": "near_impossible",
+          "average2PassRate": 0.08333333333333333,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        }
+      ]
+    },
+    {
+      "id": "wf1-two-tidehunters",
+      "stageId": "WestFall-1",
+      "fileName": "encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "WestFall-1-e04",
+          "values": {
+            "enemyId": "murloc_tidehunter",
+            "nameOverride": "鱼人猎潮者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        },
+        {
+          "spawnId": "WestFall-1-e05",
+          "values": {
+            "enemyId": "murloc_tidehunter",
+            "nameOverride": "鱼人猎潮者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:34:27.360Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c4-warleader-for-apprentice",
+      "stageId": "Challenge-4",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-4-e01",
+          "values": {
+            "enemyId": "murloc_warleader",
+            "nameOverride": "鱼人领军",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:37:18.558Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.27777777777777773,
+          "skilledBestPassRate": 0.8055555555555557,
+          "expertBestPassRate": 0.8333333333333334,
+          "overallBestPassRate": 0.8333333333333334,
+          "difficulty": "hard",
+          "average2PassRate": 0.25,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c5-warleader-for-rummager",
+      "stageId": "Challenge-5",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-5-e01",
+          "values": {
+            "enemyId": "murloc_warleader",
+            "nameOverride": "鱼人领军",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:40:51.990Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 0.9722222222222222,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.3333333333333333,
+          "skilledBestPassRate": 0.22222222222222224,
+          "expertBestPassRate": 0.13888888888888887,
+          "overallBestPassRate": 0.3333333333333333,
+          "difficulty": "balanced",
+          "average2PassRate": 0.3333333333333333,
+          "skilled2PassRate": 0.08333333333333333,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c6-warleader-for-seer",
+      "stageId": "Challenge-6",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-6-e05",
+          "values": {
+            "enemyId": "murloc_warleader",
+            "nameOverride": "鱼人领军",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:42:22.661Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 0.9722222222222222,
+          "expertBestPassRate": 0.9166666666666666,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 0.9166666666666666
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.638888888888889,
+          "skilledBestPassRate": 0.6666666666666666,
+          "expertBestPassRate": 0.6666666666666666,
+          "overallBestPassRate": 0.6666666666666666,
+          "difficulty": "balanced",
+          "average2PassRate": 0.75,
+          "skilled2PassRate": 0.5,
+          "learningBestPassRate": 0.8333333333333334
+        }
+      ]
+    },
+    {
+      "id": "wf2-blowgiller-plus-tidehunter",
+      "stageId": "WestFall-2",
+      "fileName": "encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "WestFall-2-e03",
+          "values": {
+            "enemyId": "murloc_tidehunter",
+            "nameOverride": "鱼人猎潮者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        },
+        {
+          "spawnId": "WestFall-2-e04",
+          "values": {
+            "enemyId": "murloc_blowgiller",
+            "nameOverride": "鱼人吹箭者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:44:00.051Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c7-delayed-shadow-priest",
+      "stageId": "Challenge-7",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-7-e03",
+          "values": {
+            "enemyId": "troll_shadow_priest",
+            "nameOverride": "巨魔暗影牧师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 4,
+            "openingRecoveryRemainingMs": 4000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:47:09.608Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0.05555555555555555,
+          "expertBestPassRate": 0.05555555555555555,
+          "overallBestPassRate": 0.05555555555555555,
+          "difficulty": "near_impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0.5
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        }
+      ]
+    },
+    {
+      "id": "c8-delayed-shadow-priest",
+      "stageId": "Challenge-8",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-8-e03",
+          "values": {
+            "enemyId": "troll_shadow_priest",
+            "nameOverride": "巨魔暗影牧师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 4,
+            "openingRecoveryRemainingMs": 4000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:49:09.156Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.1111111111111111,
+          "skilledBestPassRate": 0.13888888888888887,
+          "expertBestPassRate": 0.16666666666666666,
+          "overallBestPassRate": 0.16666666666666666,
+          "difficulty": "near_impossible",
+          "average2PassRate": 0.08333333333333333,
+          "skilled2PassRate": 0.16666666666666666,
+          "learningBestPassRate": 0.08333333333333333
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        }
+      ]
+    },
+    {
+      "id": "c9-delayed-shadow-priest",
+      "stageId": "Challenge-9",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-9-e04",
+          "values": {
+            "enemyId": "troll_shadow_priest",
+            "nameOverride": "巨魔暗影牧师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 4,
+            "openingRecoveryRemainingMs": 4000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:50:48.243Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.9722222222222222,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 0.9166666666666666,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "wf3-open-with-upgrades",
+      "stageId": "WestFall-3",
+      "fileName": "encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "WestFall-3-e02",
+          "values": {
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 0
+          }
+        },
+        {
+          "spawnId": "WestFall-3-e03",
+          "values": {
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:52:38.158Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 0.8333333333333334
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.8611111111111112,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 0.9444444444444443,
+          "overallBestPassRate": 1,
+          "difficulty": "easy",
+          "average2PassRate": 0.8333333333333334,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c3-geomancer-for-scout",
+      "stageId": "Challenge-3",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-3-e02",
+          "values": {
+            "enemyId": "kobold_geomancer",
+            "nameOverride": "狗头人地卜师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:54:53.899Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.8888888888888888,
+          "skilledBestPassRate": 0.9444444444444443,
+          "expertBestPassRate": 0.9722222222222222,
+          "overallBestPassRate": 0.9722222222222222,
+          "difficulty": "easy",
+          "average2PassRate": 0.75,
+          "skilled2PassRate": 0.9166666666666666,
+          "learningBestPassRate": 0.9166666666666666
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.3333333333333333,
+          "skilledBestPassRate": 0.3055555555555556,
+          "expertBestPassRate": 0.27777777777777773,
+          "overallBestPassRate": 0.3333333333333333,
+          "difficulty": "hard",
+          "average2PassRate": 0.25,
+          "skilled2PassRate": 0.25,
+          "learningBestPassRate": 0.3333333333333333
+        }
+      ]
+    },
+    {
+      "id": "c5-rummager-control-channel",
+      "stageId": "Challenge-5",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-5-e01",
+          "values": {
+            "openingCastSkillNum": 4,
+            "openingRecoveryRemainingMs": 0
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T18:58:46.958Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 0.9722222222222222,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.7777777777777778,
+          "skilledBestPassRate": 0.8055555555555555,
+          "expertBestPassRate": 0.6111111111111112,
+          "overallBestPassRate": 0.8055555555555555,
+          "difficulty": "balanced",
+          "average2PassRate": 0.75,
+          "skilled2PassRate": 0.6666666666666666,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c6-candle-shadow-hoe",
+      "stageId": "Challenge-6",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-6-e01",
+          "values": {
+            "openingCastSkillNum": 4,
+            "openingRecoveryRemainingMs": 0
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T19:00:22.846Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 0.9722222222222222,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.8333333333333334,
+          "skilledBestPassRate": 0.8055555555555555,
+          "expertBestPassRate": 0.8333333333333334,
+          "overallBestPassRate": 0.8333333333333334,
+          "difficulty": "easy",
+          "average2PassRate": 0.8333333333333334,
+          "skilled2PassRate": 0.75,
+          "learningBestPassRate": 0.8333333333333334
+        }
+      ]
+    },
+    {
+      "id": "wf1-open-with-mark",
+      "stageId": "WestFall-1",
+      "fileName": "encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "WestFall-1-e06",
+          "values": {
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 0
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T19:01:56.917Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c7-soul-summoner-for-seer",
+      "stageId": "Challenge-7",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-7-e03",
+          "values": {
+            "enemyId": "troll_soul_summoner",
+            "nameOverride": "巨魔唤魂者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T19:05:11.019Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.7222222222222222,
+          "skilledBestPassRate": 0.9444444444444443,
+          "expertBestPassRate": 0.8888888888888888,
+          "overallBestPassRate": 0.9444444444444443,
+          "difficulty": "easy",
+          "average2PassRate": 0.75,
+          "skilled2PassRate": 0.9166666666666666,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c8-soul-summoner-for-seer",
+      "stageId": "Challenge-8",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-8-e03",
+          "values": {
+            "enemyId": "troll_soul_summoner",
+            "nameOverride": "巨魔唤魂者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T19:08:28.923Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.888888888888889,
+          "skilledBestPassRate": 0.9166666666666666,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "easy",
+          "average2PassRate": 1,
+          "skilled2PassRate": 0.9166666666666666,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c9-high-priest-spirit-shell",
+      "stageId": "Challenge-9",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-9-e04",
+          "values": {
+            "openingCastSkillNum": 6,
+            "openingRecoveryRemainingMs": 0
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T19:10:08.739Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 0.9722222222222222,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "wf2-open-with-upgrades",
+      "stageId": "WestFall-2",
+      "fileName": "encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "WestFall-2-e05",
+          "values": {
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 0
+          }
+        },
+        {
+          "spawnId": "WestFall-2-e06",
+          "values": {
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T19:11:51.327Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.9444444444444443,
+          "skilledBestPassRate": 0.9722222222222222,
+          "expertBestPassRate": 0.9722222222222222,
+          "overallBestPassRate": 0.9722222222222222,
+          "difficulty": "easy",
+          "average2PassRate": 0.9166666666666666,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c1-candle-king-for-seer",
+      "budget": "normal",
+      "stageId": "Challenge-1",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-1-e05",
+          "values": {
+            "enemyId": "The_Candle_King",
+            "nameOverride": "蜡烛之王",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T19:19:47.016Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.7916666666666666,
+          "skilledBestPassRate": 0.8583333333333334,
+          "expertBestPassRate": 0.7833333333333333,
+          "overallBestPassRate": 0.8583333333333334,
+          "difficulty": "easy",
+          "average2PassRate": 0.775,
+          "skilled2PassRate": 0.85,
+          "learningBestPassRate": 0.925
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.975,
+          "skilledBestPassRate": 0.9833333333333334,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 0.95,
+          "skilled2PassRate": 0.975,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "wf1-tidehunter-for-scout",
+      "budget": "normal",
+      "stageId": "WestFall-1",
+      "fileName": "encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "WestFall-1-e05",
+          "values": {
+            "enemyId": "murloc_tidehunter",
+            "nameOverride": "鱼人猎潮者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T19:25:15.688Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "wf2-blowgiller-for-scout",
+      "budget": "normal",
+      "stageId": "WestFall-2",
+      "fileName": "encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "WestFall-2-e04",
+          "values": {
+            "enemyId": "murloc_blowgiller",
+            "nameOverride": "鱼人吹箭者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T19:32:19.999Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "wf3-open-with-upgrades",
+      "budget": "normal",
+      "stageId": "WestFall-3",
+      "fileName": "encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "WestFall-3-e02",
+          "values": {
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 0
+          }
+        },
+        {
+          "spawnId": "WestFall-3-e03",
+          "values": {
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T19:39:46.703Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.9416666666666668,
+          "skilledBestPassRate": 0.9666666666666667,
+          "expertBestPassRate": 0.9666666666666667,
+          "overallBestPassRate": 0.9666666666666667,
+          "difficulty": "easy",
+          "average2PassRate": 0.95,
+          "skilled2PassRate": 0.925,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c1-candle-king-immediate",
+      "budget": "quick",
+      "stageId": "Challenge-1",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-1-e05",
+          "values": {
+            "enemyId": "The_Candle_King",
+            "nameOverride": "蜡烛之王",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 0
+          }
+        }
+      ],
+      "generatedAt": "2026-08-01T19:42:00.053Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.9722222222222222,
+          "skilledBestPassRate": 0.9722222222222222,
+          "expertBestPassRate": 0.9166666666666666,
+          "overallBestPassRate": 0.9722222222222222,
+          "difficulty": "trivial",
+          "average2PassRate": 0.9166666666666666,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c2-candle-king-for-rummager",
+      "budget": "normal",
+      "stageId": "Challenge-2",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-2-e05",
+          "values": {
+            "enemyId": "The_Candle_King",
+            "nameOverride": "蜡烛之王",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T05:26:40.124Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 0.9916666666666667,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 0.975,
+          "learningBestPassRate": 0.95
+        }
+      ]
+    },
+    {
+      "id": "c3-candle-king-for-seer",
+      "budget": "normal",
+      "stageId": "Challenge-3",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-3-e04",
+          "values": {
+            "enemyId": "The_Candle_King",
+            "nameOverride": "蜡烛之王",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T05:36:12.686Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.8833333333333333,
+          "skilledBestPassRate": 0.9,
+          "expertBestPassRate": 0.8083333333333332,
+          "overallBestPassRate": 0.9,
+          "difficulty": "easy",
+          "average2PassRate": 0.85,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 0.625
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.5333333333333333,
+          "skilledBestPassRate": 0.575,
+          "expertBestPassRate": 0.55,
+          "overallBestPassRate": 0.575,
+          "difficulty": "hard",
+          "average2PassRate": 0.5,
+          "skilled2PassRate": 0.7,
+          "learningBestPassRate": 0.625
+        }
+      ]
+    },
+    {
+      "id": "c4-oracle-for-apprentice",
+      "budget": "normal",
+      "stageId": "Challenge-4",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-4-e01",
+          "values": {
+            "enemyId": "coldlight_oracle",
+            "nameOverride": "寒光智者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T05:49:48.772Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.8666666666666667,
+          "skilledBestPassRate": 0.85,
+          "expertBestPassRate": 0.9,
+          "overallBestPassRate": 0.9,
+          "difficulty": "easy",
+          "average2PassRate": 0.925,
+          "skilled2PassRate": 0.85,
+          "learningBestPassRate": 0.875
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0.008333333333333333,
+          "expertBestPassRate": 0.025000000000000005,
+          "overallBestPassRate": 0.025000000000000005,
+          "difficulty": "near_impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0.775
+        }
+      ]
+    },
+    {
+      "id": "c5-oracle-for-rummager",
+      "budget": "normal",
+      "stageId": "Challenge-5",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-5-e01",
+          "values": {
+            "enemyId": "coldlight_oracle",
+            "nameOverride": "寒光智者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T06:11:59.438Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.4166666666666667,
+          "skilledBestPassRate": 0.4833333333333334,
+          "expertBestPassRate": 0.42500000000000004,
+          "overallBestPassRate": 0.4833333333333334,
+          "difficulty": "hard",
+          "average2PassRate": 0.45,
+          "skilled2PassRate": 0.425,
+          "learningBestPassRate": 0.65
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0.075
+        }
+      ]
+    },
+    {
+      "id": "c6-murk-eye-for-seer",
+      "budget": "normal",
+      "stageId": "Challenge-6",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-6-e05",
+          "values": {
+            "enemyId": "Old_Murk-Eye",
+            "nameOverride": "老瞎眼",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T06:23:05.250Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.85,
+          "skilledBestPassRate": 0.7583333333333333,
+          "expertBestPassRate": 0.7833333333333333,
+          "overallBestPassRate": 0.85,
+          "difficulty": "easy",
+          "average2PassRate": 0.85,
+          "skilled2PassRate": 0.9,
+          "learningBestPassRate": 0.925
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.041666666666666664,
+          "skilledBestPassRate": 0.024999999999999998,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0.041666666666666664,
+          "difficulty": "near_impossible",
+          "average2PassRate": 0.1,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        }
+      ]
+    },
+    {
+      "id": "c7-shadow-priest-for-seer",
+      "budget": "normal",
+      "stageId": "Challenge-7",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-7-e03",
+          "values": {
+            "enemyId": "troll_shadow_priest",
+            "nameOverride": "巨魔暗影牧师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T06:38:40.572Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.05833333333333333,
+          "skilledBestPassRate": 0.05833333333333333,
+          "expertBestPassRate": 0.041666666666666664,
+          "overallBestPassRate": 0.05833333333333333,
+          "difficulty": "near_impossible",
+          "average2PassRate": 0.075,
+          "skilled2PassRate": 0.075,
+          "learningBestPassRate": 0.175
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        }
+      ]
+    },
+    {
+      "id": "c8-shadow-priest-for-seer",
+      "budget": "normal",
+      "stageId": "Challenge-8",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-8-e03",
+          "values": {
+            "enemyId": "troll_shadow_priest",
+            "nameOverride": "巨魔暗影牧师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T06:49:02.305Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        }
+      ]
+    },
+    {
+      "id": "c9-shieldmasta-for-high-priest",
+      "budget": "normal",
+      "stageId": "Challenge-9",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-9-e04",
+          "values": {
+            "enemyId": "troll_shieldmasta",
+            "nameOverride": "巨魔持盾卫士",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T07:05:02.636Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 0.9916666666666667,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 0.975,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.7916666666666666,
+          "skilledBestPassRate": 0.7416666666666667,
+          "expertBestPassRate": 0.75,
+          "overallBestPassRate": 0.7916666666666666,
+          "difficulty": "easy",
+          "average2PassRate": 0.675,
+          "skilled2PassRate": 0.825,
+          "learningBestPassRate": 0.775
+        }
+      ]
+    },
+    {
+      "id": "wf3-warleader-for-blowgiller",
+      "budget": "normal",
+      "stageId": "WestFall-3",
+      "fileName": "encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "WestFall-3-e02",
+          "values": {
+            "enemyId": "murloc_warleader",
+            "nameOverride": "鱼人领军",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T07:17:44.713Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.9916666666666667,
+          "skilledBestPassRate": 0.9916666666666667,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 0.925
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.041666666666666664,
+          "skilledBestPassRate": 0.05833333333333333,
+          "expertBestPassRate": 0.041666666666666664,
+          "overallBestPassRate": 0.05833333333333333,
+          "difficulty": "near_impossible",
+          "average2PassRate": 0.075,
+          "skilled2PassRate": 0.075,
+          "learningBestPassRate": 0.4
+        }
+      ]
+    },
+    {
+      "id": "c1-candle-plus-geomancer",
+      "budget": "normal",
+      "stageId": "Challenge-1",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-1-e05",
+          "values": {
+            "enemyId": "The_Candle_King",
+            "nameOverride": "蜡烛之王",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 1000
+          }
+        },
+        {
+          "spawnId": "Challenge-1-e04",
+          "values": {
+            "enemyId": "kobold_geomancer",
+            "nameOverride": "狗头人地卜师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T07:26:00.631Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.6416666666666667,
+          "skilledBestPassRate": 0.6333333333333333,
+          "expertBestPassRate": 0.6583333333333333,
+          "overallBestPassRate": 0.6583333333333333,
+          "difficulty": "easy",
+          "average2PassRate": 0.65,
+          "skilled2PassRate": 0.65,
+          "learningBestPassRate": 0.7
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.5833333333333334,
+          "skilledBestPassRate": 0.5916666666666667,
+          "expertBestPassRate": 0.7333333333333333,
+          "overallBestPassRate": 0.7333333333333333,
+          "difficulty": "balanced",
+          "average2PassRate": 0.625,
+          "skilled2PassRate": 0.65,
+          "learningBestPassRate": 0.925
+        }
+      ]
+    },
+    {
+      "id": "c2-candle-plus-monk",
+      "budget": "normal",
+      "stageId": "Challenge-2",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-2-e05",
+          "values": {
+            "enemyId": "The_Candle_King",
+            "nameOverride": "蜡烛之王",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 1000
+          }
+        },
+        {
+          "spawnId": "Challenge-2-e03",
+          "values": {
+            "enemyId": "kobold_monk",
+            "nameOverride": "狗头人武僧",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 5,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T07:35:33.377Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.5333333333333333,
+          "skilledBestPassRate": 0.6583333333333333,
+          "expertBestPassRate": 0.6916666666666668,
+          "overallBestPassRate": 0.6916666666666668,
+          "difficulty": "balanced",
+          "average2PassRate": 0.55,
+          "skilled2PassRate": 0.65,
+          "learningBestPassRate": 0.65
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.025000000000000005,
+          "skilledBestPassRate": 0.03333333333333333,
+          "expertBestPassRate": 0.041666666666666664,
+          "overallBestPassRate": 0.041666666666666664,
+          "difficulty": "near_impossible",
+          "average2PassRate": 0.025,
+          "skilled2PassRate": 0.025,
+          "learningBestPassRate": 0.05
+        }
+      ]
+    },
+    {
+      "id": "c3-monk-for-scout",
+      "budget": "normal",
+      "stageId": "Challenge-3",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-3-e02",
+          "values": {
+            "enemyId": "kobold_monk",
+            "nameOverride": "狗头人武僧",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 5,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T07:40:21.616Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.15,
+          "skilledBestPassRate": 0.11666666666666668,
+          "expertBestPassRate": 0.11666666666666665,
+          "overallBestPassRate": 0.15,
+          "difficulty": "near_impossible",
+          "average2PassRate": 0.2,
+          "skilled2PassRate": 0.05,
+          "learningBestPassRate": 0.225
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0.025
+        }
+      ]
+    },
+    {
+      "id": "c4-warleader-for-apprentice",
+      "budget": "normal",
+      "stageId": "Challenge-4",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-4-e01",
+          "values": {
+            "enemyId": "murloc_warleader",
+            "nameOverride": "鱼人领军",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T07:57:39.127Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.39999999999999997,
+          "skilledBestPassRate": 0.8916666666666666,
+          "expertBestPassRate": 0.9083333333333333,
+          "overallBestPassRate": 0.9083333333333333,
+          "difficulty": "hard",
+          "average2PassRate": 0.375,
+          "skilled2PassRate": 0.975,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c5-warleader-for-rummager",
+      "budget": "normal",
+      "stageId": "Challenge-5",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-5-e01",
+          "values": {
+            "enemyId": "murloc_warleader",
+            "nameOverride": "鱼人领军",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T08:25:53.171Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.9916666666666667,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.3833333333333333,
+          "skilledBestPassRate": 0.15833333333333333,
+          "expertBestPassRate": 0.09999999999999999,
+          "overallBestPassRate": 0.3833333333333333,
+          "difficulty": "hard",
+          "average2PassRate": 0.5,
+          "skilled2PassRate": 0.1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c6-warleader-for-seer",
+      "budget": "normal",
+      "stageId": "Challenge-6",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-6-e05",
+          "values": {
+            "enemyId": "murloc_warleader",
+            "nameOverride": "鱼人领军",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T08:38:02.700Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.9,
+          "skilledBestPassRate": 0.9249999999999999,
+          "expertBestPassRate": 0.9333333333333332,
+          "overallBestPassRate": 0.9333333333333332,
+          "difficulty": "easy",
+          "average2PassRate": 0.95,
+          "skilled2PassRate": 0.875,
+          "learningBestPassRate": 0.975
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.625,
+          "skilledBestPassRate": 0.7083333333333334,
+          "expertBestPassRate": 0.7000000000000001,
+          "overallBestPassRate": 0.7083333333333334,
+          "difficulty": "balanced",
+          "average2PassRate": 0.675,
+          "skilled2PassRate": 0.725,
+          "learningBestPassRate": 0.8
+        }
+      ]
+    },
+    {
+      "id": "c7-delayed-shadow-priest",
+      "budget": "normal",
+      "stageId": "Challenge-7",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-7-e03",
+          "values": {
+            "enemyId": "troll_shadow_priest",
+            "nameOverride": "巨魔暗影牧师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 4,
+            "openingRecoveryRemainingMs": 4000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T08:53:36.234Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.016666666666666666,
+          "skilledBestPassRate": 0.025000000000000005,
+          "expertBestPassRate": 0.049999999999999996,
+          "overallBestPassRate": 0.049999999999999996,
+          "difficulty": "near_impossible",
+          "average2PassRate": 0.025,
+          "skilled2PassRate": 0.025,
+          "learningBestPassRate": 0.175
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        }
+      ]
+    },
+    {
+      "id": "c8-delayed-shadow-priest",
+      "budget": "normal",
+      "stageId": "Challenge-8",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-8-e03",
+          "values": {
+            "enemyId": "troll_shadow_priest",
+            "nameOverride": "巨魔暗影牧师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 4,
+            "openingRecoveryRemainingMs": 4000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T09:10:50.690Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.09166666666666667,
+          "skilledBestPassRate": 0.13333333333333333,
+          "expertBestPassRate": 0.05833333333333334,
+          "overallBestPassRate": 0.13333333333333333,
+          "difficulty": "near_impossible",
+          "average2PassRate": 0.075,
+          "skilled2PassRate": 0.225,
+          "learningBestPassRate": 0.225
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0,
+          "skilledBestPassRate": 0,
+          "expertBestPassRate": 0,
+          "overallBestPassRate": 0,
+          "difficulty": "impossible",
+          "average2PassRate": 0,
+          "skilled2PassRate": 0,
+          "learningBestPassRate": 0
+        }
+      ]
+    },
+    {
+      "id": "c9-delayed-shadow-priest",
+      "budget": "normal",
+      "stageId": "Challenge-9",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-9-e04",
+          "values": {
+            "enemyId": "troll_shadow_priest",
+            "nameOverride": "巨魔暗影牧师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 4,
+            "openingRecoveryRemainingMs": 4000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T09:24:36.772Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 0.9916666666666667,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 0.975,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "wf1-two-tidehunters",
+      "budget": "normal",
+      "stageId": "WestFall-1",
+      "fileName": "encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "WestFall-1-e04",
+          "values": {
+            "enemyId": "murloc_tidehunter",
+            "nameOverride": "鱼人猎潮者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        },
+        {
+          "spawnId": "WestFall-1-e05",
+          "values": {
+            "enemyId": "murloc_tidehunter",
+            "nameOverride": "鱼人猎潮者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T09:33:06.404Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.9916666666666667,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "wf2-blowgiller-plus-tidehunter",
+      "budget": "normal",
+      "stageId": "WestFall-2",
+      "fileName": "encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "WestFall-2-e03",
+          "values": {
+            "enemyId": "murloc_tidehunter",
+            "nameOverride": "鱼人猎潮者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        },
+        {
+          "spawnId": "WestFall-2-e04",
+          "values": {
+            "enemyId": "murloc_blowgiller",
+            "nameOverride": "鱼人吹箭者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T09:40:29.794Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c3-geomancer-for-scout",
+      "budget": "normal",
+      "stageId": "Challenge-3",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-3-e02",
+          "values": {
+            "enemyId": "kobold_geomancer",
+            "nameOverride": "狗头人地卜师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T09:45:59.758Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.9166666666666666,
+          "skilledBestPassRate": 0.9249999999999999,
+          "expertBestPassRate": 0.9333333333333332,
+          "overallBestPassRate": 0.9333333333333332,
+          "difficulty": "trivial",
+          "average2PassRate": 0.9,
+          "skilled2PassRate": 0.95,
+          "learningBestPassRate": 0.975
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.6833333333333332,
+          "skilledBestPassRate": 0.6583333333333333,
+          "expertBestPassRate": 0.6416666666666667,
+          "overallBestPassRate": 0.6833333333333332,
+          "difficulty": "balanced",
+          "average2PassRate": 0.675,
+          "skilled2PassRate": 0.675,
+          "learningBestPassRate": 0.575
+        }
+      ]
+    },
+    {
+      "id": "c5-rummager-control-channel",
+      "budget": "normal",
+      "stageId": "Challenge-5",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-5-e01",
+          "values": {
+            "openingCastSkillNum": 4,
+            "openingRecoveryRemainingMs": 0
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T10:05:17.956Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.9500000000000001,
+          "skilledBestPassRate": 0.9916666666666667,
+          "expertBestPassRate": 0.9833333333333334,
+          "overallBestPassRate": 0.9916666666666667,
+          "difficulty": "trivial",
+          "average2PassRate": 0.9,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.7583333333333333,
+          "skilledBestPassRate": 0.7916666666666666,
+          "expertBestPassRate": 0.6916666666666668,
+          "overallBestPassRate": 0.7916666666666666,
+          "difficulty": "easy",
+          "average2PassRate": 0.75,
+          "skilled2PassRate": 0.825,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c6-candle-shadow-hoe",
+      "budget": "normal",
+      "stageId": "Challenge-6",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-6-e01",
+          "values": {
+            "openingCastSkillNum": 4,
+            "openingRecoveryRemainingMs": 0
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T10:11:26.338Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 0.9916666666666667,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.7333333333333334,
+          "skilledBestPassRate": 0.75,
+          "expertBestPassRate": 0.7833333333333333,
+          "overallBestPassRate": 0.7833333333333333,
+          "difficulty": "balanced",
+          "average2PassRate": 0.725,
+          "skilled2PassRate": 0.75,
+          "learningBestPassRate": 0.9
+        }
+      ]
+    },
+    {
+      "id": "c7-soul-summoner-for-seer",
+      "budget": "normal",
+      "stageId": "Challenge-7",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-7-e03",
+          "values": {
+            "enemyId": "troll_soul_summoner",
+            "nameOverride": "巨魔唤魂者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T10:23:32.894Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.7666666666666666,
+          "skilledBestPassRate": 0.85,
+          "expertBestPassRate": 0.875,
+          "overallBestPassRate": 0.875,
+          "difficulty": "easy",
+          "average2PassRate": 0.65,
+          "skilled2PassRate": 0.825,
+          "learningBestPassRate": 0.975
+        }
+      ]
+    },
+    {
+      "id": "c8-soul-summoner-for-seer",
+      "budget": "normal",
+      "stageId": "Challenge-8",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-8-e03",
+          "values": {
+            "enemyId": "troll_soul_summoner",
+            "nameOverride": "巨魔唤魂者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T10:37:33.553Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.8833333333333334,
+          "skilledBestPassRate": 0.9583333333333334,
+          "expertBestPassRate": 0.9666666666666667,
+          "overallBestPassRate": 0.9666666666666667,
+          "difficulty": "easy",
+          "average2PassRate": 0.925,
+          "skilled2PassRate": 0.975,
+          "learningBestPassRate": 0.975
+        }
+      ]
+    },
+    {
+      "id": "c1-wounded-candle-plus-geomancer",
+      "budget": "quick",
+      "stageId": "Challenge-1",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-1-e05",
+          "values": {
+            "enemyId": "The_Candle_King",
+            "nameOverride": "负伤的蜡烛之王",
+            "hpOverride": 200,
+            "maxHpOverride": 200,
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 1000
+          }
+        },
+        {
+          "spawnId": "Challenge-1-e04",
+          "values": {
+            "enemyId": "kobold_geomancer",
+            "nameOverride": "狗头人地卜师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T10:39:54.721Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.8055555555555555,
+          "skilledBestPassRate": 0.7222222222222222,
+          "expertBestPassRate": 0.611111111111111,
+          "overallBestPassRate": 0.8055555555555555,
+          "difficulty": "trivial",
+          "average2PassRate": 0.75,
+          "skilled2PassRate": 0.6666666666666666,
+          "learningBestPassRate": 0.6666666666666666
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.3611111111111111,
+          "skilledBestPassRate": 0.5555555555555556,
+          "expertBestPassRate": 0.6388888888888888,
+          "overallBestPassRate": 0.6388888888888888,
+          "difficulty": "hard",
+          "average2PassRate": 0.3333333333333333,
+          "skilled2PassRate": 0.8333333333333334,
+          "learningBestPassRate": 0.75
+        }
+      ]
+    },
+    {
+      "id": "c1-candle-plus-wounded-geomancer",
+      "budget": "quick",
+      "stageId": "Challenge-1",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-1-e05",
+          "values": {
+            "enemyId": "The_Candle_King",
+            "nameOverride": "蜡烛之王",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 2,
+            "openingRecoveryRemainingMs": 1000
+          }
+        },
+        {
+          "spawnId": "Challenge-1-e04",
+          "values": {
+            "enemyId": "kobold_geomancer",
+            "nameOverride": "负伤的狗头人地卜师",
+            "hpOverride": 100,
+            "maxHpOverride": 100,
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T10:41:07.222Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.8333333333333334,
+          "skilledBestPassRate": 0.8055555555555557,
+          "expertBestPassRate": 0.9444444444444443,
+          "overallBestPassRate": 0.9444444444444443,
+          "difficulty": "trivial",
+          "average2PassRate": 0.8333333333333334,
+          "skilled2PassRate": 0.75,
+          "learningBestPassRate": 0.9166666666666666
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.5555555555555555,
+          "skilledBestPassRate": 0.6944444444444443,
+          "expertBestPassRate": 0.75,
+          "overallBestPassRate": 0.75,
+          "difficulty": "balanced",
+          "average2PassRate": 0.4166666666666667,
+          "skilled2PassRate": 0.9166666666666666,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c9-shieldmasta-for-high-priest",
+      "budget": "full",
+      "stageId": "Challenge-9",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-9-e04",
+          "values": {
+            "enemyId": "troll_shieldmasta",
+            "nameOverride": "巨魔持盾卫士",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T11:11:10.568Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 1,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.7799999999999999,
+          "skilledBestPassRate": 0.7866666666666666,
+          "expertBestPassRate": 0.8000000000000002,
+          "overallBestPassRate": 0.8000000000000002,
+          "difficulty": "easy",
+          "average2PassRate": 0.71,
+          "skilled2PassRate": 0.83,
+          "learningBestPassRate": 0.78
+        }
+      ]
+    },
+    {
+      "id": "c6-warleader-for-seer",
+      "budget": "full",
+      "stageId": "Challenge-6",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-6-e05",
+          "values": {
+            "enemyId": "murloc_warleader",
+            "nameOverride": "鱼人领军",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 3,
+            "openingRecoveryRemainingMs": 1000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T11:33:15.222Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.93,
+          "skilledBestPassRate": 0.9366666666666666,
+          "expertBestPassRate": 0.9233333333333333,
+          "overallBestPassRate": 0.9366666666666666,
+          "difficulty": "easy",
+          "average2PassRate": 0.94,
+          "skilled2PassRate": 0.94,
+          "learningBestPassRate": 0.94
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.6333333333333333,
+          "skilledBestPassRate": 0.6466666666666666,
+          "expertBestPassRate": 0.6633333333333333,
+          "overallBestPassRate": 0.6633333333333333,
+          "difficulty": "balanced",
+          "average2PassRate": 0.62,
+          "skilled2PassRate": 0.65,
+          "learningBestPassRate": 0.71
+        }
+      ]
+    },
+    {
+      "id": "c3-geomancer-for-scout",
+      "budget": "full",
+      "stageId": "Challenge-3",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-3-e02",
+          "values": {
+            "enemyId": "kobold_geomancer",
+            "nameOverride": "狗头人地卜师",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T11:52:13.436Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.9533333333333333,
+          "skilledBestPassRate": 0.9700000000000001,
+          "expertBestPassRate": 0.9533333333333333,
+          "overallBestPassRate": 0.9700000000000001,
+          "difficulty": "trivial",
+          "average2PassRate": 0.97,
+          "skilled2PassRate": 0.97,
+          "learningBestPassRate": 0.99
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.61,
+          "skilledBestPassRate": 0.6466666666666666,
+          "expertBestPassRate": 0.64,
+          "overallBestPassRate": 0.6466666666666666,
+          "difficulty": "balanced",
+          "average2PassRate": 0.63,
+          "skilled2PassRate": 0.61,
+          "learningBestPassRate": 0.68
+        }
+      ]
+    },
+    {
+      "id": "c5-rummager-control-channel",
+      "budget": "full",
+      "stageId": "Challenge-5",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-5-e01",
+          "values": {
+            "openingCastSkillNum": 4,
+            "openingRecoveryRemainingMs": 0
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T13:02:12.098Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.9933333333333333,
+          "skilledBestPassRate": 0.9933333333333333,
+          "expertBestPassRate": 0.9933333333333333,
+          "overallBestPassRate": 0.9933333333333333,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.7166666666666667,
+          "skilledBestPassRate": 0.7633333333333333,
+          "expertBestPassRate": 0.7233333333333333,
+          "overallBestPassRate": 0.7633333333333333,
+          "difficulty": "balanced",
+          "average2PassRate": 0.76,
+          "skilled2PassRate": 0.75,
+          "learningBestPassRate": 1
+        }
+      ]
+    },
+    {
+      "id": "c8-soul-summoner-for-seer",
+      "budget": "full",
+      "stageId": "Challenge-8",
+      "fileName": "challenge_encounter_balance.xlsx",
+      "updates": [
+        {
+          "spawnId": "Challenge-8-e03",
+          "values": {
+            "enemyId": "troll_soul_summoner",
+            "nameOverride": "巨魔唤魂者",
+            "hpOverride": "",
+            "maxHpOverride": "",
+            "openingCastSkillNum": 1,
+            "openingRecoveryRemainingMs": 2000
+          }
+        }
+      ],
+      "generatedAt": "2026-08-02T16:10:45.120Z",
+      "classes": [
+        {
+          "classId": "warrior_t",
+          "averageBestPassRate": 0.9966666666666667,
+          "skilledBestPassRate": 1,
+          "expertBestPassRate": 1,
+          "overallBestPassRate": 1,
+          "difficulty": "trivial",
+          "average2PassRate": 1,
+          "skilled2PassRate": 1,
+          "learningBestPassRate": 1
+        },
+        {
+          "classId": "druid_bear_t",
+          "averageBestPassRate": 0.86,
+          "skilledBestPassRate": 0.9166666666666666,
+          "expertBestPassRate": 0.96,
+          "overallBestPassRate": 0.96,
+          "difficulty": "trivial",
+          "average2PassRate": 0.88,
+          "skilled2PassRate": 0.94,
+          "learningBestPassRate": 0.96
+        }
+      ]
+    }
+  ]
+}

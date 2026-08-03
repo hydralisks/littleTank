@@ -51,8 +51,8 @@ export function readDesignerWorkbook(workbookPath) {
   return XLSX.readFile(workbookPath, { cellStyles: false })
 }
 
-export function writeDesignerWorkbookCompact(currentWorkbook, workbookPath, projectRoot) {
-  const relativePath = getProjectRelativePath(projectRoot, workbookPath)
+export function writeDesignerWorkbookCompact(currentWorkbook, workbookPath, projectRoot, templateWorkbookPath = workbookPath) {
+  const relativePath = getProjectRelativePath(projectRoot, templateWorkbookPath)
   const templateBuffer = execFileSync('git', ['show', `HEAD:${relativePath}`], {
     cwd: projectRoot,
     maxBuffer: 64 * 1024 * 1024,

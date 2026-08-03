@@ -76,7 +76,8 @@ import {
 } from '../src/game/encounter/combatTimeline.ts'
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const designerDataDir = path.join(projectRoot, 'public', 'designer-data')
+const cliOptions = parseCliOptions(process.argv.slice(2))
+const designerDataDir = resolveDesignerDataDir(cliOptions.designerDataDir)
 const manualPlaytestBuildsPath = path.join(designerDataDir, 'manual_playtest_builds.xlsx')
 const outputDir = path.join(projectRoot, 'reports', 'balance')
 const storyOutputDir = path.join(outputDir, 'story')
@@ -84,7 +85,6 @@ const challengeOutputDir = path.join(outputDir, 'challenge')
 const dataEstimateOutputDir = path.join(projectRoot, 'reports', 'data_estimate')
 const dataEstimateStoryOutputDir = path.join(dataEstimateOutputDir, 'story')
 const dataEstimateChallengeOutputDir = path.join(dataEstimateOutputDir, 'challenge')
-const cliOptions = parseCliOptions(process.argv.slice(2))
 let manualPlaytestEntries = []
 const CHINESE_REPORT_FILE_NAMES = {
   'chapter-one': {
@@ -669,6 +669,19 @@ function applyStoryDesignerDataIntoCatalogs() {
   applyEncounterWorkbookOverrides(parseEncounterWorkbook(readWorkbook('encounter_balance.xlsx')))
 }
 
+function resolveDesignerDataDir(inputPath) {
+  if (!inputPath) return path.join(projectRoot, 'public', 'designer-data')
+  const resolvedPath = path.resolve(projectRoot, inputPath)
+  const relativePath = path.relative(projectRoot, resolvedPath)
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    throw new Error(`Designer data directory must stay inside project root: ${resolvedPath}`)
+  }
+  if (!fs.statSync(resolvedPath).isDirectory()) {
+    throw new Error(`Designer data directory is not a directory: ${resolvedPath}`)
+  }
+  return resolvedPath
+}
+
 function parseCliOptions(args) {
   const options = {
     area: null,
@@ -678,6 +691,7 @@ function parseCliOptions(args) {
     budget: 'full',
     trace: false,
     challenge: false,
+    designerDataDir: null,
   }
 
   for (const arg of args) {
@@ -689,6 +703,8 @@ function parseCliOptions(args) {
       options.stages = arg.slice('--stages='.length).split(',').map((stageId) => stageId.trim()).filter(Boolean)
     } else if (arg.startsWith('--classes=')) {
       options.classes = arg.slice('--classes='.length).split(',').map((classId) => classId.trim()).filter(Boolean)
+    } else if (arg.startsWith('--designer-data-dir=')) {
+      options.designerDataDir = arg.slice('--designer-data-dir='.length).trim() || null
     } else if (arg === '--quick') {
       options.sample = 'quick'
       options.budget = 'quick'
