@@ -1,20 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" data-icon-canvas="full" data-icon-kind="talent" data-icon-key="bear-talent-guardian-of-the-grove">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" data-icon-canvas="full" data-icon-style="warrior-block" data-icon-kind="talent" data-icon-key="bear-talent-guardian-of-the-grove">
   <title>druid_bear_t_guardian_of_the_grove_pic</title>
   <defs>
     <linearGradient id="bg" x1="8" y1="4" x2="57" y2="62" gradientUnits="userSpaceOnUse">
       <stop stop-color="#23664d"/>
-      <stop offset="0.58" stop-color="#102b24"/>
-      <stop offset="1" stop-color="#081012"/>
+      <stop offset="1" stop-color="#102b24"/>
     </linearGradient>
     <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(23 18) rotate(48) scale(38)">
-      <stop stop-color="#57d49a" stop-opacity=".42"/>
+      <stop stop-color="#c8f5a5" stop-opacity=".3"/>
       <stop offset="1" stop-color="#57d49a" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <path fill="url(#bg)" d="M0 0h64v64H0z"/>
-  <path fill="url(#glow)" d="M0 0h64v64H0z"/>
-  <path d="M4 4h56v56H4z" fill="none" stroke="#c8f5a5" stroke-opacity=".24"/>
-  <g fill="none" stroke="#57d49a" stroke-opacity=".4" stroke-width="1.2"><ellipse cx="32" cy="32" rx="27" ry="29"/></g>
-  <g fill="#57d49a" fill-opacity=".13" stroke="#c8f5a5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M32 13l-12 14h8l-11 13h11v12h8V40h11L36 27h8Z"/><path d="M15 19l17-7 17 7v12c0 10-6 17-17 22-11-5-17-12-17-22Z"/></g>
-  <path d="M8 57h48" stroke="#57d49a" stroke-opacity=".36" stroke-width="2"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#glow)"/>
+  <g data-icon-layer="core" fill="#57d49a" stroke="#091116" stroke-width="4" stroke-linejoin="round"><path d="M32 7 53 16v16c0 13-8 21-21 27C19 53 11 45 11 32V16Z"/></g>
+  <g data-icon-layer="symbol-outline" transform="translate(7 7) scale(.78)" fill="#c8f5a5" stroke="#091116" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 13l-12 14h8l-11 13h11v12h8V40h11L36 27h8Z"/><path d="M15 19l17-7 17 7v12c0 10-6 17-17 22-11-5-17-12-17-22Z"/></g>
+  <g data-icon-layer="highlight" transform="translate(7 7) scale(.78)" fill="#c8f5a5" stroke="#c8f5a5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M32 13l-12 14h8l-11 13h11v12h8V40h11L36 27h8Z"/><path d="M15 19l17-7 17 7v12c0 10-6 17-17 22-11-5-17-12-17-22Z"/></g>
 </svg>

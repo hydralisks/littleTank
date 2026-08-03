@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url'
 import {
   XLSX,
   readDesignerWorkbook,
-  writeDesignerWorkbookCompact,
 } from './designerWorkbookIO.mjs'
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -68,15 +67,10 @@ if (new Set(targetRows.map(({ assetKey }) => assetKey)).size !== targetRows.leng
   throw new Error('Generated Bear T assetKey values must be unique')
 }
 
-const untouchedCells = new Map()
-for (const sheetName of workbook.SheetNames) {
-  const sheet = workbook.Sheets[sheetName]
-  for (const [address, cell] of Object.entries(sheet)) {
-    if (address.startsWith('!')) continue
-    const isTargetAssetCell = sheetName === iconSheetName && targetRows.some(({ row }) => (
-      address === XLSX.utils.encode_cell({ r: row, c: columns.get('assetKey') })
-    ))
-    if (!isTargetAssetCell) untouchedCells.set(`${sheetName}:${address}`, cell.v)
+for (const target of targetRows) {
+  const currentAssetKey = String(readCell(target.row, 'assetKey'))
+  if (currentAssetKey !== target.assetKey) {
+    throw new Error(`Unexpected assetKey for ${target.iconId}: ${currentAssetKey}`)
   }
 }
 
@@ -151,56 +145,47 @@ function fallbackGlyph(slug) {
   return `<path d="M${inset} 43 32 13 ${64 - inset} 43 32 52Z"/><path d="M20 32h24M32 18v27" transform="rotate(${tilt} 32 32)"/>`
 }
 
+function corePlateFor(slug) {
+  if (/iron|survival|thick|shelter|immunity|hide|guard/.test(slug)) {
+    return '<path d="M32 7 53 16v16c0 13-8 21-21 27C19 53 11 45 11 32V16Z"/>'
+  }
+  if (/moon|lunar/.test(slug)) {
+    return '<circle cx="32" cy="32" r="24"/>'
+  }
+  if (/rage|berserk|feral|thrash|mangle|roar|pain/.test(slug)) {
+    return '<path d="M32 6 57 31 32 58 7 31Z"/>'
+  }
+  if (/bark|grove|natural|spring|regrowth|regen|wild/.test(slug)) {
+    return '<path d="M10 37C10 18 23 7 44 8c8 10 11 24 5 35-7 13-22 17-36 11-3-5-4-11-3-17Z"/>'
+  }
+  return '<path d="m32 7 21 12v26L32 57 11 45V19Z"/>'
+}
+
 function makeSvg({ iconId, iconType, assetKey }) {
   const slug = assetKey.replace(`bear-${iconType}-`, '')
   const [deep, mid, light, accent] = paletteFor(slug)
   const glyph = glyphs[slug] ?? fallbackGlyph(slug)
-  const typeMark = iconType === 'skill'
-    ? '<path d="M5 15V5h10M49 5h10v10M5 49v10h10M59 49v10H49"/>'
-    : iconType === 'talent'
-      ? '<ellipse cx="32" cy="32" rx="27" ry="29"/>'
-      : '<circle cx="32" cy="32" r="27" stroke-dasharray="2 4"/>'
+  const corePlate = corePlateFor(slug)
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" data-icon-canvas="full" data-icon-kind="${iconType}" data-icon-key="${escapeXml(assetKey)}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" data-icon-canvas="full" data-icon-style="warrior-block" data-icon-kind="${iconType}" data-icon-key="${escapeXml(assetKey)}">
   <title>${escapeXml(iconId)}</title>
   <defs>
     <linearGradient id="bg" x1="8" y1="4" x2="57" y2="62" gradientUnits="userSpaceOnUse">
       <stop stop-color="${mid}"/>
-      <stop offset="0.58" stop-color="${deep}"/>
-      <stop offset="1" stop-color="#081012"/>
+      <stop offset="1" stop-color="${deep}"/>
     </linearGradient>
     <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(23 18) rotate(48) scale(38)">
-      <stop stop-color="${accent}" stop-opacity=".42"/>
+      <stop stop-color="${light}" stop-opacity=".3"/>
       <stop offset="1" stop-color="${accent}" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <path fill="url(#bg)" d="M0 0h64v64H0z"/>
-  <path fill="url(#glow)" d="M0 0h64v64H0z"/>
-  <path d="M4 4h56v56H4z" fill="none" stroke="${light}" stroke-opacity=".24"/>
-  <g fill="none" stroke="${accent}" stroke-opacity=".4" stroke-width="1.2">${typeMark}</g>
-  <g fill="${accent}" fill-opacity=".13" stroke="${light}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>
-  <path d="M8 57h48" stroke="${accent}" stroke-opacity=".36" stroke-width="2"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#bg)"/>
+  <rect x="3" y="3" width="58" height="58" rx="12" fill="url(#glow)"/>
+  <g data-icon-layer="core" fill="${accent}" stroke="#091116" stroke-width="4" stroke-linejoin="round">${corePlate}</g>
+  <g data-icon-layer="symbol-outline" transform="translate(7 7) scale(.78)" fill="${light}" stroke="#091116" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>
+  <g data-icon-layer="highlight" transform="translate(7 7) scale(.78)" fill="${light}" stroke="${light}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>
 </svg>
 `
-}
-
-for (const target of targetRows) {
-  const address = XLSX.utils.encode_cell({ r: target.row, c: columns.get('assetKey') })
-  const current = iconSheet[address] ?? {}
-  iconSheet[address] = { ...current, t: 's', v: target.assetKey, w: target.assetKey }
-}
-
-writeDesignerWorkbookCompact(workbook, workbookPath, projectRoot)
-
-const verified = readDesignerWorkbook(workbookPath)
-for (const [key, expectedValue] of untouchedCells) {
-  const separator = key.lastIndexOf(':')
-  const sheetName = key.slice(0, separator)
-  const address = key.slice(separator + 1)
-  const actualValue = verified.Sheets[sheetName]?.[address]?.v
-  if (actualValue !== expectedValue) {
-    throw new Error(`Unexpected workbook change at ${sheetName}.${address}`)
-  }
 }
 
 fs.mkdirSync(skillIconDir, { recursive: true })
@@ -210,4 +195,4 @@ for (const target of targetRows) {
   fs.writeFileSync(path.join(outputDir, `${target.assetKey}.svg`), makeSvg(target), 'utf8')
 }
 
-console.log(`Updated ${targetRows.length} Bear T icon mappings and generated matching full-canvas SVG assets.`)
+console.log(`Generated ${targetRows.length} Bear T warrior-block SVG assets without modifying workbook mappings.`)

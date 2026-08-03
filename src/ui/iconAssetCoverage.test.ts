@@ -68,7 +68,15 @@ describe('designer workbook icon assets', () => {
     for (const icon of bearIcons) {
       const filePath = expectedIconAssetPath(icon)
       expect(fs.existsSync(filePath), `missing ${icon.iconId}: ${filePath}`).toBe(true)
-      expect(fs.readFileSync(filePath, 'utf8')).toContain('data-icon-canvas="full"')
+      const svg = fs.readFileSync(filePath, 'utf8')
+
+      expect(svg).toContain('data-icon-canvas="full"')
+      expect(svg).toContain('data-icon-style="warrior-block"')
+      expect(svg).toContain('data-icon-layer="core"')
+      expect(svg).not.toContain('data-icon-layer="frame"')
+      expect(svg).not.toContain('data-icon-layer="platform"')
+      expect(svg).not.toContain('M5 15V5h10')
+      expect(svg).not.toContain('M8 57h48')
     }
   })
 })
