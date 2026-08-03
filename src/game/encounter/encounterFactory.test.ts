@@ -2017,8 +2017,10 @@ describe('encounterFactory hand-cast flow', () => {
           shortLabel: '被',
           remainingMs: 3000,
           totalMs: 3000,
-          tone: 'buff',
+          tone: 'danger',
           kind: 'playerDebuff',
+          sourceKind: 'activeSkill',
+          sourceClassId: 'warrior_t',
         }),
       },
       {
