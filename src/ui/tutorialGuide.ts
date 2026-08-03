@@ -4,10 +4,7 @@ import type { PlayerClassId } from '../game/encounter/encounterTypes'
 export type TutorialPlacement = 'top' | 'right' | 'bottom' | 'left' | 'center'
 export type TutorialBuildPanel = 'skills' | 'passives'
 
-export type IconGrammarLegendPayload =
-  | { kind: 'class-emblems'; classIds: PlayerClassId[] }
-  | { kind: 'source-shapes'; classId: PlayerClassId }
-  | { kind: 'status-layers'; classId: PlayerClassId }
+export type IconGrammarLegendPayload = { kind: 'status-layers'; classId: PlayerClassId }
 
 export interface TutorialStep {
   id: string
@@ -23,24 +20,6 @@ export interface TutorialStep {
 export function getIconGrammarTutorialScript(classId: PlayerClassId): TutorialStep[] {
   return [
     {
-      id: 'icon-grammar-classes',
-      title: '先看职业纹章',
-      body: '状态左上角的纹样代表施加者职业。剑属于战士 T，熊抓属于熊 T；颜色用于快速扫视，轮廓用于在低亮度和色弱环境中兜底。',
-      target: '.encounter-stage',
-      placement: 'center',
-      legend: { kind: 'class-emblems', classIds: ['warrior_t', 'druid_bear_t'] },
-      skipLabel: '跳过图标说明',
-    },
-    {
-      id: 'icon-grammar-sources',
-      title: '再看来源形状',
-      body: '下垂小战旗代表主动技能，椭圆盾代表被动天赋。纹样与形状组合后，可以同时读出职业和来源。',
-      target: '.encounter-stage',
-      placement: 'center',
-      legend: { kind: 'source-shapes', classId },
-      skipLabel: '跳过图标说明',
-    },
-    {
       id: 'icon-grammar-runtime',
       title: '最后看战斗状态',
       body: '整圈外框表示有利、有害或团队状态；右下金属叠片显示多层效果，顺时针暗色遮罩表示持续时间已经经过的比例。',
@@ -49,7 +28,7 @@ export function getIconGrammarTutorialScript(classId: PlayerClassId): TutorialSt
       legend: { kind: 'status-layers', classId },
       skipLabel: '跳过图标说明',
     },
-  ].filter((step) => step.legend?.kind === 'status-layers')
+  ]
 }
 
 export function getPreparationTutorialScript(): TutorialStep[] {

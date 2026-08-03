@@ -21,21 +21,20 @@ function createLegendStatus(overrides: Partial<StatusEffect>): StatusEffect {
 }
 
 export function IconGrammarLegend({ legend }: IconGrammarLegendProps) {
-  const classId = 'classId' in legend ? legend.classId : 'warrior_t'
   const statuses = [
-    createLegendStatus({ sourceKind: 'activeSkill', sourceClassId: classId }),
+    createLegendStatus({ sourceKind: 'activeSkill', sourceClassId: legend.classId }),
     createLegendStatus({
       id: 'icon-grammar-party',
       kind: 'neutral',
       sourceKind: 'passiveTalent',
-      sourceClassId: classId,
+      sourceClassId: legend.classId,
     }),
     createLegendStatus({
       id: 'icon-grammar-stacks',
       kind: 'playerDebuff',
       tone: 'danger',
       sourceKind: 'activeSkill',
-      sourceClassId: classId,
+      sourceClassId: legend.classId,
       stacks: 3,
       maxStacks: 5,
     }),
